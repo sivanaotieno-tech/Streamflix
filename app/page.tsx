@@ -87,17 +87,30 @@ export default function Home(){
   };
 
   useEffect(()=>{
-    Promise.all([
-      get("tvmaze","/shows?page=0"),
-      get("jikan","/top/anime?filter=bypopularity&limit=20"),
-      get("archive","q=mediatype%3Amovies%20AND%20collection%3Afeature_films%20AND%20downloads%3A%5B1%20TO%20*%5D&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=description&fl%5B%5D=date&rows=20&page=1&output=json"),
-      fetch("/api/live").then(r=>r.json())
-    ]).then(([t,a,i,l])=>{
-      const A=t.map(tv),B=a.data.map(anime),C=i.response.docs.map(archive),L=(l.channels||[]).map(live).filter((x:Item)=>x.videoUrl);
-      const availableRows:Record<string,Item[]>={"Public Live TV":L.slice(0,30),"TV Discovery":A.slice(0,20),"Anime Spotlight":B,"Public Domain Movies":C};
+    const load=async()=>{
+      const results=await Promise.allSettled([
+        get("tvmaze","/shows?page=0"),
+        get("jikan","/top/anime?filter=bypopularity&limit=20"),
+        get("archive","q=mediatype%3Amovies%20AND%20collection%3Afeature_films%20AND%20downloads%3A%5B1%20TO%20*%5D&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=description&fl%5B%5D=date&rows=20&page=1&output=json"),
+        fetch("/api/live").then(r=>{if(!r.ok)throw Error();return r.json()})
+      ]);
+
+      const t=results[0].status==="fulfilled"?results[0].value:[];
+      const a=results[1].status==="fulfilled"?results[1].value:{data:[]};
+      const i=results[2].status==="fulfilled"?results[2].value:{response:{docs:[]}};
+      const l=results[3].status==="fulfilled"?results[3].value:{channels:[]};
+
+      const A=t.map(tv),B=(a.data||[]).map(anime),C=(i.response?.docs||[]).map(archive),L=(l.channels||[]).map(live).filter((x:Item)=>x.videoUrl);
+      const availableRows:Record<string,Item[]>={
+        "Public Live TV":L.slice(0,30),
+        "TV Discovery":A.slice(0,20),
+        "Anime Spotlight":B,
+        "Public Domain Movies":C
+      };
       setRows(availableRows);
       setHero(B[0]||A[0]||C[0]||null);
-    }).catch(console.error)
+    };
+    load().catch(console.error)
   },[]);
 
   useEffect(()=>{
