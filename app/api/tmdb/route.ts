@@ -1,0 +1,3 @@
+import {NextRequest,NextResponse} from "next/server";
+const BASE="https://api.themoviedb.org/3";
+export async function GET(req:NextRequest){const token=process.env.TMDB_API_READ_ACCESS_TOKEN;if(!token)return NextResponse.json({error:"TMDB token is not configured."},{status:503});const path=req.nextUrl.searchParams.get("path");if(!path||!path.startsWith("/"))return NextResponse.json({error:"Missing path"},{status:400});const url=new URL(BASE+path);req.nextUrl.searchParams.forEach((v,k)=>{if(k!=="path")url.searchParams.set(k,v)});const r=await fetch(url,{headers:{Authorization:"Bearer "+token,accept:"application/json"},next:{revalidate:300}});const data=await r.json();return NextResponse.json(data,{status:r.status})}
