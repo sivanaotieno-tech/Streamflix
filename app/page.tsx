@@ -91,7 +91,7 @@ export default function Home(){
         const r=await fetch("/api/stream?identifier="+encodeURIComponent(id));
         if(!r.ok)throw Error();
         const data=await r.json();
-        setPlayer({...m,videoUrl:"/api/proxy?url="+encodeURIComponent(data.url),videoType:data.type});
+        setPlayer({...m,videoUrl:data.url,videoType:data.type});
         return;
       }catch{setSelected(m);return}
     }
