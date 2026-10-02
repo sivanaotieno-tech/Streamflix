@@ -185,3 +185,6 @@ export default function Home(){
       {browse==="My List" ? <Row title="My List" items={list} onOpen={m=>m.videoUrl?setPlayer(m):play(m)}/> : Object.entries(rows).filter(([title])=>browse==="Home" || (browse==="TV Shows"&&title==="TV Discovery") || (browse==="Anime"&&title==="Anime Spotlight") || (browse==="Movies"&&title==="Public Domain Movies") || (browse==="Live TV"&&title==="Public Live TV")).map(([title,items])=><Row key={title} title={title} items={items} onOpen={m=>m.videoUrl?setPlayer(m):play(m)}/>)}
     </div>
 
+    {selected&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5" onClick={()=>setSelected(null)}><div className="max-w-xl rounded-lg bg-[#181818] p-6" onClick={e=>e.stopPropagation()}><h2 className="text-2xl font-bold">{selected.title||selected.name}</h2><p className="mt-3 text-zinc-300">{selected.overview||"This title does not currently expose a browser-playable stream."}</p><button onClick={()=>setSelected(null)} className="mt-5 rounded bg-white px-5 py-2 font-bold text-black">Close</button></div></div>}
+    {player&&<Player movie={player} onClose={()=>setPlayer(null)}/>}
+  </main>
