@@ -1,18 +1,154 @@
 "use client";
+
 import {useEffect,useState} from "react";
-import {Search,Play,Plus,Film,Clapperboard} from "lucide-react";
-type Item={id:string|number;title?:string;name?:string;overview?:string;poster?:string|null;rating?:number;year?:string;source:string;url?:string};
+import {Search,Play,Plus,Film,Clapperboard,X} from "lucide-react";
+
+type Item={
+  id:string|number;
+  title?:string;
+  name?:string;
+  overview?:string;
+  poster?:string|null;
+  rating?:number;
+  year?:string;
+  source:string;
+  url?:string;
+  videoUrl?:string;
+};
+
+const BIG_BUCK_BUNNY:Item={
+  id:"bbb",
+  title:"Big Buck Bunny",
+  overview:"A giant rabbit takes revenge on three mischievous rodents in this Blender Open Movie.",
+  source:"Blender Open Movie",
+  year:"2008",
+  videoUrl:"https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4",
+  url:"https://video.blender.org/videos/watch/bf1f3fb5-b119-4f9f-9930-8e20e892b898"
+};
+
 const tv=(x:any):Item=>({id:"tv-"+x.id,name:x.name,overview:(x.summary||"").replace(/<[^>]*>/g,""),poster:x.image?.original||x.image?.medium,rating:x.rating?.average||0,year:(x.premiered||"").slice(0,4),source:"TVmaze",url:x.url});
 const anime=(x:any):Item=>({id:"anime-"+x.mal_id,name:x.title,overview:x.synopsis||"",poster:x.images?.jpg?.large_image_url||x.images?.jpg?.image_url,rating:x.score||0,year:(x.aired?.from||"").slice(0,4),source:"Jikan",url:x.url});
 const archive=(x:any):Item=>({id:"ia-"+x.identifier,title:x.title||x.identifier,overview:x.description?.replace(/<[^>]*>/g,"")||"Internet Archive movie",source:"Internet Archive",year:(x.date||"").slice(0,4),url:"https://archive.org/details/"+x.identifier});
-function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>void}){return <section className="mb-10"><div className="mb-3 flex items-center justify-between px-5 md:px-10"><h2 className="text-xl font-bold md:text-2xl">{title}</h2><span className="text-xs text-zinc-500">Open sources</span></div><div className="scrollbar-hide flex gap-3 overflow-x-auto px-5 md:px-10">{items.map(m=><button key={String(m.id)} onClick={()=>onOpen(m)} className="card min-w-[150px] text-left md:min-w-[190px]"><div className="aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">{m.poster?<img src={m.poster} className="h-full w-full object-cover" alt=""/>:<div className="flex h-full items-center justify-center"><Film className="h-12 w-12 text-zinc-700"/></div>}</div><div className="mt-2 truncate text-sm font-semibold">{m.title||m.name}</div><div className="text-xs text-zinc-400">{m.source}{m.rating?" · ★ "+m.rating.toFixed(1):""}</div></button>)}</div></section>}
-export default function Home(){const[rows,setRows]=useState<Record<string,Item[]>>({});const[hero,setHero]=useState<Item|null>(null);const[q,setQ]=useState("");const[results,setResults]=useState<Item[]>([]);const[selected,setSelected]=useState<Item|null>(null);const[list,setList]=useState<Item[]>([]);
-const get=async(s:string,p:string)=>{const r=await fetch("/api/catalog?source="+s+"&path="+encodeURIComponent(p));if(!r.ok)throw Error();return r.json()};
-useEffect(()=>{Promise.all([get("tvmaze","/shows?page=0"),get("jikan","/top/anime?filter=bypopularity&limit=20"),get("archive","q=mediatype%3Amovies%20AND%20collection%3Afeature_films%20AND%20downloads%3A%5B1%20TO%20*%5D&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=description&fl%5B%5D=date&rows=20&page=1&output=json")]).then(([t,a,i])=>{const A=t.map(tv),B=a.data.map(anime),C=i.response.docs.map(archive);setHero(A[0]);setRows({"TV Discovery":A.slice(0,20),"Anime Spotlight":B,"Public Domain Movies":C})}).catch(console.error)},[]);
-useEffect(()=>{if(!q.trim()){setResults([]);return}const z=setTimeout(()=>Promise.all([get("tvmaze","/search/shows?q="+encodeURIComponent(q)),get("jikan","/anime?q="+encodeURIComponent(q)+"&limit=6")]).then(([t,a])=>setResults(t.slice(0,6).map((x:any)=>tv(x.show)).concat(a.data.slice(0,6).map(anime))).catch(()=>setResults([])),350);return()=>clearTimeout(z)},[q]);
-const add=(m:Item)=>{if(!list.some(x=>x.id===m.id))setList(list.concat(m))};
-return <main className="min-h-screen bg-[#050505] pb-10">{hero&&<header className="relative min-h-[620px] overflow-hidden"><div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,#4b0000,transparent_45%)]"/><nav className="relative z-10 flex items-center justify-between px-5 py-5 md:px-10"><div className="flex items-center gap-2 text-2xl font-black text-red-600"><Clapperboard/>STREAMFLIX</div><div className="flex items-center gap-3"><div className="relative hidden sm:block"><Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400"/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search TV & anime..." className="w-64 rounded-full border border-white/20 bg-black/70 py-2 pl-10 pr-4 text-sm outline-none"/></div><button className="rounded-full bg-white/10 px-4 py-2 text-sm">My List ({list.length})</button></div></nav><div className="relative z-10 flex min-h-[540px] max-w-3xl flex-col justify-center px-5 md:px-10"><p className="mb-3 text-sm font-bold uppercase tracking-[.25em] text-red-500">STREAMFLIX</p><h1 className="text-5xl font-black md:text-7xl">{hero.name||hero.title}</h1><p className="mt-5 max-w-2xl leading-7 text-zinc-300">{hero.overview||"Discover TV, anime and public-domain movies from open web sources."}</p><div className="mt-6 flex gap-3"><button onClick={()=>setSelected(hero)} className="flex items-center gap-2 rounded-md bg-white px-6 py-3 font-bold text-black"><Play className="h-5 w-5 fill-current"/>Open</button><button onClick={()=>add(hero)} className="flex items-center gap-2 rounded-md bg-zinc-700 px-6 py-3 font-bold"><Plus/>My List</button></div></div></header>}
-{q&&<section className="absolute left-5 right-5 z-30 mt-[-80px] rounded-xl border border-white/10 bg-zinc-950 p-4 shadow-2xl md:left-auto md:right-10 md:w-[560px]"><h3 className="mb-3 font-bold">Search results</h3>{results.map(m=><button onClick={()=>setSelected(m)} key={String(m.id)} className="flex w-full gap-3 border-b border-white/5 py-2 text-left"><div className="h-16 w-11 rounded bg-zinc-800">{m.poster&&<img src={m.poster} className="h-full w-full object-cover" alt=""/>}</div><div><div className="font-semibold">{m.name||m.title}</div><div className="text-xs text-zinc-400">{m.source}</div></div></button>)}</section>}
-<div className="pt-8">{Object.entries(rows).map(([t,items])=><Row key={t} title={t} items={items} onOpen={setSelected}/>)}</div>
-<footer className="mt-12 border-t border-white/10 px-5 py-8 text-center text-xs text-zinc-500">Streamflix uses TVmaze, Jikan and Internet Archive. It does not require a TMDB key.</footer>
-{selected&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-5" onClick={()=>setSelected(null)}><div onClick={e=>e.stopPropagation()} className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-xl bg-zinc-900 p-6 shadow-2xl"><span className="rounded-full bg-red-600/20 px-3 py-1 text-xs text-red-400">{selected.source}</span><h2 className="mt-4 text-3xl font-black">{selected.name||selected.title}</h2><p className="mt-5 leading-7 text-zinc-200">{selected.overview||"No description available."}</p><div className="mt-6 flex gap-3"><button onClick={()=>add(selected)} className="rounded-md bg-zinc-700 px-5 py-3"><Plus className="mr-2 inline h-4 w-4"/>My List</button>{selected.url&&<a href={selected.url} target="_blank" className="rounded-md bg-white px-5 py-3 font-bold text-black"><Play className="mr-2 inline h-4 w-4"/>Open Source</a>}</div></div></div>}</main>}
+
+function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>void}){
+  return <section className="mb-10">
+    <div className="mb-3 flex items-center justify-between px-5 md:px-10">
+      <h2 className="text-xl font-bold md:text-2xl">{title}</h2>
+      <span className="text-xs text-zinc-500">Open sources</span>
+    </div>
+    <div className="scrollbar-hide flex gap-3 overflow-x-auto px-5 md:px-10">
+      {items.map(m=><button key={String(m.id)} onClick={()=>onOpen(m)} className="card min-w-[150px] text-left md:min-w-[190px]">
+        <div className="aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">
+          {m.poster?<img src={m.poster} className="h-full w-full object-cover" alt=""/>:<div className="flex h-full items-center justify-center"><Film className="h-12 w-12 text-zinc-700"/></div>}
+        </div>
+        <div className="mt-2 truncate text-sm font-semibold">{m.title||m.name}</div>
+        <div className="text-xs text-zinc-400">{m.source}{m.rating?" · ★ "+m.rating.toFixed(1):""}</div>
+      </button>)}
+    </div>
+  </section>
+}
+
+function Player({movie,onClose}:{movie:Item;onClose:()=>void}){
+  return <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-3 md:p-8" onClick={onClose}>
+    <div onClick={e=>e.stopPropagation()} className="w-full max-w-5xl">
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <div className="text-lg font-bold">{movie.title||movie.name}</div>
+          <div className="text-xs text-zinc-400">Streaming from {movie.source}</div>
+        </div>
+        <button onClick={onClose} className="rounded-full bg-white/10 p-2"><X/></button>
+      </div>
+      <video className="w-full rounded-lg bg-black shadow-2xl" controls autoPlay playsInline preload="metadata" src={movie.videoUrl}/>
+      <p className="mt-3 text-xs text-zinc-400">Big Buck Bunny is licensed under Creative Commons Attribution. Streamflix is playing the authorized source directly; the video file is not stored on Vercel.</p>
+    </div>
+  </div>
+}
+
+export default function Home(){
+  const[rows,setRows]=useState<Record<string,Item[]>>({});
+  const[hero,setHero]=useState<Item|null>(BIG_BUCK_BUNNY);
+  const[q,setQ]=useState("");
+  const[results,setResults]=useState<Item[]>([]);
+  const[selected,setSelected]=useState<Item|null>(null);
+  const[player,setPlayer]=useState<Item|null>(null);
+  const[list,setList]=useState<Item[]>([]);
+
+  const get=async(s:string,p:string)=>{
+    const r=await fetch("/api/catalog?source="+s+"&path="+encodeURIComponent(p));
+    if(!r.ok)throw Error();
+    return r.json();
+  };
+
+  useEffect(()=>{
+    Promise.all([
+      get("tvmaze","/shows?page=0"),
+      get("jikan","/top/anime?filter=bypopularity&limit=20"),
+      get("archive","q=mediatype%3Amovies%20AND%20collection%3Afeature_films%20AND%20downloads%3A%5B1%20TO%20*%5D&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=description&fl%5B%5D=date&rows=20&page=1&output=json")
+    ]).then(([t,a,i])=>{
+      const A=t.map(tv),B=a.data.map(anime),C=i.response.docs.map(archive);
+      setHero(BIG_BUCK_BUNNY);
+      setRows({"Playable Test Movie":[BIG_BUCK_BUNNY],"TV Discovery":A.slice(0,20),"Anime Spotlight":B,"Public Domain Movies":C});
+    }).catch(console.error)
+  },[]);
+
+  useEffect(()=>{
+    if(!q.trim()){setResults([]);return}
+    const z=setTimeout(()=>Promise.all([
+      get("tvmaze","/search/shows?q="+encodeURIComponent(q)),
+      get("jikan","/anime?q="+encodeURIComponent(q)+"&limit=6")
+    ]).then(([t,a])=>setResults(t.slice(0,6).map((x:any)=>tv(x.show)).concat(a.data.slice(0,6).map(anime))).catch(()=>setResults([])),350);
+    return()=>clearTimeout(z)
+  },[q]);
+
+  const add=(m:Item)=>{if(!list.some(x=>x.id===m.id))setList(list.concat(m))};
+
+  return <main className="min-h-screen bg-[#050505] pb-10">
+    {hero&&<header className="relative min-h-[620px] overflow-hidden">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_30%,#4b0000,transparent_45%)]"/>
+      <nav className="relative z-10 flex items-center justify-between px-5 py-5 md:px-10">
+        <div className="flex items-center gap-2 text-2xl font-black text-red-600"><Clapperboard/>STREAMFLIX</div>
+        <div className="flex items-center gap-3">
+          <div className="relative hidden sm:block"><Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400"/><input value={q} onChange={e=>setQ(e.target.value)} placeholder="Search TV & anime..." className="w-64 rounded-full border border-white/20 bg-black/70 py-2 pl-10 pr-4 text-sm outline-none"/></div>
+          <button className="rounded-full bg-white/10 px-4 py-2 text-sm">My List ({list.length})</button>
+        </div>
+      </nav>
+      <div className="relative z-10 flex min-h-[540px] max-w-3xl flex-col justify-center px-5 md:px-10">
+        <p className="mb-3 text-sm font-bold uppercase tracking-[.25em] text-red-500">PLAYABLE TEST MOVIE</p>
+        <h1 className="text-5xl font-black md:text-7xl">{hero.title||hero.name}</h1>
+        <p className="mt-5 max-w-2xl leading-7 text-zinc-300">{hero.overview}</p>
+        <div className="mt-6 flex gap-3">
+          {hero.videoUrl&&<button onClick={()=>setPlayer(hero)} className="flex items-center gap-2 rounded-md bg-white px-6 py-3 font-bold text-black"><Play className="h-5 w-5 fill-current"/>Play</button>}
+          <button onClick={()=>add(hero)} className="flex items-center gap-2 rounded-md bg-zinc-700 px-6 py-3 font-bold"><Plus/>My List</button>
+        </div>
+      </div>
+    </header>}
+
+    {q&&<section className="absolute left-5 right-5 z-30 mt-[-80px] rounded-xl border border-white/10 bg-zinc-950 p-4 shadow-2xl md:left-auto md:right-10 md:w-[560px]">
+      <h3 className="mb-3 font-bold">Search results</h3>
+      {results.map(m=><button onClick={()=>setSelected(m)} key={String(m.id)} className="flex w-full gap-3 border-b border-white/5 py-2 text-left">
+        <div className="h-16 w-11 rounded bg-zinc-800">{m.poster&&<img src={m.poster} className="h-full w-full object-cover" alt=""/>}</div>
+        <div><div className="font-semibold">{m.name||m.title}</div><div className="text-xs text-zinc-400">{m.source}</div></div>
+      </button>)}
+    </section>}
+
+    <div className="pt-8">{Object.entries(rows).map(([t,items])=><Row key={t} title={t} items={items} onOpen={m=>m.videoUrl?setPlayer(m):setSelected(m)}/>)}</div>
+
+    <footer className="mt-12 border-t border-white/10 px-5 py-8 text-center text-xs text-zinc-500">
+      Streamflix uses TVmaze, Jikan and Internet Archive. Big Buck Bunny is played from Blender's authorized open-movie source.
+    </footer>
+
+    {selected&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-5" onClick={()=>setSelected(null)}>
+      <div onClick={e=>e.stopPropagation()} className="max-h-[90vh] w-full max-w-3xl overflow-auto rounded-xl bg-zinc-900 p-6 shadow-2xl">
+        <span className="rounded-full bg-red-600/20 px-3 py-1 text-xs text-red-400">{selected.source}</span>
+        <h2 className="mt-4 text-3xl font-black">{selected.name||selected.title}</h2>
+        <p className="mt-5 leading-7 text-zinc-200">{selected.overview||"No description available."}</p>
+        <div className="mt-6 flex gap-3">
+          <button onClick={()=>add(selected)} className="rounded-md bg-zinc-700 px-5 py-3"><Plus className="mr-2 inline h-4 w-4"/>My List</button>
+          {selected.url&&<a href={selected.url} target="_blank" rel="noreferrer" className="rounded-md bg-white px-5 py-3 font-bold text-black"><Play className="mr-2 inline h-4 w-4"/>Open Source</a>}
+        </div>
+      </div>
+    </div>}
+
+    {player&&<Player movie={player} onClose={()=>setPlayer(null)}/>}
+  </main>
+}
