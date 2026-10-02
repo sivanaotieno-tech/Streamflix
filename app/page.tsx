@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect,useState} from "react";
-import {Search,Play,Plus,Film,Clapperboard,X} from "lucide-react";
+import {Search,Play,Plus,Film,Clapperboard,X,Radio} from "lucide-react";
 
 type Item={
   id:string|number;
@@ -14,6 +14,7 @@ type Item={
   source:string;
   url?:string;
   videoUrl?:string;
+  videoType?:"mp4"|"webm";
 };
 
 const BIG_BUCK_BUNNY:Item={
@@ -23,12 +24,14 @@ const BIG_BUCK_BUNNY:Item={
   source:"Blender Open Movie",
   year:"2008",
   videoUrl:"https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4",
+  videoType:"mp4",
   url:"https://video.blender.org/videos/watch/bf1f3fb5-b119-4f9f-9930-8e20e892b898"
 };
 
 const tv=(x:any):Item=>({id:"tv-"+x.id,name:x.name,overview:(x.summary||"").replace(/<[^>]*>/g,""),poster:x.image?.original||x.image?.medium,rating:x.rating?.average||0,year:(x.premiered||"").slice(0,4),source:"TVmaze",url:x.url});
 const anime=(x:any):Item=>({id:"anime-"+x.mal_id,name:x.title,overview:x.synopsis||"",poster:x.images?.jpg?.large_image_url||x.images?.jpg?.image_url,rating:x.score||0,year:(x.aired?.from||"").slice(0,4),source:"Jikan",url:x.url});
 const archive=(x:any):Item=>({id:"ia-"+x.identifier,title:x.title||x.identifier,overview:x.description?.replace(/<[^>]*>/g,"")||"Internet Archive movie",source:"Internet Archive",year:(x.date||"").slice(0,4),url:"https://archive.org/details/"+x.identifier});
+const live=(x:any):Item=>({id:"live-"+x.id,title:x.name,overview:[x.country,x.language].filter(Boolean).join(" · "),poster:x.logo||null,source:"iptv-org",videoUrl:x.streams?.[0]?.url});
 
 function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>void}){
   return <section className="mb-10">
@@ -39,7 +42,7 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
     <div className="scrollbar-hide flex gap-3 overflow-x-auto px-5 md:px-10">
       {items.map(m=><button key={String(m.id)} onClick={()=>onOpen(m)} className="card min-w-[150px] text-left md:min-w-[190px]">
         <div className="aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">
-          {m.poster?<img src={m.poster} className="h-full w-full object-cover" alt=""/>:<div className="flex h-full items-center justify-center"><Film className="h-12 w-12 text-zinc-700"/></div>}
+          {m.poster?<img src={m.poster} className="h-full w-full object-cover" alt=""/>:<div className="flex h-full items-center justify-center">{m.source==="iptv-org"?<Radio className="h-12 w-12 text-zinc-700"/>:<Film className="h-12 w-12 text-zinc-700"/>}</div>}
         </div>
         <div className="mt-2 truncate text-sm font-semibold">{m.title||m.name}</div>
         <div className="text-xs text-zinc-400">{m.source}{m.rating?" · ★ "+m.rating.toFixed(1):""}</div>
@@ -79,15 +82,31 @@ export default function Home(){
     return r.json();
   };
 
+  const play=async(m:Item)=>{
+    if(m.videoUrl){setPlayer(m);return}
+    if(m.source==="Internet Archive"){
+      const id=String(m.id).replace(/^ia-/,"");
+      try{
+        const r=await fetch("/api/stream?identifier="+encodeURIComponent(id));
+        if(!r.ok)throw Error();
+        const data=await r.json();
+        setPlayer({...m,videoUrl:data.url,videoType:data.type});
+        return;
+      }catch{setSelected(m);return}
+    }
+    setSelected(m);
+  };
+
   useEffect(()=>{
     Promise.all([
       get("tvmaze","/shows?page=0"),
       get("jikan","/top/anime?filter=bypopularity&limit=20"),
-      get("archive","q=mediatype%3Amovies%20AND%20collection%3Afeature_films%20AND%20downloads%3A%5B1%20TO%20*%5D&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=description&fl%5B%5D=date&rows=20&page=1&output=json")
-    ]).then(([t,a,i])=>{
-      const A=t.map(tv),B=a.data.map(anime),C=i.response.docs.map(archive);
+      get("archive","q=mediatype%3Amovies%20AND%20collection%3Afeature_films%20AND%20downloads%3A%5B1%20TO%20*%5D&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=description&fl%5B%5D=date&rows=20&page=1&output=json"),
+      fetch("/api/live").then(r=>r.json())
+    ]).then(([t,a,i,l])=>{
+      const A=t.map(tv),B=a.data.map(anime),C=i.response.docs.map(archive),L=(l.channels||[]).map(live).filter((x:Item)=>x.videoUrl);
       setHero(BIG_BUCK_BUNNY);
-      setRows({"Playable Test Movie":[BIG_BUCK_BUNNY],"TV Discovery":A.slice(0,20),"Anime Spotlight":B,"Public Domain Movies":C});
+      setRows({"Playable Test Movie":[BIG_BUCK_BUNNY],"Public Live TV":L.slice(0,30),"TV Discovery":A.slice(0,20),"Anime Spotlight":B,"Public Domain Movies":C});
     }).catch(console.error)
   },[]);
 
@@ -125,7 +144,7 @@ export default function Home(){
 
     {q&&<section className="absolute left-5 right-5 z-30 mt-[-80px] rounded-xl border border-white/10 bg-zinc-950 p-4 shadow-2xl md:left-auto md:right-10 md:w-[560px]">
       <h3 className="mb-3 font-bold">Search results</h3>
-      {results.map(m=><button onClick={()=>setSelected(m)} key={String(m.id)} className="flex w-full gap-3 border-b border-white/5 py-2 text-left">
+      {results.map(m=><button onClick={()=>play(m)} key={String(m.id)} className="flex w-full gap-3 border-b border-white/5 py-2 text-left">
         <div className="h-16 w-11 rounded bg-zinc-800">{m.poster&&<img src={m.poster} className="h-full w-full object-cover" alt=""/>}</div>
         <div><div className="font-semibold">{m.name||m.title}</div><div className="text-xs text-zinc-400">{m.source}</div></div>
       </button>)}
@@ -134,7 +153,7 @@ export default function Home(){
     <div className="pt-8">{Object.entries(rows).map(([t,items])=><Row key={t} title={t} items={items} onOpen={m=>m.videoUrl?setPlayer(m):setSelected(m)}/>)}</div>
 
     <footer className="mt-12 border-t border-white/10 px-5 py-8 text-center text-xs text-zinc-500">
-      Streamflix uses TVmaze, Jikan and Internet Archive. Big Buck Bunny is played from Blender's authorized open-movie source.
+      Streamflix uses TVmaze, Jikan, Internet Archive and iptv-org. Playback uses authorized/publicly available source URLs; Streamflix does not host third-party videos.
     </footer>
 
     {selected&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-5" onClick={()=>setSelected(null)}>
