@@ -17,17 +17,6 @@ type Item={
   videoType?:"mp4"|"webm";
 };
 
-const BIG_BUCK_BUNNY:Item={
-  id:"bbb",
-  title:"Big Buck Bunny",
-  overview:"A giant rabbit takes revenge on three mischievous rodents in this Blender Open Movie.",
-  source:"Blender Open Movie",
-  year:"2008",
-  videoUrl:"https://download.blender.org/peach/bigbuckbunny_movies/BigBuckBunny_320x180.mp4",
-  videoType:"mp4",
-  url:"https://video.blender.org/videos/watch/bf1f3fb5-b119-4f9f-9930-8e20e892b898"
-};
-
 const tv=(x:any):Item=>({id:"tv-"+x.id,name:x.name,overview:(x.summary||"").replace(/<[^>]*>/g,""),poster:x.image?.original||x.image?.medium,rating:x.rating?.average||0,year:(x.premiered||"").slice(0,4),source:"TVmaze",url:x.url});
 const anime=(x:any):Item=>({id:"anime-"+x.mal_id,name:x.title,overview:x.synopsis||"",poster:x.images?.jpg?.large_image_url||x.images?.jpg?.image_url,rating:x.score||0,year:(x.aired?.from||"").slice(0,4),source:"Jikan",url:x.url});
 const archive=(x:any):Item=>({id:"ia-"+x.identifier,title:x.title||x.identifier,overview:x.description?.replace(/<[^>]*>/g,"")||"Internet Archive movie",source:"Internet Archive",year:(x.date||"").slice(0,4),url:"https://archive.org/details/"+x.identifier});
@@ -62,14 +51,14 @@ function Player({movie,onClose}:{movie:Item;onClose:()=>void}){
         <button onClick={onClose} className="rounded-full bg-white/10 p-2"><X/></button>
       </div>
       <video className="w-full rounded-lg bg-black shadow-2xl" controls autoPlay playsInline preload="metadata" src={movie.videoUrl}/>
-      <p className="mt-3 text-xs text-zinc-400">Big Buck Bunny is licensed under Creative Commons Attribution. Streamflix is playing the authorized source directly; the video file is not stored on Vercel.</p>
+      <p className="mt-3 text-xs text-zinc-400">Streamflix plays authorized/public source URLs directly; video files are not stored on Vercel.</p>
     </div>
   </div>
 }
 
 export default function Home(){
   const[rows,setRows]=useState<Record<string,Item[]>>({});
-  const[hero,setHero]=useState<Item|null>(BIG_BUCK_BUNNY);
+  const[hero,setHero]=useState<Item|null>(null);
   const[q,setQ]=useState("");
   const[results,setResults]=useState<Item[]>([]);
   const[selected,setSelected]=useState<Item|null>(null);
@@ -105,8 +94,9 @@ export default function Home(){
       fetch("/api/live").then(r=>r.json())
     ]).then(([t,a,i,l])=>{
       const A=t.map(tv),B=a.data.map(anime),C=i.response.docs.map(archive),L=(l.channels||[]).map(live).filter((x:Item)=>x.videoUrl);
-      setHero(BIG_BUCK_BUNNY);
-      setRows({"Playable Test Movie":[BIG_BUCK_BUNNY],"Public Live TV":L.slice(0,30),"TV Discovery":A.slice(0,20),"Anime Spotlight":B,"Public Domain Movies":C});
+      const availableRows:Record<string,Item[]>={"Public Live TV":L.slice(0,30),"TV Discovery":A.slice(0,20),"Anime Spotlight":B,"Public Domain Movies":C};
+      setRows(availableRows);
+      setHero(B[0]||A[0]||C[0]||null);
     }).catch(console.error)
   },[]);
 
@@ -132,11 +122,11 @@ export default function Home(){
         </div>
       </nav>
       <div className="relative z-10 flex min-h-[540px] max-w-3xl flex-col justify-center px-5 md:px-10">
-        <p className="mb-3 text-sm font-bold uppercase tracking-[.25em] text-red-500">PLAYABLE TEST MOVIE</p>
+        <p className="mb-3 text-sm font-bold uppercase tracking-[.25em] text-red-500">FEATURED</p>
         <h1 className="text-5xl font-black md:text-7xl">{hero.title||hero.name}</h1>
         <p className="mt-5 max-w-2xl leading-7 text-zinc-300">{hero.overview}</p>
         <div className="mt-6 flex gap-3">
-          {hero.videoUrl&&<button onClick={()=>setPlayer(hero)} className="flex items-center gap-2 rounded-md bg-white px-6 py-3 font-bold text-black"><Play className="h-5 w-5 fill-current"/>Play</button>}
+          <button onClick={()=>play(hero)} className="flex items-center gap-2 rounded-md bg-white px-6 py-3 font-bold text-black"><Play className="h-5 w-5 fill-current"/>Open</button>
           <button onClick={()=>add(hero)} className="flex items-center gap-2 rounded-md bg-zinc-700 px-6 py-3 font-bold"><Plus/>My List</button>
         </div>
       </div>
