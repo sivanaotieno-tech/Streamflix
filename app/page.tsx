@@ -102,10 +102,7 @@ export default function Home(){
 
   useEffect(()=>{
     if(!q.trim()){setResults([]);return}
-    const z=setTimeout(()=>Promise.all([
-      get("tvmaze","/search/shows?q="+encodeURIComponent(q)),
-      get("jikan","/anime?q="+encodeURIComponent(q)+"&limit=6")
-    ]).then(([t,a])=>setResults(t.slice(0,6).map((x:any)=>tv(x.show)).concat(a.data.slice(0,6).map(anime))).catch(()=>setResults([])),350);
+    const z=setTimeout(()=>{\n      Promise.all([\n        get("tvmaze","/search/shows?q="+encodeURIComponent(q)),\n        get("jikan","/anime?q="+encodeURIComponent(q)+"&limit=6")\n      ])\n        .then(([t,a])=>setResults(t.slice(0,6).map((x:any)=>tv(x.show)).concat(a.data.slice(0,6).map(anime))))\n        .catch(()=>setResults([]));\n    },350);
     return()=>clearTimeout(z)
   },[q]);
 
