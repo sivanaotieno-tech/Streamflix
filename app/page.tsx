@@ -50,7 +50,7 @@ function Player({movie,onClose}:{movie:Item;onClose:()=>void}){
         </div>
         <button onClick={onClose} className="rounded-full bg-white/10 p-2"><X/></button>
       </div>
-      {movie.source==="Jellyfin" && movie.videoUrl ? (
+      {movie.source==="PeerTube" && movie.videoUrl ? (
         <iframe
           className="aspect-video w-full rounded-lg bg-black shadow-2xl"
           src={movie.videoUrl}
@@ -61,7 +61,7 @@ function Player({movie,onClose}:{movie:Item;onClose:()=>void}){
       ) : (
         <video className="w-full rounded-lg bg-black shadow-2xl" controls autoPlay playsInline preload="metadata" src={movie.videoUrl}/>
       )}
-      <p className="mt-3 text-xs text-zinc-400">Streamflix uses the self-hosted Jellyfin streaming API for your uploaded videos. Vercel does not proxy the video bytes.</p>
+      <p className="mt-3 text-xs text-zinc-400">Streamflix uses the self-hosted PeerTube streaming API for your uploaded videos. Vercel does not proxy the video bytes.</p>
     </div>
   </div>
 }
@@ -85,7 +85,7 @@ export default function Home(){
 
   const play=async(m:Item)=>{
     if(m.videoUrl){setPlayer(m);return}
-    if(m.source==="Jellyfin" && m.videoUrl){setPlayer(m);return}
+    if(m.source==="PeerTube" && m.videoUrl){setPlayer(m);return}
     if(m.source==="Internet Archive"){
       const id=String(m.id).replace(/^ia-/,"");
       try{
@@ -106,7 +106,7 @@ export default function Home(){
         get("jikan","/top/anime?filter=bypopularity&limit=20"),
         get("archive","q=mediatype%3Amovies%20AND%20collection%3Afeature_films%20AND%20downloads%3A%5B1%20TO%20*%5D&fl%5B%5D=identifier&fl%5B%5D=title&fl%5B%5D=description&fl%5B%5D=date&rows=20&page=1&output=json"),
         fetch("/api/live").then(r=>{if(!r.ok)throw Error();return r.json()}),
-        fetch("/api/jellyfin").then(r=>{if(!r.ok)throw Error();return r.json()})
+        fetch("/api/peertube").then(r=>{if(!r.ok)throw Error();return r.json()})
       ]);
 
       const t=results[0].status==="fulfilled"?results[0].value:[];
@@ -123,11 +123,11 @@ export default function Home(){
         overview:x.overview||"",
         poster:x.poster||null,
         year:x.year||"",
-        source:"Jellyfin",
+        source:"PeerTube",
         videoUrl:x.streamUrl
       }));
       const availableRows:Record<string,Item[]>={
-        "My Jellyfin Library":J,
+        "My PeerTube Library":J,
         "Public Live TV":L.slice(0,30),
         "TV Discovery":A.slice(0,20),
         "Anime Spotlight":B,
