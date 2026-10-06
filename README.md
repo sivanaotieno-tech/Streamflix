@@ -1,8 +1,8 @@
 # Streamivio
 
-Legitimate entertainment discovery and playback app built with Next.js, React and Tailwind CSS.
+Legitimate entertainment discovery and playback platform built with Next.js, React and Tailwind CSS.
 
-The GitHub repository retains its historical name; the user-facing brand is Streamivio.
+The GitHub repository retains its historical name; the user-facing brand is **Streamivio**.
 
 ## APIs
 
@@ -16,10 +16,11 @@ Streamivio uses multiple sources:
 - **PeerTube** — optional self-hosted video catalog and playback.
 - **OMSS** — optional streaming-source API integration. Set `OMSS_API_URL` to an OMSS-compatible backend; Streamivio requests standardized movie sources from `/v1/movies/:id`.
 
-The OMSS integration follows the open OMSS standard, which supports multiple sources, HLS/MP4 metadata, quality, audio tracks and subtitles.
+## Rights policy
 
-Movie and TV discovery uses PyMovieDb for metadata; it does not provide video streams. Connect Jellyfin or PeerTube for in-site playback of media you are authorized to access. Anime discovery also provides metadata, not video. Streamivio does not use the Internet Archive as a catalog or streaming source.
-The Movies page includes IMDb genre filters; title details include available release, rating, genre, runtime, director, and cast metadata.
+Streamivio must only make video available when the operator has the necessary authorization, owns the content, or the content is legitimately available for the intended use. Metadata/discovery sources do not grant streaming rights. Do not configure Streamivio to resolve, proxy, embed, or distribute unauthorized copyrighted streams.
+
+Movie and TV discovery uses PyMovieDb for metadata; it does not provide video streams. Connect Jellyfin or PeerTube for in-site playback of media you are authorized to access. Anime discovery also provides metadata, not video. Streamivio does not use the Internet Archive as a catalog or streaming source. The Movies page includes IMDb genre filters; title details include available release, rating, genre, runtime, director, and cast metadata.
 
 ## Local development
 
@@ -42,8 +43,4 @@ PyMovieDb scrapes IMDb for metadata. Use it in accordance with IMDb's terms and 
 
 ## Playback model
 
-Metadata search does not stream movies or TV. For in-site playback, connect an authorized self-hosted Jellyfin or PeerTube library. Jellyfin video bytes are relayed through the Next.js server, including byte ranges for seeking; ensure that server can reach Jellyfin and can handle the bandwidth. Read [docs/Jellyfin.md](./docs/Jellyfin.md) for setup and access-control notes.
-
-See [docs/Jellyfin.md](docs/Jellyfin.md) for the free local video-server setup.
-
-Only make video available when you own it, have the necessary authorization, or it is legitimately available for the intended use. Metadata and discovery sources do not grant streaming rights. Do not configure Streamivio to resolve, proxy, embed, or distribute unauthorized copyrighted streams.
+Metadata search does not stream movies or TV. For in-site playback, connect an authorized self-hosted Jellyfin or PeerTube library. Jellyfin video bytes are relayed through the Next.js server, including byte ranges for seeking; ensure that server can reach Jellyfin and can handle the bandwidth. Read [docs/JELLYFIN.md](./docs/JELLYFIN.md) for setup and access-control notes.

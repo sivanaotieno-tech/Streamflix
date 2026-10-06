@@ -313,7 +313,7 @@ export default function Home(){
 
   return <main className="min-h-screen bg-[#141414] pb-12">
     <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-12 items-center gap-5 px-5 md:gap-7 md:px-9">
-      <button onClick={()=>{setBrowse("Home");setQ("")}} className="shrink-0 text-lg font-black tracking-tight text-[#e50914]">STREAMFLIX</button>
+      <button onClick={()=>setBrowse("Home")} className="shrink-0 text-lg font-black tracking-tight text-[#e50914]">STREAMIVIO</button>
       <div className="hidden items-center gap-4 text-xs md:flex">
         {["Home","Movies","TV Shows","Anime","Jellyfin","Live TV","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
       </div>
@@ -387,7 +387,7 @@ export default function Home(){
       </div>
     </header>}
 
-    {loading&&!hero&&!q.trim()&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 text-3xl font-black text-[#e50914]">STREAMFLIX</div><div>Loading your entertainment...</div></div></div>}
+    {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 text-3xl font-black text-[#e50914]">STREAMIVIO</div><div>Loading your entertainment...</div></div></div>}
 
     {!q.trim()&&<div className="relative z-10 mx-auto max-w-[1500px] pt-5">
       {browse==="Jellyfin"&&<div role={jellyfinStatus==="error"?"alert":"status"} className={`mx-5 mb-5 rounded-lg border p-4 text-sm md:mx-9 ${jellyfinStatus==="error"?"border-red-900 bg-red-950/50 text-red-200":"border-white/10 bg-zinc-900 text-zinc-300"}`}>
