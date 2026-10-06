@@ -62,14 +62,14 @@ function Player({movie,onClose}:{movie:Item;onClose:()=>void}){
         <iframe
           className="aspect-video w-full rounded-lg bg-black shadow-2xl"
           src={movie.videoUrl}
-          title={movie.title||movie.name||"Streamflix video"}
+          title={movie.title||movie.name||"Streamivio video"}
           allow="autoplay; fullscreen; picture-in-picture"
           allowFullScreen
         />
       ) : (
         <video className="w-full rounded-lg bg-black shadow-2xl" controls autoPlay playsInline preload="metadata" src={movie.videoUrl}/>
       )}
-      <p className="mt-3 text-xs text-zinc-400">Streamflix uses the self-hosted PeerTube streaming API for your uploaded videos. Vercel does not proxy the video bytes.</p>
+      <p className="mt-3 text-xs text-zinc-400">Streamivio uses the self-hosted PeerTube streaming API for your uploaded videos. Vercel does not proxy the video bytes.</p>
     </div>
   </div>
 }
@@ -201,7 +201,7 @@ export default function Home(){
 
   return <main className="min-h-screen bg-[#141414] pb-12">
     <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-12 items-center gap-5 px-5 md:gap-7 md:px-9">
-      <button onClick={()=>setBrowse("Home")} className="shrink-0 text-lg font-black tracking-tight text-[#e50914]">STREAMFLIX</button>
+      <button onClick={()=>setBrowse("Home")} className="shrink-0 text-lg font-black tracking-tight text-[#e50914]">STREAMIVIO</button>
       <div className="hidden items-center gap-4 text-xs md:flex">
         {["Home","TV Shows","Anime","Movies","Live TV","My List"].map(x=><button key={x} onClick={()=>setBrowse(x)} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
       </div>
@@ -216,7 +216,7 @@ export default function Home(){
       <div className="hero-shade absolute inset-0"/>
       <div className="hero-content relative z-10 flex h-full max-w-xl flex-col justify-end px-5 pb-7 pt-40 sm:px-7 sm:pb-9 md:px-9 md:pb-10">
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[.3em] text-red-300">Featured title</div>
-        <div className="mb-1 text-[10px] font-bold uppercase tracking-[.35em] text-zinc-200">Streamflix selection</div>
+        <div className="mb-1 text-[10px] font-bold uppercase tracking-[.35em] text-zinc-200">Streamivio selection</div>
         <h1 className="max-w-xl text-4xl font-black leading-[.95] tracking-tight text-white drop-shadow-2xl sm:text-5xl md:text-6xl">{hero.title||hero.name}</h1>
         <div className="mt-3 flex items-center gap-2 text-[11px] text-zinc-200 sm:text-xs"><span>{hero.source}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/><span>{hero.year}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/>HD</div>
         <p className="mt-2 max-w-md line-clamp-3 text-xs leading-5 text-zinc-100 drop-shadow sm:text-sm">{hero.overview||"Discover movies, series, anime and live television."}</p>
@@ -224,7 +224,7 @@ export default function Home(){
       </div>
     </header>}
 
-    {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 text-3xl font-black text-[#e50914]">STREAMFLIX</div><div>Loading your entertainment...</div></div></div>}
+    {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 text-3xl font-black text-[#e50914]">STREAMIVIO</div><div>Loading your entertainment...</div></div></div>}
 
     {q&&<section className="relative z-30 mx-5 -mt-8 rounded bg-[#181818] p-5 shadow-2xl md:mx-10">
       <h3 className="mb-4 text-xl font-bold">Search results</h3>
