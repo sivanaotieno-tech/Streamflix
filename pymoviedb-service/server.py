@@ -8,9 +8,32 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 from PyMovieDb import IMDB
+from requests.exceptions import RequestException
 
 
 IMDB_ID_PATTERN = re.compile(r"^tt\d+$")
+IMDB_TYPES = {"movie", "tv"}
+IMDB_GENRES = {
+    "action",
+    "adventure",
+    "animation",
+    "biography",
+    "comedy",
+    "crime",
+    "drama",
+    "family",
+    "fantasy",
+    "history",
+    "horror",
+    "music",
+    "mystery",
+    "romance",
+    "sci_fi",
+    "sport",
+    "thriller",
+    "war",
+    "western",
+}
 
 
 def decode_result(result):
@@ -48,15 +71,22 @@ class MetadataHandler(BaseHTTPRequestHandler):
         try:
             if request.path == "/search":
                 title = query.get("q", [""])[0].strip()
+                title_type = query.get("type", ["movie"])[0].strip().lower()
                 if len(title) < 2 or len(title) > 100:
                     self.send_json(
                         HTTPStatus.BAD_REQUEST,
                         {"error": "Search query must be between 2 and 100 characters"},
                     )
                     return
+                if title_type not in IMDB_TYPES:
+                    self.send_json(
+                        HTTPStatus.BAD_REQUEST,
+                        {"error": "Type must be movie or tv"},
+                    )
+                    return
 
                 imdb = create_imdb_client()
-                data = decode_result(imdb.search(title))
+                data = decode_result(imdb.search(title, tv=title_type == "tv"))
                 results = data.get("results")
                 if not isinstance(results, list):
                     raise ValueError("PyMovieDb returned no results list")
@@ -65,6 +95,37 @@ class MetadataHandler(BaseHTTPRequestHandler):
                     {
                         "result_count": data.get("result_count", len(results)),
                         "results": results[:20],
+                    },
+                )
+                return
+
+            if request.path == "/popular":
+                title_type = query.get("type", ["movie"])[0].strip().lower()
+                genre = query.get("genre", [""])[0].strip().lower()
+                if title_type not in IMDB_TYPES:
+                    self.send_json(
+                        HTTPStatus.BAD_REQUEST,
+                        {"error": "Type must be movie or tv"},
+                    )
+                    return
+                if genre and genre not in IMDB_GENRES:
+                    self.send_json(
+                        HTTPStatus.BAD_REQUEST,
+                        {"error": "Unsupported IMDb genre"},
+                    )
+                    return
+
+                imdb = create_imdb_client()
+                method = imdb.popular_movies if title_type == "movie" else imdb.popular_tv
+                data = decode_result(method(genre=genre or None))
+                results = data.get("results")
+                if not isinstance(results, list):
+                    raise ValueError("PyMovieDb returned no results list")
+                self.send_json(
+                    HTTPStatus.OK,
+                    {
+                        "result_count": data.get("result_count", len(results)),
+                        "results": results[:50],
                     },
                 )
                 return
@@ -89,8 +150,29 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 return
 
             self.send_json(HTTPStatus.NOT_FOUND, {"error": "Route not found"})
-        except (OSError, ValueError, TypeError, KeyError, AttributeError) as error:
+        except (
+            RequestException,
+            OSError,
+            ValueError,
+            TypeError,
+            KeyError,
+            AttributeError,
+            IndexError,
+            UnboundLocalError,
+        ) as error:
             print(f"PyMovieDb request failed: {error}", file=sys.stderr, flush=True)
+            if request.path == "/search":
+                self.send_json(
+                    HTTPStatus.BAD_GATEWAY,
+                    {"result_count": 0, "results": [], "error": "IMDb search is currently unavailable"},
+                )
+                return
+            if request.path == "/title":
+                self.send_json(
+                    HTTPStatus.BAD_GATEWAY,
+                    {"name": None, "description": "The IMDb metadata service is currently unavailable", "error": "IMDb metadata is unavailable"},
+                )
+                return
             self.send_json(
                 HTTPStatus.BAD_GATEWAY,
                 {"error": "IMDb metadata lookup failed"},

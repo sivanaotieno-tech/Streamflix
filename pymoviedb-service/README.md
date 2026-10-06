@@ -1,6 +1,6 @@
 # PyMovieDb metadata service
 
-This local Python service exposes PyMovieDb's IMDb search and title-detail methods to Streamflix. It provides metadata only; it does not resolve or serve video.
+This local Python service exposes PyMovieDb's IMDb search, popular movies, popular TV, and title-detail methods to Streamivio. It provides metadata only; it does not resolve or serve video.
 
 ## Setup
 
@@ -19,6 +19,11 @@ The service listens on `http://127.0.0.1:8001` by default. Configure the Next.js
 PYMOVIEDB_API_URL=http://127.0.0.1:8001
 ```
 
-Restart Next.js after changing environment variables. The service exposes `/health`, `/search?q=title`, and `/title?id=tt1234567`.
+Restart Next.js after changing environment variables. The service exposes:
+
+- `/health`
+- `/search?q=title&type=movie` or `/search?q=title&type=tv`
+- `/popular?type=movie` or `/popular?type=tv`, optionally with a supported IMDb genre such as `genre=action`
+- `/title?id=tt1234567`
 
 PyMovieDb scrapes IMDb pages. Use it in accordance with IMDb's terms and applicable laws; its upstream project describes itself as educational.

@@ -6,12 +6,34 @@ export async function GET(request: NextRequest) {
   const serviceUrl = process.env.PYMOVIEDB_API_URL?.replace(/\/+$/, "");
   const query = request.nextUrl.searchParams.get("q")?.trim();
   const imdbId = request.nextUrl.searchParams.get("id")?.trim();
+  const titleType = request.nextUrl.searchParams.get("type")?.trim() || "movie";
+  const popularType = request.nextUrl.searchParams.get("popular")?.trim();
+  const genre = request.nextUrl.searchParams.get("genre")?.trim();
 
   if (!serviceUrl) {
     return NextResponse.json(
       {error: "PyMovieDb service is not configured"},
       {status: 503}
     );
+  }
+
+  if (!["movie", "tv"].includes(titleType)) {
+    return NextResponse.json({error: "Type must be movie or tv"}, {status: 400});
+  }
+
+  if (popularType && !["movie", "tv"].includes(popularType)) {
+    return NextResponse.json({error: "Popular type must be movie or tv"}, {status: 400});
+  }
+
+  if (popularType && (query || imdbId)) {
+    return NextResponse.json(
+      {error: "Popular titles cannot be combined with a query or IMDb ID"},
+      {status: 400}
+    );
+  }
+
+  if (genre && !/^[a-z_]+$/.test(genre)) {
+    return NextResponse.json({error: "Invalid genre"}, {status: 400});
   }
 
   if (query && imdbId) {
@@ -25,7 +47,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({error: "Invalid IMDb ID"}, {status: 400});
   }
 
-  if (!query && !imdbId) {
+  if (!query && !imdbId && !popularType) {
     return NextResponse.json(
       {error: "A search query or IMDb ID is required"},
       {status: 400}
@@ -39,9 +61,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const endpoint = imdbId
-    ? `${serviceUrl}/title?id=${encodeURIComponent(imdbId)}`
-    : `${serviceUrl}/search?q=${encodeURIComponent(query ?? "")}`;
+  const params = new URLSearchParams();
+  let path: string;
+  if (imdbId) {
+    path = "/title";
+    params.set("id", imdbId);
+  } else if (popularType) {
+    path = "/popular";
+    params.set("type", popularType);
+    if (genre) params.set("genre", genre);
+  } else {
+    path = "/search";
+    params.set("q", query ?? "");
+    params.set("type", titleType);
+  }
+  const endpoint = `${serviceUrl}${path}?${params}`;
 
   try {
     const response = await fetch(endpoint, {
@@ -49,7 +83,13 @@ export async function GET(request: NextRequest) {
       signal: AbortSignal.timeout(20_000)
     });
     const data: unknown = await response.json();
-    return NextResponse.json(data, {status: response.status});
+    if (!response.ok) {
+      return NextResponse.json(
+        data,
+        {status: response.status}
+      );
+    }
+    return NextResponse.json(data, {status: 200});
   } catch (error) {
     console.error("PyMovieDb metadata request failed", error);
     return NextResponse.json(
