@@ -13,8 +13,6 @@ type Item={
   year?:string;
   source:string;
   url?:string;
-  videoUrl?:string;
-  videoType?:"mp4"|"webm";
   imdbId?:string;
   genres?:string[];
   cast?:string[];
@@ -59,22 +57,6 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
   </section>
 }
 
-function Player({movie,onClose}:{movie:Item;onClose:()=>void}){
-  return <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-3 md:p-8" onClick={onClose}>
-    <div onClick={e=>e.stopPropagation()} className="w-full max-w-5xl">
-      <div className="mb-3 flex items-center justify-between">
-        <div>
-          <div className="text-lg font-bold">{movie.title||movie.name}</div>
-          <div className="text-xs text-zinc-400">Your authorized Jellyfin library</div>
-        </div>
-        <button onClick={onClose} className="rounded-full bg-white/10 p-2"><X/></button>
-      </div>
-      <video className="w-full rounded-lg bg-black shadow-2xl" controls autoPlay playsInline preload="metadata" src={movie.videoUrl} crossOrigin="anonymous"/>
-      <p className="mt-3 text-xs text-zinc-400">Only media from your configured, authorized library is played here.</p>
-    </div>
-  </div>
-}
-
 export default function Home(){
   const[rows,setRows]=useState<Record<string,Item[]>>({});
   const[hero,setHero]=useState<Item|null>(null);
@@ -86,13 +68,10 @@ export default function Home(){
   const[searchError,setSearchError]=useState("");
   const[movieGenre,setMovieGenre]=useState("");
   const[movieShelfLoading,setMovieShelfLoading]=useState(false);
-  const[jellyfinStatus,setJellyfinStatus]=useState<"checking"|"connected"|"not-configured"|"error">("checking");
-  const[jellyfinMessage,setJellyfinMessage]=useState("");
   const searchAbort=useRef<AbortController|null>(null);
   const searchTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const[selected,setSelected]=useState<Item|null>(null);
   const[detailError,setDetailError]=useState("");
-  const[player,setPlayer]=useState<Item|null>(null);
   const[list,setList]=useState<Item[]>([]);
   const [browse,setBrowse]=useState("Home");
   const [loading,setLoading]=useState(true);
@@ -104,7 +83,6 @@ export default function Home(){
   };
 
   const play=async(m:Item)=>{
-    if(m.videoUrl){setPlayer(m);return}
     if(m.imdbId){
       void openDetails(m);
       return;
@@ -170,39 +148,15 @@ export default function Home(){
   };
 
   useEffect(()=>{
-    const load=async()=>{
-      const results=await Promise.allSettled([
-        fetch("/api/search?scope=anime&popular=1").then(r=>{if(!r.ok)throw Error();return r.json()}),
-        fetch("/api/jellyfin").then(async r=>{
-          const data=await r.json();
-          if(!r.ok)throw new Error(data.error||"Jellyfin returned "+r.status);
-          return data;
-        })
-      ]);
-
-      const anime=results[0].status==="fulfilled"?results[0].value:{results:[]};
-      const jellyfin=results[1].status==="fulfilled"?results[1].value:{configured:false,enabled:false,videos:[]};
-      const B=(anime.results||[]).map((x:any):Item=>({...x,name:x.title,source:x.source||"Anime"}));
-      const J=(jellyfin.videos||[]).map((x:any):Item=>({
-        id:"jellyfin-"+x.id,title:x.title,name:x.title,overview:x.overview||"",poster:x.poster||null,
-        year:x.year||"",rating:Number(x.rating)||0,genres:Array.isArray(x.genres)?x.genres:[],
-        runtime:x.runtime||null,source:"Jellyfin",videoUrl:x.streamUrl
-      }));
-      if(results[1].status==="rejected"){
-        setJellyfinStatus("error");
-        setJellyfinMessage(results[1].reason instanceof Error?results[1].reason.message:"Could not connect to Jellyfin");
-      }else if(!jellyfin.configured){
-        setJellyfinStatus("not-configured");
-        setJellyfinMessage("Add JELLYFIN_URL and JELLYFIN_API_KEY to the server environment to connect your authorized personal library.");
-      }else{
-        setJellyfinStatus("connected");
-        setJellyfinMessage(J.length?J.length+" authorized-library titles available.":"Connected, but no Movies, Series, or Episodes were found.");
-      }
-      setRows({"My Jellyfin Library":J,"Anime Spotlight":B});
-      setHero(J[0]||null);
-      setLoading(false);
-    };
-    load().catch(()=>setLoading(false));
+    fetch("/api/search?scope=anime&popular=1")
+      .then(async response=>{
+        const data=await response.json();
+        if(!response.ok)throw new Error(data.error||"Anime catalog unavailable");
+        const anime=(Array.isArray(data.results)?data.results:[]).map((x:any):Item=>({...x,name:x.title,source:x.source||"Anime"}));
+        setRows(current=>({...current,"Anime Spotlight":anime}));
+      })
+      .catch(error=>console.error("Anime catalog could not be loaded",error))
+      .finally(()=>setLoading(false));
   },[]);
 
   useEffect(()=>{
@@ -271,7 +225,7 @@ export default function Home(){
     <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-12 items-center gap-5 px-5 md:gap-7 md:px-9">
       <button onClick={()=>setBrowse("Home")} className="shrink-0 text-lg font-black tracking-tight text-[#e50914]">STREAMIVIO</button>
       <div className="hidden items-center gap-4 text-xs md:flex">
-        {["Home","Movies","TV Shows","Anime","Jellyfin","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
+        {["Home","Movies","TV Shows","Anime","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
       </div>
       <div className="ml-auto flex items-center gap-3">
         <form onSubmit={submitSearch} role="search" className="relative flex items-center">
@@ -339,19 +293,14 @@ export default function Home(){
         <div className="mb-1 text-[10px] font-bold uppercase tracking-[.35em] text-zinc-200">Streamivio selection</div>
         <h1 className="max-w-xl text-4xl font-black leading-[.95] tracking-tight text-white drop-shadow-2xl sm:text-5xl md:text-6xl">{hero.title||hero.name}</h1>
         <div className="mt-3 flex items-center gap-2 text-[11px] text-zinc-200 sm:text-xs"><span>{hero.source}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/><span>{hero.year}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/>HD</div>
-        <p className="mt-2 max-w-md line-clamp-3 text-xs leading-5 text-zinc-100 drop-shadow sm:text-sm">{hero.overview||"Discover movies, series, anime and live television."}</p>
-        <div className="mt-4 flex gap-2"><button onClick={()=>play(hero)} className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-zinc-200"><Play className="h-3.5 w-3.5 fill-current"/>Play</button><button onClick={()=>hero.imdbId?void openDetails(hero):setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-xs font-bold text-white hover:bg-white/30"><Plus className="h-3.5 w-3.5"/>More Info</button></div>
+        <p className="mt-2 max-w-md line-clamp-3 text-xs leading-5 text-zinc-100 drop-shadow sm:text-sm">{hero.overview||"Discover movies, series and anime."}</p>
+        <div className="mt-4 flex gap-2"><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-zinc-200"><Film className="h-3.5 w-3.5"/>Explore</button><button onClick={()=>hero.imdbId?void openDetails(hero):setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-xs font-bold text-white hover:bg-white/30"><Plus className="h-3.5 w-3.5"/>More Info</button></div>
       </div>
     </header>}
 
     {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 text-3xl font-black text-[#e50914]">STREAMIVIO</div><div>Loading your entertainment...</div></div></div>}
 
     {!q.trim()&&<div className="relative z-10 mx-auto max-w-[1500px] pt-5">
-      {browse==="Jellyfin"&&<div role={jellyfinStatus==="error"?"alert":"status"} className={`mx-5 mb-5 rounded-lg border p-4 text-sm md:mx-9 ${jellyfinStatus==="error"?"border-red-900 bg-red-950/50 text-red-200":"border-white/10 bg-zinc-900 text-zinc-300"}`}>
-        <div className="font-semibold">{jellyfinStatus==="connected"?"Jellyfin":jellyfinStatus==="checking"?"Connecting to Jellyfin…":jellyfinStatus==="error"?"Jellyfin connection failed":"Connect your Jellyfin server"}</div>
-        <p className="mt-1 text-xs opacity-80">{jellyfinMessage||"Checking the server configuration."}</p>
-        {jellyfinStatus==="not-configured"&&<p className="mt-2 text-xs">Never paste your API key in chat or browser code. Keep it in .env.local on the server.</p>}
-      </div>}
       {browse==="Movies"&&<div className="mb-5 flex flex-wrap items-center gap-2 px-5 md:px-9">
         <span className="mr-1 text-xs text-zinc-400">Genre</span>
         {MOVIE_GENRES.map(([label,value])=><button
@@ -364,14 +313,14 @@ export default function Home(){
         {movieShelfLoading&&<LoaderCircle aria-label="Loading movies" className="h-4 w-4 animate-spin text-zinc-400"/>}
       </div>}
       {browse==="My List"
-        ? <Row title="My List" items={list} onOpen={m=>m.videoUrl?setPlayer(m):play(m)}/>
+        ? <Row title="My List" items={list} onOpen={play}/>
         : Object.entries(rows)
           .filter(([title])=>browse==="Home"
             || (browse==="TV Shows"&&title==="Popular TV")
             || (browse==="Anime"&&title==="Anime Spotlight")
             || (browse==="Movies"&&title==="Popular Movies")
-            || (browse==="Jellyfin"&&title==="My Jellyfin Library"))
-          .map(([title,items])=><Row key={title} title={title} items={items} onOpen={m=>m.videoUrl?setPlayer(m):play(m)}/>)}
+)
+          .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
     </div>}
 
     {selected&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5" onClick={()=>setSelected(null)}><div className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-lg bg-[#181818] p-6" onClick={e=>e.stopPropagation()}>
@@ -381,7 +330,7 @@ export default function Home(){
         {selected.year&&<span>{selected.year}</span>}{selected.contentRating&&<span>{selected.contentRating}</span>}{selected.runtime&&<span>{selected.runtime}</span>}{selected.rating&&<span>★ {selected.rating.toFixed(1)}</span>}
       </div>}
       {selected.genres&&selected.genres.length>0&&<p className="mt-3 text-sm text-zinc-400">{selected.genres.join(" · ")}</p>}
-      <p className="mt-3 text-zinc-300">{selected.overview||"This title does not currently expose a browser-playable stream."}</p>
+      <p className="mt-3 text-zinc-300">{selected.overview||"This title is available for discovery only. Streamivio does not provide playback until distribution rights are secured."}</p>
       {selected.directors&&selected.directors.length>0&&<p className="mt-3 text-sm text-zinc-400"><span className="text-zinc-200">Director:</span> {selected.directors.join(", ")}</p>}
       {selected.cast&&selected.cast.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Cast:</span> {selected.cast.join(", ")}</p>}
       {detailError&&<p role="status" className="mt-4 text-sm text-amber-300">{detailError}</p>}
@@ -389,6 +338,5 @@ export default function Home(){
         <button onClick={()=>setSelected(null)} className="rounded bg-zinc-700 px-5 py-2 font-bold">Close</button>
       </div>
     </div></div>}
-    {player&&<Player movie={player} onClose={()=>setPlayer(null)}/>}
   </main>
 }
