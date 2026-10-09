@@ -333,6 +333,7 @@ export default function Home(){
           {q&&<button type="button" onClick={()=>setQ("")} aria-label="Clear search" className="absolute right-2 text-zinc-400 hover:text-white"><X className="h-3.5 w-3.5"/></button>}
         </form>
         <button onClick={()=>{setBrowse("My List");setQ("")}} className="hidden text-xs font-semibold sm:block">My List</button>
+        <a href="/subscribe" className="rounded-full bg-[#e50914] px-3 py-2 text-[11px] font-bold text-white hover:bg-red-700">Subscribe</a>
       </div>
     </nav>
 
