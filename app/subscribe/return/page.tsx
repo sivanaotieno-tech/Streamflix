@@ -2,27 +2,27 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 
 export default function SubscriptionReturnPage() {
-  const params = useSearchParams();
-  const session = params.get("session");
+  const [session, setSession] = useState<string | null>(null);
   const [state, setState] = useState<"checking" | "active" | "pending" | "failed">("checking");
   const [message, setMessage] = useState("Verifying your payment directly with the payment provider…");
 
   useEffect(() => {
+    const sessionFromUrl = new URLSearchParams(window.location.search).get("session");
+    setSession(sessionFromUrl);
     let cancelled = false;
     let attempts = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     async function check() {
-      if (!session) {
+      if (!sessionFromUrl) {
         setState("failed");
         setMessage("This checkout link is missing its session reference. Please return to subscriptions and try again.");
         return;
       }
       try {
-        const response = await fetch(`/api/billing/status?session=${encodeURIComponent(session)}`, { cache: "no-store" });
+        const response = await fetch(`/api/billing/status?session=${encodeURIComponent(sessionFromUrl)}`, { cache: "no-store" });
         const data = await response.json();
         if (cancelled) return;
         if (response.status === 404 || data.status === "not_found") {
@@ -59,7 +59,7 @@ export default function SubscriptionReturnPage() {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [session]);
+  }, []);
 
   const active = state === "active";
   const failed = state === "failed";
