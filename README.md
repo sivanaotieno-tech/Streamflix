@@ -44,6 +44,19 @@ Payments use IntaSend hosted checkout. For KES, IntaSend can display M-Pesa and 
 - The catalog's metadata rows are not marked as premium content, so this integration does not gate existing catalog browsing or claim any titles are licensed. Gate only playback for content explicitly tagged as authorized premium content once that catalog entitlement model exists.
 - Do not commit `.env.local` or put secret values in client-side code. Never enable live payments until you have permission to sell the service and the relevant content rights.
 
+## Vercel multi-service deployment
+
+The root `vercel.json` configures two services in one Vercel project:
+
+- **`app`** — the public Next.js website and its `/api/*` routes.
+- **`pymoviedb-service`** — the internal Python metadata backend. It has no public rewrite, so requests reach it only through the app's service binding.
+
+The `app` service declares a binding to `pymoviedb-service`. Vercel injects the backend base URL into `PYMOVIEDB_SERVICE_URL` at runtime. Do not create a Vercel environment variable with that name manually. The app's IMDb routes use this binding first; `PYMOVIEDB_API_URL` remains as a local-development fallback.
+
+**Vercel project setup:** in Project Settings → Build and Deployment, set the project's framework to **Services**. Services-mode deployments require this project setting in addition to `vercel.json`. Then deploy the `main` branch. To test the services together locally, use a current Vercel CLI and run `vercel dev` from the repository root.
+
+Public rewrites intentionally send all public paths to `app`; the Python metadata service remains internal. The Python entrypoint is `server:handler`, with the handler exported from `pymoviedb-service/server.py`.
+
 ## Local development
 
 1. Copy `.env.example` to `.env.local`.
