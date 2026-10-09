@@ -22,6 +22,35 @@ Streamivio must only make video available when the operator has the necessary au
 
 Movie and TV discovery uses PyMovieDb for metadata; it does not provide video streams. Connect Jellyfin or PeerTube for in-site playback of media you are authorized to access. Anime discovery also provides metadata, not video. Streamivio does not use the Internet Archive as a catalog or streaming source. The Movies page includes IMDb genre filters; title details include available release, rating, genre, runtime, director, and cast metadata.
 
+
+## Subscriptions and payments
+
+The subscription UI is at `/subscribe`. It offers Streamivio Plus (KSh 299/month or KSh 2,990/year) and Streamivio Premium (KSh 499/month or KSh 4,990/year). These are configurable starter prices, not a statement that licensed premium titles are already available.
+
+Payments use IntaSend hosted checkout. For KES, IntaSend can display M-Pesa and card methods enabled on your merchant account. A customer selects a plan and period, then leaves Streamivio for the hosted checkout page. Streamivio does **not** activate a membership based on the browser redirect: the status route checks the invoice with IntaSend and verifies the invoice ID, amount, currency and unique order reference. The webhook also validates the configured challenge and independently checks the payment with IntaSend. Subscription records are stored in Upstash Redis, not process memory.
+
+### Configure locally and on Vercel
+
+1. Create an IntaSend account at [IntaSend Developers](https://developers.intasend.com/) and use sandbox API keys first. In **Settings → API Keys**, copy the publishable key and secret key. Keep the secret key server-side.
+2. Create an Upstash Redis database and copy its **REST URL** and **REST token**.
+3. Copy `.env.example` to `.env.local` locally, then set:
+   - `INTASEND_PUBLISHABLE_KEY`
+   - `INTASEND_SECRET_KEY`
+   - `INTASEND_WEBHOOK_CHALLENGE` (use a long random secret; it must match the dashboard challenge)
+   - `UPSTASH_REDIS_REST_URL`
+   - `UPSTASH_REDIS_REST_TOKEN`
+   - `NEXT_PUBLIC_APP_URL` (the canonical public HTTPS URL, without a trailing slash)
+4. Add the same values in **Vercel → Project → Settings → Environment Variables** for Preview and Production as appropriate, then redeploy.
+5. In IntaSend, open **Settings → Webhooks → New**. Set the endpoint to `https://YOUR-DOMAIN/api/billing/webhook`, use the exact same challenge as `INTASEND_WEBHOOK_CHALLENGE`, and subscribe to `collection_event`. Test failed, pending and completed transactions using sandbox keys before going live.
+6. When tests pass, switch to live IntaSend keys, verify your merchant account and checkout methods, and redeploy.
+
+### Important billing limitations
+
+- Checkout charges one selected billing period at a time. Renewal is **manual**; this implementation does not silently auto-charge a saved card. IntaSend's separate recurring-subscription API is for recurring card billing, and should be integrated only after its customer/plan setup and subscription webhooks are explicitly configured. Do not assume M-Pesa supports automatic recurring charges.
+- The site currently has no full account/login system. After a verified checkout, a secure HTTP-only membership cookie identifies that browser. For a public commercial launch, add proper user accounts, account recovery, membership management/cancellation, refund and privacy flows, rate limiting, monitoring, and support processes before relying on this cookie-only model for a full customer account.
+- The catalog's metadata rows are not marked as premium content, so this integration does not gate existing catalog browsing or claim any titles are licensed. Gate only playback for content explicitly tagged as authorized premium content once that catalog entitlement model exists.
+- Do not commit `.env.local` or put secret values in client-side code. Never enable live payments until you have permission to sell the service and the relevant content rights.
+
 ## Local development
 
 1. Copy `.env.example` to `.env.local`.
