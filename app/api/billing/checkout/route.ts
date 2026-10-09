@@ -78,7 +78,7 @@ export async function POST(request: Request) {
       amount,
       currency: "KES",
       status: "PENDING",
-      invoiceId: checkout.invoice_id || checkout.id,
+      invoiceId: checkout.invoice_id,
       checkoutUrl: checkout.url,
       createdAt: new Date().toISOString(),
     };
