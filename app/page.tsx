@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect,useRef,useState,type FormEvent} from "react";
-import {Search,Play,Plus,Film,X,Radio,LoaderCircle} from "lucide-react";
+import {Search,Play,Plus,Film,X,LoaderCircle} from "lucide-react";
 
 type Item={
   id:string|number;
@@ -23,7 +23,6 @@ type Item={
   contentRating?:string|null;
 };
 
-const live=(x:any):Item=>({id:"live-"+x.id,title:x.name,overview:[x.country,x.language].filter(Boolean).join(" · "),poster:x.logo||null,source:"iptv-org",videoUrl:x.streams?.[0]?.url});
 const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["Anime","anime"],["TV Shows","tv"]] as const;
 const MOVIE_GENRES=[["All",""],["Action","action"],["Comedy","comedy"],["Drama","drama"],["Horror","horror"],["Romance","romance"],["Sci-Fi","sci_fi"],["Thriller","thriller"]] as const;
 const imdbItem=(x:any):Item=>({
@@ -49,7 +48,7 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
     <div className="scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-3 md:gap-3 md:px-9">
       {items.map(m=><button key={String(m.id)} onClick={()=>onOpen(m)} className="catalog-card group min-w-[38vw] text-left sm:min-w-[25vw] md:min-w-[18vw]">
         <div className="relative aspect-video overflow-hidden rounded-lg bg-zinc-900">
-          {m.poster?<img src={m.poster} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" alt={m.title||m.name||""}/>:<div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-black">{m.source==="iptv-org"?<Radio className="h-12 w-12 text-zinc-700"/>:<Film className="h-12 w-12 text-zinc-700"/>}</div>}
+          {m.poster?<img src={m.poster} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" alt={m.title||m.name||""}/>:<div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-black"><Film className="h-12 w-12 text-zinc-700"/></div>}
           <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10"/>
           <span className="absolute bottom-2 left-2 right-2 truncate text-xs font-bold drop-shadow md:bottom-3 md:left-3 md:text-sm">{m.title||m.name}</span>
           <span className="poster-play absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100"><span className="rounded-full border border-white/80 bg-black/60 p-2"><Play className="h-4 w-4 fill-white"/></span></span>
@@ -188,65 +187,36 @@ export default function Home(){
     const load=async()=>{
       const results=await Promise.allSettled([
         fetch("/api/search?scope=anime&popular=1").then(r=>{if(!r.ok)throw Error();return r.json()}),
-        fetch("/api/live").then(r=>{if(!r.ok)throw Error();return r.json()}),
-        fetch("/api/peertube").then(r=>{if(!r.ok)throw Error();return r.json()}),
         fetch("/api/jellyfin").then(async r=>{
           const data=await r.json();
-          if(!r.ok)throw new Error(data.error||`Jellyfin returned ${r.status}`);
+          if(!r.ok)throw new Error(data.error||"Jellyfin returned "+r.status);
           return data;
         })
       ]);
 
-      const a=results[0].status==="fulfilled"?results[0].value:{results:[]};
-      const l=results[1].status==="fulfilled"?results[1].value:{channels:[]};
-      const p=results[2].status==="fulfilled"?results[2].value:{videos:[]};
-      const jellyfin=results[3].status==="fulfilled"?results[3].value:{configured:false,enabled:false,videos:[]};
-
-      const B=(a.results||[]).map((x:any):Item=>({...x,name:x.title,source:x.source||"Anime"})),L=(l.channels||[]).map(live).filter((x:Item)=>x.videoUrl);
-      const P=(p.videos||[]).map((x:any):Item=>({
-        id:"peertube-"+x.id,
-        title:x.title,
-        name:x.title,
-        overview:x.overview||"",
-        poster:x.poster||null,
-        year:x.year||"",
-        source:"PeerTube",
-        videoUrl:x.streamUrl
-      }));
+      const anime=results[0].status==="fulfilled"?results[0].value:{results:[]};
+      const jellyfin=results[1].status==="fulfilled"?results[1].value:{configured:false,enabled:false,videos:[]};
+      const B=(anime.results||[]).map((x:any):Item=>({...x,name:x.title,source:x.source||"Anime"}));
       const J=(jellyfin.videos||[]).map((x:any):Item=>({
-        id:"jellyfin-"+x.id,
-        title:x.title,
-        name:x.title,
-        overview:x.overview||"",
-        poster:x.poster||null,
-        year:x.year||"",
-        rating:Number(x.rating)||0,
-        genres:Array.isArray(x.genres)?x.genres:[],
-        runtime:x.runtime||null,
-        source:"Jellyfin",
-        videoUrl:x.streamUrl
+        id:"jellyfin-"+x.id,title:x.title,name:x.title,overview:x.overview||"",poster:x.poster||null,
+        year:x.year||"",rating:Number(x.rating)||0,genres:Array.isArray(x.genres)?x.genres:[],
+        runtime:x.runtime||null,source:"Jellyfin",videoUrl:x.streamUrl
       }));
-      if(results[3].status==="rejected"){
+      if(results[1].status==="rejected"){
         setJellyfinStatus("error");
-        setJellyfinMessage(results[3].reason instanceof Error?results[3].reason.message:"Could not connect to Jellyfin");
+        setJellyfinMessage(results[1].reason instanceof Error?results[1].reason.message:"Could not connect to Jellyfin");
       }else if(!jellyfin.configured){
         setJellyfinStatus("not-configured");
-        setJellyfinMessage("Add JELLYFIN_URL and JELLYFIN_API_KEY to the website's .env.local file, then restart Next.js.");
+        setJellyfinMessage("Add JELLYFIN_URL and JELLYFIN_API_KEY to the server environment to connect your authorized personal library.");
       }else{
         setJellyfinStatus("connected");
-        setJellyfinMessage(J.length?`${J.length} Jellyfin titles available.`:"Connected, but no playable Movies, Series, or Episodes were found.");
+        setJellyfinMessage(J.length?J.length+" authorized-library titles available.":"Connected, but no Movies, Series, or Episodes were found.");
       }
-      const availableRows:Record<string,Item[]>={
-        "My Jellyfin Library":J,
-        "My PeerTube Library":P,
-        "Public Live TV":L.slice(0,30),
-        "Anime Spotlight":B,
-      };
-      setRows(availableRows);
-      setHero(J[0]||P[0]||null);
+      setRows({"My Jellyfin Library":J,"Anime Spotlight":B});
+      setHero(J[0]||null);
       setLoading(false);
     };
-    load().catch(()=>setLoading(false))
+    load().catch(()=>setLoading(false));
   },[]);
 
   useEffect(()=>{
@@ -315,7 +285,7 @@ export default function Home(){
     <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-12 items-center gap-5 px-5 md:gap-7 md:px-9">
       <button onClick={()=>setBrowse("Home")} className="shrink-0 text-lg font-black tracking-tight text-[#e50914]">STREAMIVIO</button>
       <div className="hidden items-center gap-4 text-xs md:flex">
-        {["Home","Movies","TV Shows","Anime","Jellyfin","Live TV","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
+        {["Home","Movies","TV Shows","Anime","Jellyfin","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
       </div>
       <div className="ml-auto flex items-center gap-3">
         <form onSubmit={submitSearch} role="search" className="relative flex items-center">
@@ -414,8 +384,7 @@ export default function Home(){
             || (browse==="TV Shows"&&title==="Popular TV")
             || (browse==="Anime"&&title==="Anime Spotlight")
             || (browse==="Movies"&&title==="Popular Movies")
-            || (browse==="Jellyfin"&&title==="My Jellyfin Library")
-            || (browse==="Live TV"&&title==="Public Live TV"))
+            || (browse==="Jellyfin"&&title==="My Jellyfin Library"))
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={m=>m.videoUrl?setPlayer(m):play(m)}/>)}
     </div>}
 
