@@ -52,10 +52,10 @@ export default function SubscribePage() {
   const amount = period === "monthly" ? selectedPlan.monthly : selectedPlan.yearly;
 
   return (
-    <main className="min-h-screen bg-[#101010] px-4 pb-16 pt-7 text-white sm:px-8">
+    <main className="min-h-screen bg-[#141414] px-4 pb-16 pt-5 text-white sm:px-8">
       <div className="mx-auto max-w-6xl">
-        <nav className="mb-10 flex items-center justify-between">
-          <Link href="/" className="text-xl font-black tracking-tight text-[#e50914]">STREAMIVIO</Link>
+        <nav className="site-nav -mx-4 mb-12 flex items-center justify-between px-4 py-4 sm:-mx-8 sm:px-8">
+          <Link href="/" className="text-2xl font-black tracking-[-.06em] text-[#e50914]">STREAMIVIO</Link>
           <Link href="/" className="text-sm text-zinc-300 hover:text-white">← Back to browse</Link>
         </nav>
 
@@ -80,7 +80,7 @@ export default function SubscribePage() {
 
         <div className="grid gap-5 md:grid-cols-2">
           {plans.map((item) => (
-            <button key={item.id} type="button" onClick={() => setPlan(item.id)} className={`rounded-2xl border p-6 text-left transition sm:p-8 ${plan === item.id ? "border-red-500 bg-red-950/20 ring-1 ring-red-500/40" : "border-white/10 bg-white/[.03] hover:border-white/30"}`}>
+            <button key={item.id} type="button" onClick={() => setPlan(item.id)} className={`rounded-lg border p-6 text-left transition sm:p-8 ${plan === item.id ? "border-red-500 bg-[#202020] ring-1 ring-red-500/40" : "border-white/10 bg-[#1b1b1b] hover:border-white/30"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h2 className="text-2xl font-extrabold">{item.name}</h2>
@@ -99,7 +99,7 @@ export default function SubscribePage() {
           ))}
         </div>
 
-        <section className="mx-auto mt-8 max-w-2xl rounded-2xl border border-white/10 bg-[#191919] p-5 sm:p-8">
+        <section className="mx-auto mt-8 max-w-2xl rounded-lg border border-white/10 bg-[#1b1b1b] p-5 sm:p-8">
           <h2 className="text-xl font-bold">Continue to secure checkout</h2>
           <p className="mt-2 text-sm text-zinc-400">Selected: {selectedPlan.name} · {period} · KSh {amount.toLocaleString("en-KE")}. Checkout offers the payment methods enabled for your IntaSend account, including M-Pesa and cards when enabled.</p>
           <form onSubmit={startCheckout} className="mt-6 grid gap-4 sm:grid-cols-2">
