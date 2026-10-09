@@ -15,8 +15,7 @@
     },
     "pymoviedb-service": {
       "root": "pymoviedb-service",
-      "runtime": "python",
-      "entrypoint": "server.py"
+      "entrypoint": "server:handler"
     }
   },
   "rewrites": [
