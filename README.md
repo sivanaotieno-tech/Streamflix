@@ -9,13 +9,12 @@ The GitHub repository retains its historical name; the user-facing brand is **St
 - **PyMovieDb** — movie and TV metadata through the local Python service in `pymoviedb-service/`.
 - **Kitsu** — anime metadata and discovery.
 - **`/api/search`** — searches metadata catalogs; metadata is not a video stream.
-- **Jellyfin** — optional personal/self-hosted media library. Connect only media you own or are authorized to distribute.
 
 ## Rights policy
 
 Streamivio is an entertainment discovery platform, not a third-party stream aggregator. The site must only play media that you own or have explicit rights to distribute. Movie, TV and anime metadata does not grant streaming rights.
 
-Unverified third-party stream directories, external stream-resolver backends, public live-TV stream lists, and remote PeerTube catalogs have been removed. The site does not resolve or embed movie streams from third-party sources. Metadata results are for discovery only. Optional Jellyfin playback is intended for your own authorized library; do not expose it publicly without proper authentication and access controls.
+Unverified third-party stream directories, external stream-resolver backends, public live-TV stream lists, remote PeerTube catalogs, personal media-server integrations, and all in-site video playback have been removed. Streamivio is metadata-only and does not resolve, embed, proxy, or play video streams. Metadata results are for discovery only.
 
 ## Subscriptions and payments
 
@@ -48,7 +47,7 @@ Payments use IntaSend hosted checkout. For KES, IntaSend can display M-Pesa and 
 ## Local development
 
 1. Copy `.env.example` to `.env.local`.
-2. Configure the PyMovieDb service URL and optionally set `JELLYFIN_URL` and `JELLYFIN_API_KEY` in `.env.local` for your Jellyfin library.
+2. Configure the PyMovieDb service URL in `.env.local`.
 3. Start the PyMovieDb service in a separate terminal:
 
    ```powershell
@@ -66,4 +65,4 @@ PyMovieDb scrapes IMDb for metadata. Use it in accordance with IMDb's terms and 
 
 ## Playback model
 
-Movie, TV and anime search is metadata-only and does not supply video. In-site playback is available only through an optional Jellyfin library that you control and are authorized to use. Keep the Jellyfin API key server-side and protect the site with authentication or a private network before exposing it to anyone else.
+Movie, TV and anime search is metadata-only and does not supply video. Streamivio currently provides metadata and discovery only. No video playback, stream embedding, personal media server, or third-party streaming integration is included. Playback may be added only after the appropriate distribution rights and authorized content delivery are in place.
