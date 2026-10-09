@@ -60,31 +60,17 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
 }
 
 function Player({movie,onClose}:{movie:Item;onClose:()=>void}){
-  const isEmbeddedPage=/\/videos\/embed\/|\/embed\//i.test(String(movie.videoUrl||""));
-  const isDirectStream=Boolean(movie.videoUrl)&&!isEmbeddedPage;
-
   return <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/95 p-3 md:p-8" onClick={onClose}>
     <div onClick={e=>e.stopPropagation()} className="w-full max-w-5xl">
       <div className="mb-3 flex items-center justify-between">
         <div>
           <div className="text-lg font-bold">{movie.title||movie.name}</div>
-          <div className="text-xs text-zinc-400">Streaming in-app from {movie.source}</div>
+          <div className="text-xs text-zinc-400">Your authorized Jellyfin library</div>
         </div>
         <button onClick={onClose} className="rounded-full bg-white/10 p-2"><X/></button>
       </div>
-      {isDirectStream ? (
-        <video className="w-full rounded-lg bg-black shadow-2xl" controls autoPlay playsInline preload="metadata" src={movie.videoUrl} crossOrigin="anonymous"/>
-      ) : (
-        <iframe
-          className="aspect-video w-full rounded-lg bg-black shadow-2xl"
-          src={movie.videoUrl}
-          title={movie.title||movie.name||"Streamivio video"}
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowFullScreen
-          referrerPolicy="strict-origin-when-cross-origin"
-        />
-      )}
-      <p className="mt-3 text-xs text-zinc-400">Streamivio plays media inside the site instead of sending you to a separate video page.</p>
+      <video className="w-full rounded-lg bg-black shadow-2xl" controls autoPlay playsInline preload="metadata" src={movie.videoUrl} crossOrigin="anonymous"/>
+      <p className="mt-3 text-xs text-zinc-400">Only media from your configured, authorized library is played here.</p>
     </div>
   </div>
 }
