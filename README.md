@@ -6,22 +6,16 @@ The GitHub repository retains its historical name; the user-facing brand is **St
 
 ## APIs
 
-Streamivio uses multiple sources:
-
-- **PyMovieDb** — IMDb-backed popular movie and TV catalogs, search, and title details through the local Python service in `pymoviedb-service/`.
-- **Kitsu** — anime metadata, popular anime, and search.
-- **`/api/search`** — debounced, category-filterable search across PyMovieDb movies/TV and Kitsu anime. Results from healthy sources remain available when another source is offline.
-- **iptv-org** — publicly listed live-TV channels and streams through `/api/live`.
-- **Jellyfin** — optional self-hosted movie/TV library shown on the Jellyfin page and played in Streamivio through a server-side, range-aware proxy.
-- **PeerTube** — optional self-hosted video catalog and playback.
-- **OMSS** — optional streaming-source API integration. Set `OMSS_API_URL` to an OMSS-compatible backend; Streamivio requests standardized movie sources from `/v1/movies/:id`.
+- **PyMovieDb** — movie and TV metadata through the local Python service in `pymoviedb-service/`.
+- **Kitsu** — anime metadata and discovery.
+- **`/api/search`** — searches metadata catalogs; metadata is not a video stream.
+- **Jellyfin** — optional personal/self-hosted media library. Connect only media you own or are authorized to distribute.
 
 ## Rights policy
 
-Streamivio must only make video available when the operator has the necessary authorization, owns the content, or the content is legitimately available for the intended use. Metadata/discovery sources do not grant streaming rights. Do not configure Streamivio to resolve, proxy, embed, or distribute unauthorized copyrighted streams.
+Streamivio is an entertainment discovery platform, not a third-party stream aggregator. The site must only play media that you own or have explicit rights to distribute. Movie, TV and anime metadata does not grant streaming rights.
 
-Movie and TV discovery uses PyMovieDb for metadata; it does not provide video streams. Connect Jellyfin or PeerTube for in-site playback of media you are authorized to access. Anime discovery also provides metadata, not video. Streamivio does not use the Internet Archive as a catalog or streaming source. The Movies page includes IMDb genre filters; title details include available release, rating, genre, runtime, director, and cast metadata.
-
+Unverified third-party stream directories, external stream-resolver backends, public live-TV stream lists, and remote PeerTube catalogs have been removed. The site does not resolve or embed movie streams from third-party sources. Metadata results are for discovery only. Optional Jellyfin playback is intended for your own authorized library; do not expose it publicly without proper authentication and access controls.
 
 ## Subscriptions and payments
 
@@ -72,4 +66,4 @@ PyMovieDb scrapes IMDb for metadata. Use it in accordance with IMDb's terms and 
 
 ## Playback model
 
-Metadata search does not stream movies or TV. For in-site playback, connect an authorized self-hosted Jellyfin or PeerTube library. Jellyfin video bytes are relayed through the Next.js server, including byte ranges for seeking; ensure that server can reach Jellyfin and can handle the bandwidth. Read [docs/JELLYFIN.md](./docs/JELLYFIN.md) for setup and access-control notes.
+Movie, TV and anime search is metadata-only and does not supply video. In-site playback is available only through an optional Jellyfin library that you control and are authorized to use. Keep the Jellyfin API key server-side and protect the site with authentication or a private network before exposing it to anyone else.
