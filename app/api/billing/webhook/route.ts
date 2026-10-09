@@ -37,14 +37,14 @@ export async function POST(request: Request) {
     const sessionToken = await findSessionByReference(event.api_ref);
     if (!sessionToken) return NextResponse.json({ received: true, ignored: true });
     let record = await getRecord(sessionToken);
-    if (!record || record.apiRef !== event.api_ref || record.invoiceId !== event.invoice_id) {
+    if (!record || record.apiRef !== event.api_ref || (record.invoiceId && record.invoiceId !== event.invoice_id)) {
       return NextResponse.json({ received: true, ignored: true });
     }
 
     // Do not trust webhook state alone: confirm invoice state, amount, currency and reference with IntaSend.
-    const result = await intasendStatus(record.invoiceId);
+    const result = await intasendStatus(event.invoice_id);
     const invoice = result.invoice;
-    if (!invoice || invoice.invoice_id !== record.invoiceId ||
+    if (!invoice || invoice.invoice_id !== event.invoice_id ||
         invoice.api_ref !== record.apiRef ||
         invoice.currency !== record.currency ||
         Number(invoice.value) !== record.amount) {
@@ -55,6 +55,7 @@ export async function POST(request: Request) {
       const paidAt = new Date();
       record = {
         ...record,
+        invoiceId: event.invoice_id,
         status: "ACTIVE",
         paidAt: paidAt.toISOString(),
         expiresAt: addPeriod(paidAt, record.period),
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
       await updateRecord(record);
     } else if (invoice.state === "FAILED" || invoice.state === "CANCELED") {
       if (record.status === "PENDING") {
-        record = { ...record, status: invoice.state };
+        record = { ...record, invoiceId: event.invoice_id, status: invoice.state };
         await updateRecord(record);
       }
     }
