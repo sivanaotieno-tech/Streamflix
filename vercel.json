@@ -1,0 +1,30 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": ".",
+      "framework": "nextjs",
+      "bindings": [
+        {
+          "type": "service",
+          "service": "pymoviedb-service",
+          "format": "url",
+          "env": "PYMOVIEDB_SERVICE_URL"
+        }
+      ]
+    },
+    "pymoviedb-service": {
+      "root": "pymoviedb-service",
+      "runtime": "python",
+      "entrypoint": "server.py"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
+  ]
+}
