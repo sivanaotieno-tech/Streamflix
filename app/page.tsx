@@ -39,13 +39,13 @@ const imdbItem=(x:any):Item=>({
 function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>void}){
   if(items.length===0)return null;
   return <section className="mb-7">
-    <div className="mb-2 flex items-center justify-between px-5 md:px-9">
+    <div className="mb-3 flex items-center justify-between px-4 md:px-12">
       <h2 className="text-sm font-bold md:text-base">{title}</h2>
       <span className="text-[10px] text-zinc-500">{items.length} titles</span>
     </div>
-    <div className="scrollbar-hide flex gap-2 overflow-x-auto px-5 pb-3 md:gap-3 md:px-9">
-      {items.map(m=><button key={String(m.id)} onClick={()=>onOpen(m)} className="catalog-card group min-w-[38vw] text-left sm:min-w-[25vw] md:min-w-[18vw]">
-        <div className="relative aspect-video overflow-hidden rounded-lg bg-zinc-900">
+    <div className="scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-5 md:gap-3 md:px-12">
+      {items.map(m=><button key={String(m.id)} onClick={()=>onOpen(m)} className="catalog-card group min-w-[31vw] text-left sm:min-w-[19vw] md:min-w-[14vw] lg:min-w-[12vw]">
+        <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">
           {m.poster?<img src={m.poster} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" alt={m.title||m.name||""}/>:<div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-black"><Film className="h-12 w-12 text-zinc-700"/></div>}
           <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10"/>
           <span className="absolute bottom-2 left-2 right-2 truncate text-xs font-bold drop-shadow md:bottom-3 md:left-3 md:text-sm">{m.title||m.name}</span>
@@ -222,9 +222,9 @@ export default function Home(){
   const add=(m:Item)=>{if(!list.some(x=>x.id===m.id))setList(list.concat(m))};
 
   return <main className="min-h-screen bg-[#141414] pb-12">
-    <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-12 items-center gap-5 px-5 md:gap-7 md:px-9">
-      <button onClick={()=>setBrowse("Home")} className="shrink-0 text-lg font-black tracking-tight text-[#e50914]">STREAMIVIO</button>
-      <div className="hidden items-center gap-4 text-xs md:flex">
+    <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-16 items-center gap-5 px-4 md:gap-8 md:px-12">
+      <button onClick={()=>setBrowse("Home")} className="shrink-0 text-xl font-black tracking-[-.06em] text-[#e50914] sm:text-2xl">STREAMIVIO</button>
+      <div className="hidden items-center gap-5 text-sm md:flex">
         {["Home","Movies","TV Shows","Anime","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
       </div>
       <div className="ml-auto flex items-center gap-3">
@@ -243,7 +243,7 @@ export default function Home(){
           {q&&<button type="button" onClick={()=>setQ("")} aria-label="Clear search" className="absolute right-2 text-zinc-400 hover:text-white"><X className="h-3.5 w-3.5"/></button>}
         </form>
         <button onClick={()=>{setBrowse("My List");setQ("")}} className="hidden text-xs font-semibold sm:block">My List</button>
-        <a href="/subscribe" className="rounded-full bg-[#e50914] px-3 py-2 text-[11px] font-bold text-white hover:bg-red-700">Subscribe</a>
+        <a href="/subscribe" aria-label="Open Streamivio subscription plans" className="rounded bg-[#e50914] px-4 py-2 text-xs font-bold text-white transition hover:bg-red-700 sm:text-sm">Subscribe</a>
       </div>
     </nav>
 
@@ -285,23 +285,23 @@ export default function Home(){
               : <p className="text-sm text-zinc-500">No matches found. Try a different title or category.</p>}
     </section>}
 
-    {!q.trim()&&hero&&<header className="hero-shell relative mx-4 mt-14 overflow-hidden rounded-xl sm:mx-6 md:mx-9">
+    {!q.trim()&&hero&&<header className="hero-shell relative mt-16 overflow-hidden">
       <div className="hero-art absolute inset-0">{hero.poster&&<img src={hero.poster} alt="" className="h-full w-full object-cover"/>}</div>
       <div className="hero-shade absolute inset-0"/>
-      <div className="hero-content relative z-10 flex h-full max-w-xl flex-col justify-end px-5 pb-7 pt-40 sm:px-7 sm:pb-9 md:px-9 md:pb-10">
+      <div className="hero-content relative z-10 flex h-full max-w-2xl flex-col justify-end px-5 pb-10 pt-40 sm:px-8 sm:pb-12 md:px-12 md:pb-14">
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[.3em] text-red-300">Featured title</div>
         <div className="mb-1 text-[10px] font-bold uppercase tracking-[.35em] text-zinc-200">Streamivio selection</div>
         <h1 className="max-w-xl text-4xl font-black leading-[.95] tracking-tight text-white drop-shadow-2xl sm:text-5xl md:text-6xl">{hero.title||hero.name}</h1>
         <div className="mt-3 flex items-center gap-2 text-[11px] text-zinc-200 sm:text-xs"><span>{hero.source}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/><span>{hero.year}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/>HD</div>
         <p className="mt-2 max-w-md line-clamp-3 text-xs leading-5 text-zinc-100 drop-shadow sm:text-sm">{hero.overview||"Discover movies, series and anime."}</p>
-        <div className="mt-4 flex gap-2"><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-zinc-200"><Film className="h-3.5 w-3.5"/>Explore</button><button onClick={()=>hero.imdbId?void openDetails(hero):setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-xs font-bold text-white hover:bg-white/30"><Plus className="h-3.5 w-3.5"/>More Info</button></div>
+        <div className="mt-5 flex gap-3"><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-zinc-200"><Film className="h-3.5 w-3.5"/>Explore</button><button onClick={()=>hero.imdbId?void openDetails(hero):setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-xs font-bold text-white hover:bg-white/30"><Plus className="h-3.5 w-3.5"/>More Info</button></div>
       </div>
     </header>}
 
     {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 text-3xl font-black text-[#e50914]">STREAMIVIO</div><div>Loading your entertainment...</div></div></div>}
 
-    {!q.trim()&&<div className="relative z-10 mx-auto max-w-[1500px] pt-5">
-      {browse==="Movies"&&<div className="mb-5 flex flex-wrap items-center gap-2 px-5 md:px-9">
+    {!q.trim()&&<div className="relative z-10 mx-auto max-w-[1700px] pt-5">
+      {browse==="Movies"&&<div className="mb-5 flex flex-wrap items-center gap-2 px-4 md:px-12">
         <span className="mr-1 text-xs text-zinc-400">Genre</span>
         {MOVIE_GENRES.map(([label,value])=><button
           key={value||"all"}
