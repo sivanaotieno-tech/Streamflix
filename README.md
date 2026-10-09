@@ -48,14 +48,14 @@ Payments use IntaSend hosted checkout. For KES, IntaSend can display M-Pesa and 
 
 The root `vercel.json` configures two services in one Vercel project:
 
-- **`app`** — the public Next.js website and its `/api/*` routes.
-- **`pymoviedb-service`** — the internal Python metadata backend. It has no public rewrite, so requests reach it only through the app's service binding.
+- **`app`** — the public Next.js website and its `/api/*` routes. All unmatched public paths are routed here.
+- **`pymoviedb-service`** — the Python metadata API. It is also public at `/health`, `/search`, `/popular`, and `/title`; these routes are forwarded to the Python service before the catch-all app rewrite.
 
 The `app` service declares a binding to `pymoviedb-service`. Vercel injects the backend base URL into `PYMOVIEDB_SERVICE_URL` at runtime. Do not create a Vercel environment variable with that name manually. The app's IMDb routes use this binding first; `PYMOVIEDB_API_URL` remains as a local-development fallback.
 
 **Vercel project setup:** in Project Settings → Build and Deployment, set the project's framework to **Services**. Services-mode deployments require this project setting in addition to `vercel.json`. Then deploy the `main` branch. To test the services together locally, use a current Vercel CLI and run `vercel dev` from the repository root.
 
-Public rewrites intentionally send all public paths to `app`; the Python metadata service remains internal. The Python entrypoint is `server:handler`, with the handler exported from `pymoviedb-service/server.py`.
+The Python entrypoint is `server:handler`, with the handler exported from `pymoviedb-service/server.py`. Since the metadata service is public, consider adding authentication/rate limiting before exposing it on a production domain to prevent abuse of the upstream IMDb scraping requests.
 
 ## Local development
 
