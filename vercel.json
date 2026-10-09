@@ -20,6 +20,12 @@
   },
   "rewrites": [
     {
+      "source": "/(health|search|popular|title)",
+      "destination": {
+        "service": "pymoviedb-service"
+      }
+    },
+    {
       "source": "/(.*)",
       "destination": {
         "service": "app"
