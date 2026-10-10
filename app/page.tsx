@@ -334,7 +334,8 @@ export default function Home(){
       {selected.directors&&selected.directors.length>0&&<p className="mt-3 text-sm text-zinc-400"><span className="text-zinc-200">Director:</span> {selected.directors.join(", ")}</p>}
       {selected.cast&&selected.cast.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Cast:</span> {selected.cast.join(", ")}</p>}
       {detailError&&<p role="status" className="mt-4 text-sm text-amber-300">{detailError}</p>}
-      <div className="mt-5 flex gap-3">
+      <div className="mt-5 flex flex-wrap gap-3">
+        {selected.source==="Kitsu"&&/^one piece$/i.test((selected.title||selected.name||"").trim())&&<a href="/anime/one-piece" className="rounded bg-[#e50914] px-5 py-2 font-bold text-white hover:bg-red-700">Watch One Piece</a>}
         <button onClick={()=>setSelected(null)} className="rounded bg-zinc-700 px-5 py-2 font-bold">Close</button>
       </div>
     </div></div>}
