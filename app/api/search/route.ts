@@ -58,9 +58,31 @@ async function searchAnime(query:string){
   return mapKitsuAnime(data.data);
 }
 async function popularAnime(){
-  const params=new URLSearchParams({sort:"-userCount","page[limit]":"20"});
-  const data=await fetchJson(`${KITSU}?${params}`);
-  return mapKitsuAnime(data.data);
+  const featuredParams = new URLSearchParams({
+    "filter[text]": "One Piece",
+    "page[limit]": "10",
+  });
+  const popularParams = new URLSearchParams({
+    sort: "-userCount",
+    "page[limit]": "20",
+  });
+
+  const [featuredData, popularData] = await Promise.all([
+    fetchJson(`${KITSU}?${featuredParams}`),
+    fetchJson(`${KITSU}?${popularParams}`),
+  ]);
+
+  const featured = mapKitsuAnime(featuredData.data);
+  const popular = mapKitsuAnime(popularData.data);
+  const onePiece = featured.filter(item =>
+    /^one piece$/i.test(item.title.trim())
+  );
+
+  const seen = new Set(onePiece.map(item => item.id));
+  return [
+    ...onePiece,
+    ...popular.filter(item => !seen.has(item.id) && seen.add(item.id)),
+  ];
 }
 
 export async function GET(request:NextRequest){
