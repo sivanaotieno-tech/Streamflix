@@ -31,6 +31,17 @@ create index if not exists titles_search_idx on public.titles using gin (
   to_tsvector('english', coalesce(title,'') || ' ' || coalesce(overview,''))
 );
 
+-- Public poster delivery via Supabase Storage. Upload files through the Dashboard;
+-- public write access is intentionally NOT enabled.
+insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)
+values ('title-posters','title-posters',true,5242880,array['image/jpeg','image/png','image/webp','image/avif'])
+on conflict (id) do update set public=true;
+
+drop policy if exists "Public can view title posters" on storage.objects;
+create policy "Public can view title posters"
+  on storage.objects for select
+  using (bucket_id = 'title-posters');
+
 insert into public.titles (id,title,overview,release_year,rating,type,genres,country,age_rating)
 values
 ('m-matrix','The Matrix','A computer hacker learns that reality may be a simulation and joins a rebellion against its controllers.',1999,8.7,'movie',ARRAY['Action','Sci-Fi' ]::text[],ARRAY['United States' ]::text[],'R'),
