@@ -1,108 +1,37 @@
 import {NextRequest,NextResponse} from "next/server";
+import {catalog} from "../../data/catalog";
 
-const KITSU="https://kitsu.io/api/edge/anime";
-const SEARCH_SCOPES=["all","movies","anime","tv"] as const;
-type SearchScope=(typeof SEARCH_SCOPES)[number];
-type SearchResult={
-  id:string; imdbId?:string; title:string; overview:string; poster:string|null;
-  year:string; rating:number; source:"PyMovieDb"|"Kitsu"; url:string;
-};
+const SCOPES=["all","movies","anime","tv","documentaries","kids","reality"] as const;
+type Scope=(typeof SCOPES)[number];
 
-async function fetchJson(url:string){
-  const response=await fetch(url,{
-    headers:{"User-Agent":"Streamivio/1.0"},cache:"no-store",
-    signal:AbortSignal.timeout(12_000)
-  });
-  if(!response.ok) throw new Error(`Search source returned ${response.status}`);
-  return response.json();
-}
-
-function mapIMDbResults(items:unknown):SearchResult[]{
-  return (Array.isArray(items)?items:[])
-    .filter((item:any)=>item?.id&&item?.name)
-    .map((item:any)=>({
-      id:`imdb-${item.id}`, imdbId:String(item.id), title:String(item.name), overview:"",
-      poster:typeof item.poster==="string"&&item.poster!=="image_not_found"?item.poster:null,
-      year:item.year?String(item.year):"", rating:Number(item.rating?.ratingValue||item.rating)||0,
-      source:"PyMovieDb" as const, url:`/title/${encodeURIComponent(String(item.id))}`
-    }));
-}
-
-function mapKitsuAnime(items:unknown):SearchResult[]{
-  return (Array.isArray(items)?items:[])
-    .filter((item:any)=>item?.id&&item?.attributes)
-    .map((item:any)=>({
-      id:`anime-${item.id}`,
-      title:String(item.attributes.canonicalTitle||item.attributes.titles?.en||item.attributes.titles?.en_jp||item.attributes.slug||"Untitled anime"),
-      overview:String(item.attributes.synopsis||""),
-      poster:item.attributes.posterImage?.large||item.attributes.posterImage?.medium||item.attributes.posterImage?.small||null,
-      year:item.attributes.startDate?String(item.attributes.startDate).slice(0,4):"",
-      rating:Number(item.attributes.averageRating)/10||0, source:"Kitsu" as const,
-      url:`https://kitsu.io/anime/${encodeURIComponent(String(item.attributes.slug||item.id))}`
-    }));
-}
-
-async function searchIMDb(query:string,titleType:"movie"|"tv"){
-  const value=process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL;
-  const serviceUrl=value?.replace(/\/+$/,"");
-  if(!serviceUrl) throw new Error("PyMovieDb service is not configured");
-  const params=new URLSearchParams({q:query,type:titleType});
-  const endpoint=new URL(`search?${params.toString()}`,`${serviceUrl}/`);
-  const data=await fetchJson(endpoint.toString());
-  return mapIMDbResults(data.results);
-}
-
-async function searchAnime(query:string){
-  const params=new URLSearchParams({"filter[text]":query,"page[limit]":"12","sort":"-userCount"});
-  const data=await fetchJson(`${KITSU}?${params}`);
-  return mapKitsuAnime(data.data);
-}
-async function popularAnime(){
-  const featuredParams = new URLSearchParams({
-    "filter[text]": "One Piece",
-    "page[limit]": "10",
-  });
-  const popularParams = new URLSearchParams({
-    sort: "-userCount",
-    "page[limit]": "20",
-  });
-
-  const [featuredData, popularData] = await Promise.all([
-    fetchJson(`${KITSU}?${featuredParams}`),
-    fetchJson(`${KITSU}?${popularParams}`),
-  ]);
-
-  const featured = mapKitsuAnime(featuredData.data);
-  const popular = mapKitsuAnime(popularData.data);
-  const onePiece = featured.filter(item =>
-    /^one piece$/i.test(item.title.trim())
-  );
-
-  const seen = new Set(onePiece.map(item => item.id));
-  return [
-    ...onePiece,
-    ...popular.filter(item => !seen.has(item.id) && seen.add(item.id)),
-  ];
+function matchesScope(type:string,scope:Scope){
+  if(scope==="all")return true;
+  if(scope==="movies")return type==="movie";
+  if(scope==="tv")return type==="tv";
+  if(scope==="anime")return type==="anime";
+  if(scope==="documentaries")return type==="documentary";
+  if(scope==="kids")return type==="kids";
+  return type==="reality";
 }
 
 export async function GET(request:NextRequest){
-  const query=request.nextUrl.searchParams.get("q")?.trim()||"";
-  const scope=request.nextUrl.searchParams.get("scope")||"all";
-  const popular=request.nextUrl.searchParams.get("popular")==="1";
-  if(popular&&scope!=="anime") return NextResponse.json({error:"Popular mode is only available for anime"},{status:400});
-  if(!popular&&(query.length<2||query.length>100)) return NextResponse.json({error:"Search must be between 2 and 100 characters"},{status:400});
-  if(!SEARCH_SCOPES.includes(scope as SearchScope)) return NextResponse.json({error:"Invalid search category"},{status:400});
-
-  const sources:{name:string;search:()=>Promise<SearchResult[]>}[]=[];
-  if(scope==="all"||scope==="movies") sources.push({name:"Movies",search:()=>searchIMDb(query,"movie")});
-  if(scope==="all"||scope==="tv") sources.push({name:"TV",search:()=>searchIMDb(query,"tv")});
-  if(scope==="all"||scope==="anime") sources.push({name:"Anime",search:popular?popularAnime:()=>searchAnime(query)});
-
-  const settled=await Promise.allSettled(sources.map(source=>source.search()));
-  const results:SearchResult[]=[]; const unavailable:string[]=[];
-  settled.forEach((result,index)=>{
-    if(result.status==="fulfilled") results.push(...result.value);
-    else { unavailable.push(sources[index].name); console.error(`${sources[index].name} search failed`,result.reason); }
-  });
-  return NextResponse.json({results,unavailable},{headers:{"Cache-Control":"no-store"}});
+  const params=request.nextUrl.searchParams;
+  const query=(params.get("q")||"").trim().toLocaleLowerCase();
+  const rawScope=params.get("scope")||"all";
+  const popular=params.get("popular")==="1";
+  const genre=(params.get("genre")||"").replace(/_/g," ").toLocaleLowerCase();
+  if(!SCOPES.includes(rawScope as Scope))return NextResponse.json({error:"Invalid catalog category"},{status:400});
+  if(!popular&&(query.length<2||query.length>100))return NextResponse.json({error:"Search must be between 2 and 100 characters"},{status:400});
+  const scope=rawScope as Scope;
+  let results=catalog.filter(item=>matchesScope(item.type,scope));
+  if(genre)results=results.filter(item=>item.genres.some(value=>value.toLocaleLowerCase()===genre));
+  if(!popular){
+    results=results.filter(item=>[item.title,item.overview,item.year,item.type,...item.genres].join(" ").toLocaleLowerCase().includes(query));
+  }else{
+    results=[...results].sort((a,b)=>b.rating-a.rating);
+  }
+  return NextResponse.json({
+    results:results.map(item=>({...item,url:null,imdbId:undefined})),
+    unavailable:[]
+  },{headers:{"Cache-Control":"public, max-age=60, s-maxage=300, stale-while-revalidate=600"}});
 }
