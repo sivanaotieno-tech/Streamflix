@@ -1,0 +1,4 @@
+id,title,overview,release_year,rating,type,genres,country,age_rating,poster_url,is_published
+sample-film,Example Film,Replace with your own summary,2025,,movie,"{Action,Drama}","{Kenya}",PG,,true
+sample-series,Example Series,Replace with your own summary,2024,,tv,"{Drama,Comedy}","{United Kingdom}",TV-14,,true
+sample-anime,Example Anime,Replace with your own summary,2023,,anime,"{Anime,Adventure}","{Japan}",TV-14,,true
