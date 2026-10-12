@@ -4,11 +4,12 @@ Legitimate entertainment discovery and playback platform built with Next.js, Rea
 
 The GitHub repository retains its historical name; the user-facing brand is **Streamivio**.
 
-## APIs
+## Local entertainment database
 
-- **PyMovieDb** — movie and TV metadata through the local Python service in `pymoviedb-service/`.
-- **Kitsu** — anime metadata and discovery.
-- **`/api/search`** — searches metadata catalogs; metadata is not a video stream.
+- **`app/data/catalog.ts`** is Streamivio's built-in catalog for movies, TV, anime, documentaries, kids and family titles, and reality/competition shows.
+- Search and discovery read this local catalog through the app's own `/api/search` route. No third-party movie metadata API, API key, or network call is required for catalog search.
+- Add titles by editing the catalog data file. Metadata is for discovery only and does not grant video distribution rights.
+- The legacy `pymoviedb-service/` folder remains in the repository for now, but the homepage and catalog search no longer depend on it.
 
 ## Rights policy
 
@@ -51,7 +52,7 @@ The root `vercel.json` configures two services in one Vercel project:
 - **`app`** — the public Next.js website and its `/api/*` routes. All unmatched public paths are routed here.
 - **`pymoviedb-service`** — the Python metadata API. It is also public at `/health`, `/search`, `/popular`, and `/title`; these routes are forwarded to the Python service before the catch-all app rewrite.
 
-The `app` service declares a binding to `pymoviedb-service`. Vercel injects the backend base URL into `PYMOVIEDB_SERVICE_URL` at runtime. Do not create a Vercel environment variable with that name manually. The app's IMDb routes use this binding first; `PYMOVIEDB_API_URL` remains as a local-development fallback.
+The `app` service declares a binding to `pymoviedb-service`. Vercel injects the backend base URL into `PYMOVIEDB_SERVICE_URL` at runtime. Do not create a Vercel environment variable with that name manually. The app's legacy IMDb routes use this binding first; `PYMOVIEDB_API_URL` remains as a local-development fallback. The local entertainment catalog and search do not call these routes.
 
 **Vercel project setup:** in Project Settings → Build and Deployment, set the project's framework to **Services**. Services-mode deployments require this project setting in addition to `vercel.json`. Then deploy the `main` branch. To test the services together locally, use a current Vercel CLI and run `vercel dev` from the repository root.
 
