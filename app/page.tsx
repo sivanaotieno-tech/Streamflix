@@ -15,6 +15,8 @@ type Item={
   url?:string;
   imdbId?:string;
   genres?:string[];
+  country?:string[];
+  ageRating?:string|null;
   cast?:string[];
   directors?:string[];
   runtime?:string|null;
@@ -50,6 +52,9 @@ export default function Home(){
   const[q,setQ]=useState("");
   const[results,setResults]=useState<Item[]>([]);
   const[searchCategory,setSearchCategory]=useState("all");
+  const[searchCountry,setSearchCountry]=useState("");
+  const[searchYear,setSearchYear]=useState("");
+  const[searchAgeRating,setSearchAgeRating]=useState("");
   const[searchLoading,setSearchLoading]=useState(false);
   const[searchUnavailable,setSearchUnavailable]=useState<string[]>([]);
   const[searchError,setSearchError]=useState("");
@@ -71,7 +76,7 @@ export default function Home(){
 
   const play=(m:Item)=>setSelected(m);
 
-  const runSearch=async(query:string,category:string)=>{
+  const runSearch=async(query:string,category:string,country=searchCountry,year=searchYear,ageRating=searchAgeRating)=>{
     if(query.trim().length<2)return;
     searchAbort.current?.abort();
     const controller=new AbortController();
@@ -80,6 +85,9 @@ export default function Home(){
     setSearchError("");
     try{
       const params=new URLSearchParams({q:query.trim(),scope:category});
+      if(country.trim())params.set("country",country.trim());
+      if(year.trim())params.set("year",year.trim());
+      if(ageRating)params.set("age_rating",ageRating);
       const response=await fetch(`/api/search?${params}`,{signal:controller.signal});
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||"Search failed");
@@ -151,12 +159,12 @@ export default function Home(){
     setSearchUnavailable([]);
     setSearchError("");
     setSearchLoading(true);
-    searchTimer.current=setTimeout(()=>void runSearch(query,searchCategory),350);
+    searchTimer.current=setTimeout(()=>void runSearch(query,searchCategory,searchCountry,searchYear,searchAgeRating),350);
     return()=>{
       if(searchTimer.current)clearTimeout(searchTimer.current);
       searchAbort.current?.abort();
     };
-  },[q,searchCategory]);
+  },[q,searchCategory,searchCountry,searchYear,searchAgeRating]);
 
   const submitSearch=(event:FormEvent<HTMLFormElement>)=>{
     event.preventDefault();
@@ -208,6 +216,19 @@ export default function Home(){
           aria-pressed={searchCategory===value}
           className={`rounded-full px-4 py-2 text-xs font-semibold transition ${searchCategory===value?"bg-white text-black":"bg-white/10 text-zinc-300 hover:bg-white/20"}`}
         >{label}</button>)}
+      </div>
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <label className="flex flex-col gap-1 text-xs text-zinc-400">Country
+          <input value={searchCountry} onChange={e=>setSearchCountry(e.target.value)} placeholder="e.g. Japan, Kenya, USA" className="rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-zinc-600"/>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-zinc-400">Release year
+          <input inputMode="numeric" value={searchYear} onChange={e=>setSearchYear(e.target.value.replace(/[^0-9]/g,"").slice(0,4))} placeholder="e.g. 2024" maxLength={4} className="rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-zinc-600"/>
+        </label>
+        <label className="flex flex-col gap-1 text-xs text-zinc-400">Age rating
+          <select value={searchAgeRating} onChange={e=>setSearchAgeRating(e.target.value)} className="rounded border border-white/15 bg-[#181818] px-3 py-2 text-sm text-white">
+            <option value="">Any rating</option><option>G</option><option>PG</option><option>PG-13</option><option>R</option><option>TV-Y</option><option>TV-Y7</option><option>TV-G</option><option>TV-PG</option><option>TV-14</option><option>TV-MA</option><option>16+</option><option>18+</option>
+          </select>
+        </label>
       </div>
       {searchUnavailable.length>0&&<p role="status" className="mb-4 text-sm text-amber-300">Some sources are unavailable right now: {searchUnavailable.join(", ")}.</p>}
       {searchError&&<p role="alert" className="mb-4 text-sm text-amber-300">{searchError}</p>}
