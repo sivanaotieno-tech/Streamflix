@@ -19,12 +19,13 @@ export async function GET(request:NextRequest){
   const query=(params.get("q")||"").trim().toLocaleLowerCase();
   const rawScope=params.get("scope")||"all";
   const popular=params.get("popular")==="1";
-  const genre=(params.get("genre")||"").replace(/_/g," ").toLocaleLowerCase();
+  const normalize=(value:string)=>value.toLocaleLowerCase().replace(/[^a-z0-9]/g,"");
+  const genre=normalize(params.get("genre")||"");
   if(!SCOPES.includes(rawScope as Scope))return NextResponse.json({error:"Invalid catalog category"},{status:400});
   if(!popular&&(query.length<2||query.length>100))return NextResponse.json({error:"Search must be between 2 and 100 characters"},{status:400});
   const scope=rawScope as Scope;
   let results=catalog.filter(item=>matchesScope(item.type,scope));
-  if(genre)results=results.filter(item=>item.genres.some(value=>value.toLocaleLowerCase()===genre));
+  if(genre)results=results.filter(item=>item.genres.some(value=>normalize(value)===genre));
   if(!popular){
     results=results.filter(item=>[item.title,item.overview,item.year,item.type,...item.genres].join(" ").toLocaleLowerCase().includes(query));
   }else{
