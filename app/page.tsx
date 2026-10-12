@@ -21,7 +21,7 @@ type Item={
   contentRating?:string|null;
 };
 
-const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["Anime","anime"],["TV Shows","tv"]] as const;
+const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["TV Shows","tv"],["Anime","anime"],["Documentaries","documentaries"],["Kids & Family","kids"],["Reality","reality"]] as const;
 const MOVIE_GENRES=[["All",""],["Action","action"],["Comedy","comedy"],["Drama","drama"],["Horror","horror"],["Romance","romance"],["Sci-Fi","sci_fi"],["Thriller","thriller"]] as const;
 const imdbItem=(x:any):Item=>({
   id:`imdb-${x.id}`,
@@ -225,7 +225,7 @@ export default function Home(){
     <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-16 items-center gap-5 px-4 md:gap-8 md:px-12">
       <button onClick={()=>setBrowse("Home")} className="shrink-0 text-xl font-black tracking-[-.06em] text-[#e50914] sm:text-2xl">STREAMIVIO</button>
       <div className="hidden items-center gap-5 text-sm md:flex">
-        {["Home","Movies","TV Shows","Anime","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
+        {["Home","Movies","TV Shows","Documentaries","Kids & Family","Reality","Anime","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
       </div>
       <div className="ml-auto flex items-center gap-3">
         <form onSubmit={submitSearch} role="search" className="relative flex items-center">
@@ -234,8 +234,8 @@ export default function Home(){
             value={q}
             onChange={e=>setQ(e.target.value)}
             onKeyDown={e=>{if(e.key==="Escape")setQ("")}}
-            placeholder="Search movies, anime..."
-            aria-label="Search movies, anime, and TV shows"
+            placeholder="Search movies, shows, docs, anime..."
+            aria-label="Search movies, TV, documentaries, kids shows, reality and anime"
             autoComplete="off"
             maxLength={100}
             className="w-36 border border-white/20 bg-black/40 py-2 pl-7 pr-8 text-xs outline-none transition placeholder:text-zinc-400 focus:w-56 focus:border-white sm:w-48"
@@ -317,6 +317,9 @@ export default function Home(){
         : Object.entries(rows)
           .filter(([title])=>browse==="Home"
             || (browse==="TV Shows"&&title==="Popular TV")
+            || (browse==="Documentaries"&&title==="Documentaries")
+            || (browse==="Kids & Family"&&title==="Family & Kids")
+            || (browse==="Reality"&&title==="Reality & Competition")
             || (browse==="Anime"&&title==="Anime Spotlight")
             || (browse==="Movies"&&title==="Popular Movies")
 )
@@ -335,7 +338,7 @@ export default function Home(){
       {selected.cast&&selected.cast.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Cast:</span> {selected.cast.join(", ")}</p>}
       {detailError&&<p role="status" className="mt-4 text-sm text-amber-300">{detailError}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
-        {selected.source==="Kitsu"&&/^one piece$/i.test((selected.title||selected.name||"").trim())&&<a href="/anime/one-piece" className="rounded bg-[#e50914] px-5 py-2 font-bold text-white hover:bg-red-700">Watch One Piece</a>}
+        
         <button onClick={()=>setSelected(null)} className="rounded bg-zinc-700 px-5 py-2 font-bold">Close</button>
       </div>
     </div></div>}
