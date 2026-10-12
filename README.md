@@ -4,12 +4,30 @@ Legitimate entertainment discovery and playback platform built with Next.js, Rea
 
 The GitHub repository retains its historical name; the user-facing brand is **Streamivio**.
 
-## Local entertainment database
+## Supabase entertainment database
 
-- **`app/data/catalog.ts`** is Streamivio's built-in catalog for movies, TV, anime, documentaries, kids and family titles, and reality/competition shows.
-- Search and discovery read this local catalog through the app's own `/api/search` route. No third-party movie metadata API, API key, or network call is required for catalog search.
-- Add titles by editing the catalog data file. Metadata is for discovery only and does not grant video distribution rights.
-- The legacy `pymoviedb-service/` folder remains in the repository for now, but the homepage and catalog search no longer depend on it.
+Streamivio uses **Supabase PostgreSQL** as its catalog source when configured. It supports movies, TV, anime, documentaries, kids/family, and reality titles, with genre, release year, country, age-rating, rating, overview, and poster fields. The local `app/data/catalog.ts` remains a fallback when Supabase environment variables are not configured or the database is unavailable.
+
+### Connect Supabase
+
+1. Create a project at [Supabase](https://supabase.com/).
+2. Open **SQL Editor → New query**, paste the complete contents of [`supabase/schema.sql`](./supabase/schema.sql), and run it. This creates the `public.titles` table, indexes, read-only public catalog policy, public-read `title-posters` storage bucket, and seeds the 33 starter entries.
+3. In **Project Settings → API**, copy the project URL and the **anon/publishable key**. Add these variables to Vercel under **Project → Settings → Environment Variables** for Production and Preview:
+   - `SUPABASE_URL`
+   - `SUPABASE_ANON_KEY`
+4. Add the same two variables to your local `.env.local` when developing. Restart the dev server after changing environment variables.
+5. Redeploy the Vercel project. The existing `/api/search` route will query Supabase automatically. Without these values it falls back to the local starter catalog.
+
+**Security:** only use the anon/publishable key in these variables. Never put a Supabase `service_role` or secret key in `NEXT_PUBLIC_*`, browser code, or GitHub. The public policy only allows reading published titles; do catalog edits/imports from the Supabase Dashboard or a trusted admin environment.
+
+### Add hundreds or thousands of titles
+
+- For bulk additions, use **Supabase → Table Editor → titles → Import data from CSV** and prepare a CSV using [`supabase/titles-import-template.csv`](./supabase/titles-import-template.csv). Give each title a unique `id`; use one of the supported `type` values (`movie`, `tv`, `anime`, `documentary`, `kids`, `reality`). Genre and country arrays use PostgreSQL array syntax, for example `"{Action,Drama}"` and `"{Kenya,United Kingdom}"`.
+- Keep `release_year` numeric, `rating` between 0 and 10 (or blank), `age_rating` a text label, and `poster_url` a public URL to artwork you have permission to use.
+- For poster files, upload artwork you own or are licensed to use into **Storage → title-posters**. Copy each file's public URL into `poster_url`. The bucket allows public reads only; public uploads are not enabled.
+- Search supports category, genre, country, release year, and age-rating filters. Titles are metadata for discovery and do not imply streaming or distribution rights.
+
+The legacy `pymoviedb-service/` and IMDb route remain in the repository for compatibility, but homepage shelves and the main search route use the local catalog/Supabase rather than depending on those external metadata sources.
 
 ## Rights policy
 
@@ -60,9 +78,9 @@ The Python entrypoint is `server:handler`, with the handler exported from `pymov
 
 ## Local development
 
-1. Copy `.env.example` to `.env.local`.
-2. Configure the PyMovieDb service URL in `.env.local`.
-3. Start the PyMovieDb service in a separate terminal:
+1. Copy `.env.example` to `.env.local` and add Supabase URL/key if you have created a project.
+2. (Optional legacy service) Configure the PyMovieDb service URL in `.env.local`.
+3. To run the legacy PyMovieDb service, start it in a separate terminal:
 
    ```powershell
    cd pymoviedb-service
