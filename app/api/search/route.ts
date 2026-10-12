@@ -47,8 +47,6 @@ export async function GET(request:NextRequest){
       let db=supabase.from("titles").select("id,title,overview,release_year,rating,type,genres,country,age_rating,poster_url").eq("is_published",true);
       if(scope==="movies")db=db.eq("type","movie");
       else if(scope!=="all")db=db.eq("type",scope==="documentaries"?"documentary":scope);
-      if(genre)db=db.contains("genres",[params.get("genre")!.replace(/_/g," ")]);
-      if(country)db=db.contains("country",[params.get("country")!.trim()]);
       if(year){
         const yearNumber=Number(year);
         if(!Number.isInteger(yearNumber)||yearNumber<1888||yearNumber>2200)return NextResponse.json({error:"Invalid release year"},{status:400});
