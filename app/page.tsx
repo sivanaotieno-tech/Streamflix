@@ -23,19 +23,6 @@ type Item={
 
 const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["TV Shows","tv"],["Anime","anime"],["Documentaries","documentaries"],["Kids & Family","kids"],["Reality","reality"]] as const;
 const MOVIE_GENRES=[["All",""],["Action","action"],["Comedy","comedy"],["Drama","drama"],["Horror","horror"],["Romance","romance"],["Sci-Fi","sci_fi"],["Thriller","thriller"]] as const;
-const imdbItem=(x:any):Item=>({
-  id:`imdb-${x.id}`,
-  imdbId:String(x.id),
-  title:String(x.name||"Untitled"),
-  overview:String(x.description||""),
-  poster:typeof x.poster==="string"&&x.poster!=="image_not_found"?x.poster:null,
-  year:x.year?String(x.year):String(x.datePublished||"").slice(0,4),
-  rating:Number(x.rating?.ratingValue||x.rating)||0,
-  source:"PyMovieDb",
-  genres:Array.isArray(x.genre)?x.genre:[],
-  url:`/title/${encodeURIComponent(String(x.id))}`
-});
-
 function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>void}){
   if(items.length===0)return null;
   return <section className="mb-7">
@@ -82,43 +69,7 @@ export default function Home(){
     return r.json();
   };
 
-  const play=async(m:Item)=>{
-    if(m.imdbId){
-      void openDetails(m);
-      return;
-    }
-    setSelected(m);
-  };
-
-  const openDetails=async(m:Item)=>{
-    setSelected(m);
-    setDetailError("");
-    if(!m.imdbId)return;
-    try{
-      const response=await fetch("/api/imdb?id="+encodeURIComponent(m.imdbId));
-      const data=await response.json();
-      if(!response.ok || !data || (!data.name && !data.description && !data.poster && !data.url)){
-        throw new Error(`IMDb metadata request failed (${response.status})`);
-      }
-      setSelected(current=>current?.id===m.id?{
-        ...current,
-        name:data.name||current.name,
-        overview:data.description||current.overview,
-        poster:data.poster||current.poster,
-        rating:Number(data.rating?.ratingValue)||current.rating,
-        year:(data.datePublished||"").slice(0,4)||current.year,
-        genres:Array.isArray(data.genre)?data.genre:[],
-        cast:Array.isArray(data.actor)?data.actor.map((person:any)=>person.name).filter(Boolean).slice(0,8):[],
-        directors:Array.isArray(data.director)?data.director.map((person:any)=>person.name).filter(Boolean):[],
-        runtime:data.duration||null,
-        contentRating:data.contentRating||null,
-        url:data.url?.startsWith("http")?data.url:current.url
-      }:current);
-    }catch(error){
-      console.error("IMDb title details could not be loaded",error);
-      setDetailError("IMDb details are temporarily unavailable. The metadata service is blocked or offline, but the rest of the catalog still works.");
-    }
-  };
+  const play=(m:Item)=>setSelected(m);
 
   const runSearch=async(query:string,category:string)=>{
     if(query.trim().length<2)return;
@@ -288,7 +239,7 @@ export default function Home(){
         <h1 className="max-w-xl text-4xl font-black leading-[.95] tracking-tight text-white drop-shadow-2xl sm:text-5xl md:text-6xl">{hero.title||hero.name}</h1>
         <div className="mt-3 flex items-center gap-2 text-[11px] text-zinc-200 sm:text-xs"><span>{hero.source}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/><span>{hero.year}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/>HD</div>
         <p className="mt-2 max-w-md line-clamp-3 text-xs leading-5 text-zinc-100 drop-shadow sm:text-sm">{hero.overview||"Discover movies, series and anime."}</p>
-        <div className="mt-5 flex gap-3"><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-zinc-200"><Film className="h-3.5 w-3.5"/>Explore</button><button onClick={()=>hero.imdbId?void openDetails(hero):setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-xs font-bold text-white hover:bg-white/30"><Plus className="h-3.5 w-3.5"/>More Info</button></div>
+        <div className="mt-5 flex gap-3"><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-zinc-200"><Film className="h-3.5 w-3.5"/>Explore</button><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-xs font-bold text-white hover:bg-white/30"><Plus className="h-3.5 w-3.5"/>More Info</button></div>
       </div>
     </header>}
 
