@@ -11,7 +11,7 @@ Streamivio uses **Supabase PostgreSQL** as its catalog source when configured. I
 ### Connect Supabase
 
 1. Create a project at [Supabase](https://supabase.com/).
-2. Open **SQL Editor → New query**, paste the complete contents of [`supabase/schema.sql`](./supabase/schema.sql), and run it. This creates the `public.titles` table, indexes, read-only public catalog policy, public-read `title-posters` storage bucket, and seeds the 33 starter entries.
+2. Open **SQL Editor → New query**, paste the complete contents of [`supabase/schema.sql`](./supabase/schema.sql), and run it. This creates the `public.titles` table, indexes, read-only public catalog policy, public-read `title-posters` storage bucket, and seeds 33 starter entries. Then run the complete [`supabase/seed-more.sql`](./supabase/seed-more.sql) file to add 75 more curated entries (108 total).
 3. In **Project Settings → API**, copy the project URL and the **anon/publishable key**. Add these variables to Vercel under **Project → Settings → Environment Variables** for Production and Preview:
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
@@ -22,7 +22,7 @@ Streamivio uses **Supabase PostgreSQL** as its catalog source when configured. I
 
 ### Add hundreds or thousands of titles
 
-- For bulk additions, use **Supabase → Table Editor → titles → Import data from CSV** and prepare a CSV using [`supabase/titles-import-template.csv`](./supabase/titles-import-template.csv). Give each title a unique `id`; use one of the supported `type` values (`movie`, `tv`, `anime`, `documentary`, `kids`, `reality`). Genre and country arrays use PostgreSQL array syntax, for example `"{Action,Drama}"` and `"{Kenya,United Kingdom}"`.
+- For bulk additions, use **Supabase → Table Editor → titles → Import data from CSV** and prepare a CSV using [`supabase/titles-import-template.csv`](./supabase/titles-import-template.csv). The repository's starter SQL seeds 108 curated entries across multiple entertainment categories; bulk import can expand this to hundreds or thousands. Give each title a unique `id`; use one of the supported `type` values (`movie`, `tv`, `anime`, `documentary`, `kids`, `reality`). Genre and country arrays use PostgreSQL array syntax, for example `"{Action,Drama}"` and `"{Kenya,United Kingdom}"`.
 - Keep `release_year` numeric, `rating` between 0 and 10 (or blank), `age_rating` a text label, and `poster_url` a public URL to artwork you have permission to use.
 - For poster files, upload artwork you own or are licensed to use into **Storage → title-posters**. Copy each file's public URL into `poster_url`. The bucket allows public reads only; public uploads are not enabled.
 - Search supports category, genre, country, release year, and age-rating filters. Titles are metadata for discovery and do not imply streaming or distribution rights.
