@@ -57,9 +57,13 @@ export async function GET(request:NextRequest){
         const safeQuery=query.replace(/[,%()]/g," ").replace(/\s+/g," ").trim();
         db=db.or("title.ilike.%"+safeQuery+"%,overview.ilike.%"+safeQuery+"%");
       }
-      const {data,error}=await db.order(sort,{ascending:sort==="title",nullsFirst:false}).limit(limit);
+      const {data,error}=await db.order(sort,{ascending:sort==="title",nullsFirst:false}).limit(1000);
       if(error)throw error;
-      return NextResponse.json({results:(data||[]).map(normalizeRow),unavailable:[],database:"supabase"},
+      let rows=(data||[]).map(normalizeRow);
+      if(genre)rows=rows.filter((row:any)=>row.genres.some((value:string)=>normalize(value)===genre));
+      if(country)rows=rows.filter((row:any)=>row.country.some((value:string)=>normalize(value)===normalize(country)));
+      rows=rows.slice(0,limit);
+      return NextResponse.json({results:rows,unavailable:[],database:"supabase"},
         {headers:{"Cache-Control":"public, max-age=30, s-maxage=120, stale-while-revalidate=300"}});
     }catch(error){
       console.error("Supabase catalog query failed; using local fallback",error);
