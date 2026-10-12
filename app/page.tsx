@@ -160,36 +160,30 @@ export default function Home(){
   },[]);
 
   useEffect(()=>{
-    const params=new URLSearchParams({popular:"movie"});
+    const params=new URLSearchParams({scope:"movies",popular:"1"});
     if(movieGenre)params.set("genre",movieGenre);
     setMovieShelfLoading(true);
-    fetch(`/api/imdb?${params}`)
+    fetch("/api/search?"+params.toString())
       .then(async response=>{
         const data=await response.json();
-        if(!response.ok)throw new Error(data.error||"Popular movie list unavailable");
-        const movies=Array.isArray(data.results)?data.results.map(imdbItem):[];
+        if(!response.ok)throw new Error(data.error||"Local movie catalog unavailable");
+        const movies=Array.isArray(data.results)?data.results as Item[]:[];
         setRows(current=>({...current,"Popular Movies":movies}));
         setHero(current=>current||movies[0]||null);
       })
-      .catch(error=>{
-        console.error("PyMovieDb popular movies could not be loaded",error);
-        setRows(current=>({...current,"Popular Movies":[]}));
-      })
+      .catch(error=>console.error("Local movie catalog could not be loaded",error))
       .finally(()=>setMovieShelfLoading(false));
   },[movieGenre]);
 
   useEffect(()=>{
-    fetch("/api/imdb?popular=tv")
-      .then(async response=>{
-        const data=await response.json();
-        if(!response.ok)throw new Error(data.error||"Popular TV list unavailable");
-        const shows=Array.isArray(data.results)?data.results.map(imdbItem):[];
-        setRows(current=>({...current,"Popular TV":shows}));
-      })
-      .catch(error=>{
-        console.error("PyMovieDb popular TV could not be loaded",error);
-        setRows(current=>({...current,"Popular TV":[]}));
-      });
+    const shelves=[["tv","Popular TV"],["documentaries","Documentaries"],["kids","Family & Kids"],["reality","Reality & Competition"]];
+    Promise.all(shelves.map(async ([scope,title])=>{
+      const response=await fetch("/api/search?scope="+scope+"&popular=1");
+      if(!response.ok)throw new Error("Local "+scope+" catalog unavailable");
+      const data=await response.json();
+      const items=Array.isArray(data.results)?data.results as Item[]:[];
+      setRows(current=>({...current,[title]:items}));
+    })).catch(error=>console.error("Some local catalog shelves could not be loaded",error));
   },[]);
 
   useEffect(()=>{
