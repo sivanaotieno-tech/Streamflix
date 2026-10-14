@@ -178,7 +178,7 @@ export default function Home(){
     <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-16 items-center gap-5 px-4 md:gap-8 md:px-12">
       <button onClick={()=>setBrowse("Home")} className="shrink-0 text-xl font-black tracking-[-.06em] text-[#e50914] sm:text-2xl">STREAMIVIO</button>
       <div className="hidden items-center gap-5 text-sm md:flex">
-        {["Home","Movies","TV Shows","Documentaries","Kids & Family","Reality","Anime","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
+        {["Home","Movies","TV Shows","Documentaries","Kids & Family","Reality","Anime","Games","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
       </div>
       <div className="ml-auto flex items-center gap-3">
         <form onSubmit={submitSearch} role="search" className="relative flex items-center">
@@ -267,7 +267,7 @@ export default function Home(){
     {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 text-3xl font-black text-[#e50914]">STREAMIVIO</div><div>Loading your entertainment...</div></div></div>}
 
     {!q.trim()&&<div className="relative z-10 mx-auto max-w-[1700px] pt-5">
-      {browse==="Movies"&&<div className="mb-5 flex flex-wrap items-center gap-2 px-4 md:px-12">
+      {browse==="Games"&&gamesLoading&&<div className="mb-4 flex items-center gap-2 px-4 text-sm text-zinc-400 md:px-12"><LoaderCircle className="h-4 w-4 animate-spin"/>Loading games from Supabase…</div>}\n      {browse==="Movies"&&<div className="mb-5 flex flex-wrap items-center gap-2 px-4 md:px-12">
         <span className="mr-1 text-xs text-zinc-400">Genre</span>
         {MOVIE_GENRES.map(([label,value])=><button
           key={value||"all"}
@@ -287,7 +287,7 @@ export default function Home(){
             || (browse==="Kids & Family"&&title==="Family & Kids")
             || (browse==="Reality"&&title==="Reality & Competition")
             || (browse==="Anime"&&title==="Anime Spotlight")
-            || (browse==="Movies"&&title==="Popular Movies")
+            || (browse==="Movies"&&title==="Popular Movies")\n            || (browse==="Games"&&title==="Games Spotlight")
 )
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
     </div>}
