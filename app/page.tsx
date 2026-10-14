@@ -17,6 +17,9 @@ type Item={
   genres?:string[];
   country?:string[];
   ageRating?:string|null;
+  platforms?:string[];
+  developer?:string|null;
+  publisher?:string|null;
   cast?:string[];
   directors?:string[];
   runtime?:string|null;
@@ -133,6 +136,14 @@ export default function Home(){
       .catch(error=>console.error("Local movie catalog could not be loaded",error))
       .finally(()=>setMovieShelfLoading(false));
   },[movieGenre]);
+
+  useEffect(()=>{
+    setGamesLoading(true);
+    fetch("/api/games?popular=1")
+      .then(async response=>{const data=await response.json();if(!response.ok)throw new Error(data.error||"Games catalog unavailable");const games=Array.isArray(data.results)?data.results as Item[]:[];setRows(current=>({...current,"Games Spotlight":games}));})
+      .catch(error=>console.error("Games catalog could not be loaded",error))
+      .finally(()=>setGamesLoading(false));
+  },[]);
 
   useEffect(()=>{
     const shelves=[["tv","Popular TV"],["documentaries","Documentaries"],["kids","Family & Kids"],["reality","Reality & Competition"]];
@@ -299,6 +310,10 @@ export default function Home(){
         {selected.year&&<span>{selected.year}</span>}{selected.contentRating&&<span>{selected.contentRating}</span>}{selected.runtime&&<span>{selected.runtime}</span>}{selected.rating&&<span>★ {selected.rating.toFixed(1)}</span>}
       </div>}
       {selected.genres&&selected.genres.length>0&&<p className="mt-3 text-sm text-zinc-400">{selected.genres.join(" · ")}</p>}
+      {selected.platforms&&selected.platforms.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Platforms:</span> {selected.platforms.join(", ")}</p>}
+      {selected.developer&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Developer:</span> {selected.developer}</p>}
+      {selected.publisher&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Publisher:</span> {selected.publisher}</p>}
+      {selected.url&&<a href={selected.url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-red-400 hover:text-red-300">Official game page ↗</a>}
       <p className="mt-3 text-zinc-300">{selected.overview||"This title is available for discovery only. Streamivio does not provide playback until distribution rights are secured."}</p>
       {selected.directors&&selected.directors.length>0&&<p className="mt-3 text-sm text-zinc-400"><span className="text-zinc-200">Director:</span> {selected.directors.join(", ")}</p>}
       {selected.cast&&selected.cast.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Cast:</span> {selected.cast.join(", ")}</p>}
