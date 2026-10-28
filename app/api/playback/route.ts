@@ -2,7 +2,7 @@ import {NextRequest,NextResponse} from "next/server";
 import {catalog} from "../../data/catalog";
 
 const isSafeHttps=(value:string)=>{try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password;}catch{return false;}};
-const normalize=(value:string)=>value.toLocaleLowerCase().replace(/[^a-z0-9]/g,"");
+const normalize=(value:string)=>value.replace(/\s*\(\d{4}\)\s*$/,"").toLocaleLowerCase().replace(/[^a-z0-9]/g,"");
 
 export async function GET(request:NextRequest){
   const params=request.nextUrl.searchParams;
