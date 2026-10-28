@@ -35,6 +35,25 @@ type Item={
 };
 
 const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["TV Shows","tv"],["Anime","anime"],["Documentaries","documentaries"],["Kids & Family","kids"],["Reality","reality"]] as const;
+
+const isTvItem=(item:Item|null)=>{
+  const type=String(item?.type||item?.media_type||"").toLowerCase();
+  const source=String(item?.source||"").toLowerCase();
+  return ["tv","tvshow","tv show","series","anime","documentary","documentaries","kids","reality"].includes(type)||source.includes("tv show");
+};
+const getIdFromEmbedUrl=(value:string)=>{
+  try{
+    const parts=new URL(value).pathname.split("/").filter(Boolean);
+    const index=parts.findIndex(part=>part==="movie"||part==="tv");
+    return index>=0?parts[index+1]||"": "";
+  }catch{return "";}
+};
+const progressKeyFor=(id:string)=>"streamivio:vidsrc-progress:"+id.toLowerCase();
+const formatSeconds=(value:number)=>{
+  const total=Math.max(0,Math.floor(Number.isFinite(value)?value:0));
+  return Math.floor(total/60)+":"+String(total%60).padStart(2,"0");
+};
+
 const MOVIE_GENRES=[["All",""],["Action","action"],["Comedy","comedy"],["Drama","drama"],["Horror","horror"],["Romance","romance"],["Sci-Fi","sci_fi"],["Thriller","thriller"]] as const;
 function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>void}){
   if(items.length===0)return null;
@@ -79,6 +98,22 @@ export default function Home(){
   const[playbackFormat,setPlaybackFormat]=useState("");
   const[playbackLoading,setPlaybackLoading]=useState(false);
   const[playbackError,setPlaybackError]=useState("");
+  const[vidsrcOptionsOpen,setVidSrcOptionsOpen]=useState(false);
+  const[subtitleLanguage,setSubtitleLanguage]=useState("en");
+  const[autoplay,setAutoplay]=useState(false);
+  const[autoNext,setAutoNext]=useState(false);
+  const[season,setSeason]=useState("");
+  const[episode,setEpisode]=useState("");
+  const[customSubtitleUrl,setCustomSubtitleUrl]=useState("");
+  const[customSubtitleLabel,setCustomSubtitleLabel]=useState("Custom subtitle");
+  const[customSubtitleLang,setCustomSubtitleLang]=useState("en");
+  const[startAt,setStartAt]=useState("");
+  const[playerContentId,setPlayerContentId]=useState("");
+  const[resumeSeconds,setResumeSeconds]=useState(0);
+  const[vidsrcInfo,setVidSrcInfo]=useState<any|null>(null);
+  const[vidsrcInfoLoading,setVidSrcInfoLoading]=useState(false);
+  const[vidsrcInfoError,setVidSrcInfoError]=useState("");
+  const playerIframeRef=useRef<HTMLIFrameElement|null>(null);
   const[list,setList]=useState<Item[]>([]);
   const [browse,setBrowse]=useState("Home");
   const [loading,setLoading]=useState(true);
@@ -89,25 +124,76 @@ export default function Home(){
     return r.json();
   };
 
-  const play=(m:Item)=>{setSelected(m);setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");};
-  const startPlayback=async()=>{
+  const play=(m:Item)=>{
+    setSelected(m);setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");
+    setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(0);setStartAt("");
+  };
+
+  const buildVidSrcUrl=(baseUrl:string,contentId:string,kind:"movie"|"tv",resumeOverride?:number)=>{
+    const url=new URL(baseUrl);
+    if(url.origin!=="https://vidsrc.sh"||!url.pathname.startsWith("/embed/"))return baseUrl;
+    if(!(/^tt\d{5,10}$/i.test(contentId)||/^\d{1,12}$/.test(contentId)))return baseUrl;
+
+    if(kind==="tv"){
+      const seasonNumber=season.trim()?Number(season):NaN;
+      const episodeNumber=episode.trim()?Number(episode):NaN;
+      url.pathname="/embed/tv/"+encodeURIComponent(contentId);
+      if(Number.isInteger(seasonNumber)&&seasonNumber>0&&Number.isInteger(episodeNumber)&&episodeNumber>0){
+        url.pathname+="/"+seasonNumber+"/"+episodeNumber;
+      }
+    }else{
+      url.pathname="/embed/movie/"+encodeURIComponent(contentId);
+    }
+    url.search="";
+
+    if(autoplay)url.searchParams.set("autoplay","1");
+    if(kind==="tv"&&autoNext)url.searchParams.set("autonext","1");
+    const lang=subtitleLanguage.trim();
+    if(lang&&/^[a-z]{2,3}(,[a-z]{2,3}){0,2}$/i.test(lang))url.searchParams.set("ds_lang",lang);
+
+    let saved=0;
+    if(resumeOverride!==undefined)saved=resumeOverride;
+    else if(startAt.trim())saved=Number(startAt);
+    else{
+      try{saved=Number(localStorage.getItem("streamivio:vidsrc-progress:"+contentId.toLowerCase())||0);}catch{saved=0;}
+    }
+    if(Number.isFinite(saved)&&saved>0)url.searchParams.set("startAt",String(Math.floor(saved)));
+
+    if(customSubtitleUrl.trim()){
+      const subtitleUrl=new URL(customSubtitleUrl.trim());
+      if(subtitleUrl.protocol!=="https:")throw new Error("Custom subtitle files must use an HTTPS URL.");
+      url.searchParams.set("sub_url",subtitleUrl.toString());
+      if(customSubtitleLabel.trim())url.searchParams.set("sub_label",customSubtitleLabel.trim().slice(0,80));
+      if(/^[a-z]{2,3}$/i.test(customSubtitleLang.trim()))url.searchParams.set("sub_lang",customSubtitleLang.trim());
+    }
+    return url.toString();
+  };
+
+  const startPlayback=async(resumeOverride?:number)=>{
     if(!selected)return;
     setPlaybackLoading(true);setPlaybackError("");setPlaybackUrl("");
+    setVidSrcInfo(null);setVidSrcInfoError("");
+    const kind:"movie"|"tv"=isTvItem(selected)?"tv":"movie";
     try{
-      // First ask Streamivio's playback API for an explicitly configured authorized stream.
+      // Prefer explicitly configured authorized media URLs, then use the documented VidSrc iframe.
       const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||"movie")+"&imdb_id="+encodeURIComponent(selected.imdbId||selected.imdb_id||selected.imdbID||"")+"&tmdb_id="+encodeURIComponent(String(selected.tmdbId||selected.tmdb_id||"")),{cache:"no-store"});
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data.available&&typeof data.stream_url==="string"){
-        setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
+        setPlayerContentId("");setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
       }
       if(response.ok&&data.available&&typeof data.embed_url==="string"){
-        setPlaybackUrl(data.embed_url);setPlaybackFormat("iframe");return;
+        const contentId=String(data.content_id||data.imdb_id||data.tmdb_id||selected.imdbId||selected.imdb_id||selected.imdbID||selected.tmdbId||selected.tmdb_id||getIdFromEmbedUrl(data.embed_url)||"");
+        if(!contentId)throw new Error("The player URL did not include a valid IMDb or TMDB ID.");
+        setPlayerContentId(contentId);
+        setPlaybackUrl(buildVidSrcUrl(data.embed_url,contentId,kind,resumeOverride));
+        setPlaybackFormat("iframe");return;
       }
-      // Prefer a real IMDb ID from the catalog. Never treat a local catalog key as a provider ID.
-      let imdbId=selected.imdbId||selected.imdb_id||selected.imdbID||
-        (typeof selected.id==="string"&&/^tt\d+$/.test(selected.id)?selected.id:"");
-      if(!imdbId){
-        const kind=selected.type==="tv"||selected.media_type==="tv"||(selected.source||"").toLowerCase().includes("tv")?"tv":"movie";
+
+      // Use only a real IMDb ID or numeric TMDB ID; never treat an ordinary catalog key as a provider ID.
+      const listedImdb=String(selected.imdbId||selected.imdb_id||selected.imdbID||(typeof selected.id==="string"&&/^tt\d{5,10}$/i.test(selected.id)?selected.id:""));
+      const listedTmdb=String(selected.tmdbId||selected.tmdb_id||(/^\d{1,12}$/.test(String(selected.id))?selected.id:""));
+      let contentId=/^tt\d{5,10}$/i.test(listedImdb)?listedImdb:(/^\d{1,12}$/.test(listedTmdb)?listedTmdb:"");
+      if(!contentId){
         const serviceBase=(process.env.NEXT_PUBLIC_PYMOVIEDB_SERVICE_URL||"").replace(/\/+$/,"");
         if(serviceBase){
           const lookup=await fetch(serviceBase+"/search?q="+encodeURIComponent(selected.title||selected.name||"")+"&type="+kind,{cache:"no-store"});
@@ -117,20 +203,81 @@ export default function Home(){
             const norm=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,"");
             const exact=candidates.find((item:any)=>norm(String(item.title||item.name||item.titleText||""))===norm(selected.title||selected.name||""));
             const found=exact||null;
-            imdbId=found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"";
-            if(!/^tt\d+$/.test(String(imdbId)))imdbId="";
+            const foundImdb=String(found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"");
+            const foundTmdb=String(found?.tmdb_id||found?.tmdbId||found?.tmdbID||"");
+            contentId=/^tt\d{5,10}$/i.test(foundImdb)?foundImdb:(/^\d{1,12}$/.test(foundTmdb)?foundTmdb:(/^\d{1,12}$/.test(foundImdb)?foundImdb:""));
           }
         }
       }
-      if(!imdbId)throw new Error("No IMDb ID is configured for this title. Add imdb_id to the catalog or configure the Python metadata service to resolve it.");
-      const isTv=selected.type==="tv"||selected.media_type==="tv"||(selected.source||"").toLowerCase().includes("tv");
-      const embedUrl=isTv
-        ? "https://vidsrc.sh/embed/tv/"+encodeURIComponent(imdbId)
-        : "https://vidsrc.sh/embed/movie/"+encodeURIComponent(imdbId);
-      setPlaybackFormat("iframe");setPlaybackUrl(embedUrl);
-    }catch(error){setPlaybackError(error instanceof Error?error.message:"Playback is unavailable right now.");}
-    finally{setPlaybackLoading(false);}
+      if(!contentId)throw new Error("No IMDb or TMDB ID is configured for this title. Add imdb_id or tmdb_id to the catalog, or configure the Python metadata service.");
+      const embedUrl=kind==="tv"
+        ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(contentId)
+        :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(contentId);
+      setPlayerContentId(contentId);
+      setPlaybackUrl(buildVidSrcUrl(embedUrl,contentId,kind,resumeOverride));
+      setPlaybackFormat("iframe");
+    }catch(error){
+      setPlaybackError(error instanceof Error?error.message:"Playback is unavailable right now.");
+    }finally{
+      setPlaybackLoading(false);
+    }
   };
+
+  useEffect(()=>{
+    if(playbackFormat!=="iframe"||!playerContentId||!selected){
+      setVidSrcInfo(null);setVidSrcInfoError("");setVidSrcInfoLoading(false);return;
+    }
+    const controller=new AbortController();
+    const kind=isTvItem(selected)?"tv":"movie";
+    const params=new URLSearchParams({id:playerContentId,type:kind});
+    if(kind==="tv"&&season.trim()&&episode.trim()){
+      params.set("season",season);params.set("episode",episode);
+    }
+    setVidSrcInfoLoading(true);setVidSrcInfoError("");
+    fetch("/api/playback/info?"+params.toString(),{signal:controller.signal,cache:"no-store"})
+      .then(async response=>{
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(payload.message||"VidSrc reports no information for this title.");
+        setVidSrcInfo(payload);
+      })
+      .catch(error=>{
+        if(error instanceof Error&&error.name==="AbortError")return;
+        setVidSrcInfo(null);setVidSrcInfoError(error instanceof Error?error.message:"VidSrc information is unavailable.");
+      })
+      .finally(()=>setVidSrcInfoLoading(false));
+    return()=>controller.abort();
+  },[playbackFormat,playerContentId,selected,season,episode]);
+
+  useEffect(()=>{
+    if(!playerContentId)return;
+    try{
+      const saved=Number(localStorage.getItem(progressKeyFor(playerContentId))||0);
+      setResumeSeconds(Number.isFinite(saved)&&saved>0?saved:0);
+    }catch{setResumeSeconds(0);}
+  },[playerContentId]);
+
+  useEffect(()=>{
+    const onPlayerMessage=(event:MessageEvent)=>{
+      if(event.origin!=="https://vidsrc.sh")return;
+      if(event.source!==playerIframeRef.current?.contentWindow)return;
+      if(!event.data||event.data.type!=="PLAYER_EVENT"||!event.data.data||typeof event.data.data!=="object")return;
+      if(!playerContentId)return;
+      const data=event.data.data;
+      const status=String(data.player_status||"");
+      const progress=Number(data.player_progress);
+      const duration=Number(data.player_duration);
+      if(status==="completed"||(Number.isFinite(duration)&&duration>0&&Number.isFinite(progress)&&progress>=duration-2)){
+        try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}
+        setResumeSeconds(0);return;
+      }
+      if(!["playing","paused","seeked"].includes(status)||!Number.isFinite(progress)||progress<0)return;
+      const seconds=Math.floor(progress);
+      try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}
+      setResumeSeconds(seconds);
+    };
+    window.addEventListener("message",onPlayerMessage);
+    return()=>window.removeEventListener("message",onPlayerMessage);
+  },[playerContentId]);
 
   const runSearch=async(query:string,category:string,country=searchCountry,year=searchYear,ageRating=searchAgeRating)=>{
     if(query.trim().length<2)return;
@@ -371,9 +518,61 @@ export default function Home(){
       {selected.directors&&selected.directors.length>0&&<p className="mt-3 text-sm text-zinc-400"><span className="text-zinc-200">Director:</span> {selected.directors.join(", ")}</p>}
       {selected.cast&&selected.cast.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Cast:</span> {selected.cast.join(", ")}</p>}
       {detailError&&<p role="status" className="mt-4 text-sm text-amber-300">{detailError}</p>}
+      <div className="mt-4 rounded-lg border border-white/10 bg-black/20">
+        <button type="button" onClick={()=>setVidSrcOptionsOpen(open=>!open)} aria-expanded={vidsrcOptionsOpen} className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm font-semibold">
+          <span>VidSrc player settings</span><span className="text-xs text-zinc-400">{vidsrcOptionsOpen?"Hide options":"Subtitles, resume, episodes"}</span>
+        </button>
+        {vidsrcOptionsOpen&&<div className="grid gap-4 border-t border-white/10 p-4 sm:grid-cols-2">
+          <label className="grid gap-1 text-xs text-zinc-300">Default subtitle language
+            <select value={subtitleLanguage} onChange={e=>setSubtitleLanguage(e.target.value)} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm">
+              <option value="">Provider default</option><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ar">Arabic</option><option value="sw">Swahili</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="zh">Chinese</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-xs text-zinc-300">Start time in seconds
+            <input inputMode="numeric" type="number" min="0" value={startAt} onChange={e=>setStartAt(e.target.value)} placeholder={resumeSeconds>0?String(Math.floor(resumeSeconds)):"0"} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"/>
+          </label>
+          {isTvItem(selected)&&<>
+            <label className="grid gap-1 text-xs text-zinc-300">Season
+              <select value={season} onChange={e=>{setSeason(e.target.value);setEpisode("");}} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm">
+                <option value="">Show season/episode picker</option>
+                {(Array.isArray(vidsrcInfo?.seasons)?vidsrcInfo.seasons:[]).map((entry:any)=><option key={entry.season} value={String(entry.season)}>Season {entry.season}</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-xs text-zinc-300">Episode
+              <input inputMode="numeric" type="number" min="1" disabled={!season} value={episode} onChange={e=>setEpisode(e.target.value)} placeholder="Episode number" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm disabled:opacity-50"/>
+            </label>
+          </>}
+          <label className="flex items-center gap-2 text-sm text-zinc-300"><input type="checkbox" checked={autoplay} onChange={e=>setAutoplay(e.target.checked)}/> Request autoplay after the provider's play gate</label>
+          {isTvItem(selected)&&<label className="flex items-center gap-2 text-sm text-zinc-300"><input type="checkbox" checked={autoNext} onChange={e=>setAutoNext(e.target.checked)}/> Automatically play the next episode</label>}
+          <div className="grid gap-2 sm:col-span-2">
+            <label className="grid gap-1 text-xs text-zinc-300">Optional custom subtitle file (HTTPS .vtt or .srt)
+              <input type="url" value={customSubtitleUrl} onChange={e=>setCustomSubtitleUrl(e.target.value)} placeholder="https://example.com/subtitles/en.vtt" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"/>
+            </label>
+            {customSubtitleUrl.trim()&&<div className="grid gap-2 sm:grid-cols-2">
+              <label className="grid gap-1 text-xs text-zinc-300">Subtitle label
+                <input value={customSubtitleLabel} onChange={e=>setCustomSubtitleLabel(e.target.value)} maxLength={80} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"/>
+              </label>
+              <label className="grid gap-1 text-xs text-zinc-300">Subtitle language code
+                <input value={customSubtitleLang} onChange={e=>setCustomSubtitleLang(e.target.value)} maxLength={3} placeholder="en" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"/>
+              </label>
+            </div>}
+            <p className="text-[11px] text-zinc-500">The subtitle host must allow browser CORS requests. Streamivio does not download the subtitle file.</p>
+          </div>
+        </div>}
+      </div>
+      {resumeSeconds>0&&<div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded border border-white/10 px-3 py-2 text-xs text-zinc-300">
+        <span>Saved playback position: {formatSeconds(resumeSeconds)}</span>
+        <button type="button" onClick={()=>void startPlayback(resumeSeconds)} disabled={playbackLoading} className="rounded bg-zinc-700 px-3 py-1.5 font-semibold disabled:opacity-50">Resume</button>
+      </div>}
+      {vidsrcInfoLoading&&<p role="status" className="mt-3 text-xs text-zinc-400">Checking VidSrc availability and quality…</p>}
+      {vidsrcInfo&&<div className="mt-3 rounded border border-white/10 px-3 py-2 text-xs text-zinc-300">
+        <div className="flex flex-wrap gap-3"><span className="font-semibold text-emerald-300">VidSrc reports this title as available</span>{vidsrcInfo.quality&&<span>Best reported quality: {vidsrcInfo.quality}</span>}{vidsrcInfo.year&&<span>{vidsrcInfo.year}</span>}</div>
+        {Array.isArray(vidsrcInfo.seasons)&&<p className="mt-1 text-zinc-400">{vidsrcInfo.seasons.length} season{vidsrcInfo.seasons.length===1?"":"s"} listed by the provider.</p>}
+      </div>}
+      {vidsrcInfoError&&<p role="status" className="mt-3 text-xs text-amber-300">{vidsrcInfoError}</p>}
       {playbackUrl&&<div className="mt-5 overflow-hidden rounded-lg bg-black">
-        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl}>Your browser cannot play this video format.</video>:<iframe title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
-        <p className="px-3 py-2 text-xs text-zinc-400">If playback fails, the provider may block embedding or the URL may not be browser-compatible.</p>
+        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{};}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
+        <p className="px-3 py-2 text-xs text-zinc-400">VidSrc quality controls and built-in subtitles are provided by the embedded player. Availability and playback can vary by title and region.</p>
       </div>}
       {playbackError&&<p role="status" className="mt-4 text-sm text-amber-300">{playbackError}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
