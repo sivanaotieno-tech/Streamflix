@@ -34,7 +34,7 @@ type Item={
   contentRating?:string|null;
 };
 
-const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["TV Shows","tv"],["Anime","anime"],["Documentaries","documentaries"],["Kids & Family","kids"],["Reality","reality"]] as const;
+const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["TV Shows","tv"],["Anime","anime"],["Documentaries","documentaries"],["Kids & Family","kids"],["Reality","reality"],["Games","games"]] as const;
 
 const isTvItem=(item:Item|null)=>{
   const type=String(item?.type||item?.media_type||"").toLowerCase();
@@ -86,6 +86,9 @@ export default function Home(){
   const[searchCountry,setSearchCountry]=useState("");
   const[searchYear,setSearchYear]=useState("");
   const[searchAgeRating,setSearchAgeRating]=useState("");
+  const[searchSort,setSearchSort]=useState("relevance");
+  const[searchTotal,setSearchTotal]=useState(0);
+  const[searchSources,setSearchSources]=useState<string[]>([]);
   const[searchLoading,setSearchLoading]=useState(false);
   const[searchUnavailable,setSearchUnavailable]=useState<string[]>([]);
   const[searchError,setSearchError]=useState("");
@@ -338,8 +341,11 @@ export default function Home(){
     return()=>window.removeEventListener("message",onPlayerMessage);
   },[playerContentId]);
 
-  const runSearch=async(query:string,category:string,country=searchCountry,year=searchYear,ageRating=searchAgeRating)=>{
-    if(query.trim().length<2)return;
+  const runSearch=async(query:string,category:string,country=searchCountry,year=searchYear,ageRating=searchAgeRating,sort=searchSort)=>{
+    if(query.trim().length<2){
+      setResults([]);setSearchTotal(0);setSearchSources([]);
+      return;
+    }
     searchAbort.current?.abort();
     const controller=new AbortController();
     searchAbort.current=controller;
@@ -350,16 +356,21 @@ export default function Home(){
       if(country.trim())params.set("country",country.trim());
       if(year.trim())params.set("year",year.trim());
       if(ageRating)params.set("age_rating",ageRating);
-      const response=await fetch(`/api/search?${params}`,{signal:controller.signal});
+      if(sort)params.set("sort",sort);
+      const response=await fetch(`/api/search?${params}`,{signal:controller.signal,cache:"no-store"});
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||"Search failed");
-      setResults(Array.isArray(data.results)?data.results:[]);
+      const found=Array.isArray(data.results)?data.results:[];
+      setResults(found);
+      setSearchTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):found.length);
+      setSearchSources(Array.isArray(data.sources)?data.sources.filter((source:any)=>typeof source==="string"):[]);
       setSearchUnavailable(Array.isArray(data.unavailable)?data.unavailable:[]);
     }catch(error){
       if(error instanceof Error&&error.name==="AbortError")return;
       console.error("Catalog search failed",error);
       setResults([]);
-      setSearchError("Search is temporarily unavailable. Please try again.");
+      setSearchTotal(0);setSearchSources([]);
+      setSearchError("Search is temporarily unavailable. Check your connection or try again shortly.");
     }finally{
       if(searchAbort.current===controller){
         searchAbort.current=null;
@@ -420,6 +431,7 @@ export default function Home(){
     searchAbort.current?.abort();
     if(query.length<2){
       setResults([]);
+      setSearchTotal(0);setSearchSources([]);
       setSearchUnavailable([]);
       setSearchError("");
       setSearchLoading(false);
@@ -429,17 +441,17 @@ export default function Home(){
     setSearchUnavailable([]);
     setSearchError("");
     setSearchLoading(true);
-    searchTimer.current=setTimeout(()=>void runSearch(query,searchCategory,searchCountry,searchYear,searchAgeRating),350);
+    searchTimer.current=setTimeout(()=>void runSearch(query,searchCategory,searchCountry,searchYear,searchAgeRating,searchSort),350);
     return()=>{
       if(searchTimer.current)clearTimeout(searchTimer.current);
       searchAbort.current?.abort();
     };
-  },[q,searchCategory,searchCountry,searchYear,searchAgeRating]);
+  },[q,searchCategory,searchCountry,searchYear,searchAgeRating,searchSort]);
 
   const submitSearch=(event:FormEvent<HTMLFormElement>)=>{
     event.preventDefault();
     if(searchTimer.current)clearTimeout(searchTimer.current);
-    void runSearch(q,searchCategory);
+    void runSearch(q,searchCategory,searchCountry,searchYear,searchAgeRating,searchSort);
   };
 
   const add=(m:Item)=>{if(!list.some(x=>x.id===m.id))setList(list.concat(m))};
@@ -458,8 +470,8 @@ export default function Home(){
             value={q}
             onChange={e=>setQ(e.target.value)}
             onKeyDown={e=>{if(e.key==="Escape")setQ("")}}
-            placeholder="Search movies, shows, docs, anime..."
-            aria-label="Search movies, TV, documentaries, kids shows, reality and anime"
+            placeholder="Search movies, shows, anime, games..."
+            aria-label="Search movies, TV, documentaries, kids shows, reality, anime and games"
             autoComplete="off"
             maxLength={100}
             className="w-36 border border-white/20 bg-black/40 py-2 pl-7 pr-8 text-xs outline-none transition placeholder:text-zinc-400 focus:w-56 focus:border-white sm:w-48"
@@ -475,7 +487,7 @@ export default function Home(){
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold sm:text-2xl">Search</h2>
-          <p className="mt-1 text-sm text-zinc-400">Movies, anime, and TV shows for “{q.trim()}”</p>
+          <p className="mt-1 text-sm text-zinc-400">Searching {SEARCH_CATEGORIES.find(([,value])=>value===searchCategory)?.[0]||"all categories"} for “{q.trim()}”</p>
         </div>
         {searchLoading&&<span role="status" className="flex items-center gap-2 text-sm text-zinc-400"><LoaderCircle className="h-4 w-4 animate-spin"/>Searching...</span>}
       </div>
@@ -488,7 +500,7 @@ export default function Home(){
           className={`rounded-full px-4 py-2 text-xs font-semibold transition ${searchCategory===value?"bg-white text-black":"bg-white/10 text-zinc-300 hover:bg-white/20"}`}
         >{label}</button>)}
       </div>
-      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-5 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <label className="flex flex-col gap-1 text-xs text-zinc-400">Country
           <input value={searchCountry} onChange={e=>setSearchCountry(e.target.value)} placeholder="e.g. Japan, Kenya, USA" className="rounded border border-white/15 bg-black/30 px-3 py-2 text-sm text-white placeholder:text-zinc-600"/>
         </label>
@@ -500,9 +512,15 @@ export default function Home(){
             <option value="">Any rating</option><option>G</option><option>PG</option><option>PG-13</option><option>R</option><option>TV-Y</option><option>TV-Y7</option><option>TV-G</option><option>TV-PG</option><option>TV-14</option><option>TV-MA</option><option>16+</option><option>18+</option>
           </select>
         </label>
+        <label className="flex flex-col gap-1 text-xs text-zinc-400">Sort results
+          <select value={searchSort} onChange={e=>setSearchSort(e.target.value)} className="rounded border border-white/15 bg-[#181818] px-3 py-2 text-sm text-white">
+            <option value="relevance">Best match</option><option value="rating">Top rated</option><option value="year">Newest first</option><option value="title">Title A–Z</option>
+          </select>
+        </label>
       </div>
-      {searchUnavailable.length>0&&<p role="status" className="mb-4 text-sm text-amber-300">Some sources are unavailable right now: {searchUnavailable.join(", ")}.</p>}
+      {searchUnavailable.length>0&&<p role="status" className="mb-4 text-sm text-amber-300">Some search sources are unavailable: {searchUnavailable.join(", ")}. Showing results from the sources that responded.</p>}
       {searchError&&<p role="alert" className="mb-4 text-sm text-amber-300">{searchError}</p>}
+      {!searchLoading&&results.length>0&&<p className="mb-3 text-xs text-zinc-500">{searchTotal} result{searchTotal===1?"":"s"} · Searched {searchSources.join(" and ")||"the available catalog"}.</p>}
       {q.trim().length<2
         ? <p className="text-sm text-zinc-500">Type at least 2 characters to search.</p>
         : searchLoading&&results.length===0
@@ -519,7 +537,7 @@ export default function Home(){
               </button>)}</div>
             : searchUnavailable.length>0
               ? <p className="text-sm text-zinc-500">No matches were returned because one or more selected sources are unavailable. Try again later.</p>
-              : <p className="text-sm text-zinc-500">No matches found. Try a different title or category.</p>}
+              : <p className="text-sm text-zinc-500">No matches for “{q.trim()}”. Try fewer words, check the spelling, choose All, or remove a filter.</p>}
     </section>}
 
     {!q.trim()&&hero&&<header className="hero-shell relative mt-16 overflow-hidden">
