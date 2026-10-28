@@ -43,3 +43,10 @@ Default address: `http://127.0.0.1:8001`.
 Catalog examples: `/catalog?type=movie`, `/catalog?type=anime&genre=adventure`, `/catalog?q=space&limit=20&offset=0`.
 
 A title's playback endpoint returns unavailable until `video_url` is set to a working, authorized media URL. The API does not scrape, unlock, proxy, or supply unauthorized movie streams.
+
+
+## Playback demo
+
+The web title dialog now has a **Play** button. It calls `GET /playback?id=<catalog-id>` and renders configured MP4/HLS URLs in a browser video element; configured external player URLs are embedded in an iframe. A public demo entry, `demo-big-buck-bunny`, uses an openly licensed Blender Foundation short hosted by Internet Archive to verify the playback flow. This is a playback test, not a licensed catalog of commercial films.
+
+For commercial titles, configure `video_url` only with a working URL you own or are licensed to distribute. MP4 playback depends on browser-supported codecs; HLS compatibility varies by browser, and some external providers prohibit iframe embedding. A successful API response does not guarantee the provider will permit playback.
