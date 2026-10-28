@@ -18,7 +18,20 @@ export async function GET(request:NextRequest){
     return NextResponse.json({available:true,stream_url:localUrl,format,source:"configured-authorized-catalog"});
   }
 
-  const imdbId=String((local as any)?.imdb_id||(local as any)?.imdbId||(local as any)?.imdbID||"");
+  const imdbId=String(params.get("imdb_id")||(local as any)?.imdb_id||(local as any)?.imdbId||(local as any)?.imdbID||"");
+  const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/+$/,"");
+  if(metadataBase&&id){
+    try{
+      const directUrl=new URL("/playback",metadataBase);
+      directUrl.searchParams.set("id",id);
+      const response=await fetch(directUrl.toString(),{cache:"no-store",signal:AbortSignal.timeout(4500)});
+      const data=await response.json();
+      if(response.ok&&data.available&&typeof data.stream_url==="string"&&isSafeHttps(data.stream_url)){
+        return NextResponse.json({...data,source:"python-authorized-catalog"},{headers:{"Cache-Control":"no-store"}});
+      }
+    }catch(error){console.error("Python authorized playback lookup unavailable",error);}
+  }
+
   const resolverBase=(process.env.STREAMIVIO_RESOLVER_URL||"").replace(/\/$/,"");
   if(resolverBase&&/^tt\d+$/i.test(imdbId)){
     try{
