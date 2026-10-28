@@ -91,16 +91,12 @@ def _edit_distance_within(left, right, limit):
     previous = list(range(len(right) + 1))
     for i, char_left in enumerate(left, 1):
         current = [i]
-        row_min = i
         for j, char_right in enumerate(right, 1):
             current.append(min(
                 current[j - 1] + 1,
                 previous[j] + 1,
                 previous[j - 1] + (char_left != char_right),
             ))
-            row_min = min(row_min, current[j])
-        if row_min > limit:
-            return limit + 1
         previous = current
     return previous[-1] if previous[-1] <= limit else limit + 1
 
@@ -233,11 +229,14 @@ def get_catalog(params):
         ]
     if country:
         wanted_country = normalize_facet(country)
-        country_aliases = {
-            "usa": {"usa", "unitedstates", "us", "unitedstatesofamerica"},
-            "uk": {"uk", "unitedkingdom", "greatbritain", "britain"},
-        }
-        accepted_countries = country_aliases.get(wanted_country, {wanted_country})
+        us_aliases = {"usa", "unitedstates", "us", "unitedstatesofamerica"}
+        uk_aliases = {"uk", "unitedkingdom", "greatbritain", "britain"}
+        if wanted_country in us_aliases:
+            accepted_countries = us_aliases
+        elif wanted_country in uk_aliases:
+            accepted_countries = uk_aliases
+        else:
+            accepted_countries = {wanted_country}
         rows = [
             row for row in rows
             if any(
