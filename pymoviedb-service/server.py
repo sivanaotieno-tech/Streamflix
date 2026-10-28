@@ -81,7 +81,7 @@ class MetadataHandler(BaseHTTPRequestHandler):
                     self.send_json(HTTPStatus.NOT_FOUND, {"available": False, "error": "Title not found"})
                     return
                 item = normalize(title)
-                stream_url = item.get("video_url")
+                stream_url = title.get("video_url")
                 if not stream_url:
                     self.send_json(HTTPStatus.NOT_FOUND, {
                         "id": title_id, "available": False,
