@@ -125,9 +125,11 @@ function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"):SearchRecord|null
 
 function countryMatches(item:SearchRecord,query:string){
   const wanted=compact(query);
+  const usAliases=["us","usa","unitedstates","unitedstatesofamerica"];
+  const ukAliases=["uk","unitedkingdom","greatbritain","britain"];
   const aliases:Record<string,string[]>={
-    us:["us","usa","unitedstates","unitedstatesofamerica"],
-    uk:["uk","unitedkingdom","greatbritain","britain"],
+    us:usAliases,usa:usAliases,unitedstates:usAliases,unitedstatesofamerica:usAliases,
+    uk:ukAliases,unitedkingdom:ukAliases,greatbritain:ukAliases,britain:ukAliases,
   };
   const accepted=aliases[wanted]||[wanted];
   return textList(item.country).some(country=>{
@@ -195,7 +197,8 @@ export async function GET(request:NextRequest){
   const year=(params.get("year")||"").trim();
   const ageRating=(params.get("age_rating")||"").trim().toLocaleLowerCase();
   const sortParam=(params.get("sort")||"").trim().toLocaleLowerCase();
-  const sort=sortParam==="year"||sortParam==="title"||sortParam==="rating"?"rating"===sortParam?"rating":sortParam:(rawQuery&&!popular?"relevance":"rating");
+  const allowedSorts=["relevance","rating","year","title"];
+  const sort=allowedSorts.includes(sortParam)?sortParam:(rawQuery&&!popular?"relevance":"rating");
   const requestedLimit=Number(params.get("limit")||60);
   const limit=Number.isFinite(requestedLimit)?Math.min(100,Math.max(1,Math.floor(requestedLimit))):60;
 
@@ -285,7 +288,9 @@ export async function GET(request:NextRequest){
   const externalEligible=!popular&&Boolean(apiBase)&&rawQuery.length>=2&&
     (scope==="all"||scope==="movies"||scope==="tv")&&
     combined.filter(item=>item.source!=="Local Games Catalog").length<10;
-  const sources=["Streamivio Library"];
+  const sources:string[]=[];
+  if(scope!=="games")sources.push("Streamivio Library");
+  if(scope==="all"||scope==="games")sources.push("Games catalog");
   if(externalEligible&&apiBase){
     const types:("movie"|"tv")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:["movie","tv"];
     const remote=await Promise.all(types.map(async kind=>{
