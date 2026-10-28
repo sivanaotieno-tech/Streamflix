@@ -84,7 +84,7 @@ function projectDetails(base: AnyRecord, metadata?: AnyRecord | null) {
     imdb_id: imdbId,
     tmdbId,
     tmdb_id: tmdbId,
-    source: metadata ? "IMDb metadata + Streamivio catalog" : (base.source || "Streamivio Library"),
+    source: firstText(source, ["source"]) || (metadata ? "IMDb metadata + Streamivio catalog" : (base.source || "Streamivio Library")),
     playback_available: Boolean(base.playback_available ?? base.video_url),
   };
 }
@@ -175,13 +175,14 @@ export async function GET(request: NextRequest) {
   if (serviceBase && !game) {
     if (resolvedProviderId) {
       metadata = await serviceGet(serviceBase, "/title?id=" + encodeURIComponent(resolvedProviderId));
-    } else if (/^\d{1,12}$/.test(tmdbId)) {
-      // The metadata service currently supports IMDb IDs only. Preserve the TMDB ID for the player,
-      // while searching by the title for available descriptive metadata.
-      metadata = null;
+    } else if (id && !local) {
+      // The Python catalog can contain titles that are not in the frontend fallback list.
+      // Resolve the catalog ID there before trying external metadata search.
+      const catalogRecord = await serviceGet(serviceBase, "/title?id=" + encodeURIComponent(id));
+      if (catalogRecord && firstText(catalogRecord, ["title", "name"])) metadata = catalogRecord;
     }
 
-    const searchTitle = titleQuery || String(local?.title || "");
+    const searchTitle = titleQuery || String(local?.title || game?.title || "");
     if (!metadata && searchTitle.length >= 2) {
       const searchPath = "/search?q=" + encodeURIComponent(searchTitle) + "&type=" + encodeURIComponent(kind);
       const payload = await serviceGet(serviceBase, searchPath);
