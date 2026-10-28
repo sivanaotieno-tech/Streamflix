@@ -11,6 +11,7 @@ from PyMovieDb import IMDB
 from requests.exceptions import RequestException
 
 from catalog import CatalogUnavailable, fetch_titles, get_catalog, get_categories, get_featured, get_genres, normalize
+from streamex_source import fetch_page_metadata
 
 IMDB_ID_PATTERN = re.compile(r"^tt\d+$")
 IMDB_TYPES = {"movie", "tv"}
@@ -51,12 +52,22 @@ class MetadataHandler(BaseHTTPRequestHandler):
         path = request.path.rstrip("/") or "/"
 
         if path == "/health":
-            self.send_json(HTTPStatus.OK, {"status": "ok"})
+            self.send_json(HTTPStatus.OK, {"status": "ok", "database": "local-json", "supabase": False})
             return
         try:
+            if path == "/sources/streamex":
+                try:
+                    self.send_json(HTTPStatus.OK, fetch_page_metadata())
+                except (RequestException, OSError, RuntimeError, ValueError) as error:
+                    self.send_json(HTTPStatus.BAD_GATEWAY, {
+                        "source": "StreameX",
+                        "error": "Could not safely retrieve StreameX page metadata",
+                        "detail": str(error),
+                    })
+                return
+
             if path == "/catalog":
-                data = get_catalog(query)
-                self.send_json(HTTPStatus.OK, data)
+                self.send_json(HTTPStatus.OK, get_catalog(query))
                 return
 
             if path == "/categories":
@@ -171,8 +182,6 @@ class MetadataHandler(BaseHTTPRequestHandler):
         print(f"PyMovieDb service: {format % args}", file=sys.stderr, flush=True)
 
 
-# Vercel's Python runtime discovers a BaseHTTPRequestHandler subclass named handler.
-# Keep the local development server below for running this file directly.
 handler = MetadataHandler
 
 if __name__ == "__main__":
