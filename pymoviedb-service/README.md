@@ -48,6 +48,13 @@ A title's playback endpoint returns unavailable until `video_url` is set to a wo
 
 ## Browser playback
 
-The Streamivio title dialog includes a Play button. It first checks the local JSON catalog for a configured authorized MP4/HLS or external player URL. If none is configured, it attempts to resolve an exact IMDb ID through the metadata search endpoint and builds a VidSrc embed URL for the selected movie or the first episode (season 1, episode 1) of a TV title. The player is embedded in the browser; it does not download or proxy the video.
+The Streamivio title dialog includes a Play button. It first calls the Next.js `/api/playback` route for a configured authorized HTTPS MP4/HLS URL or an optional private resolver URL (`STREAMIVIO_RESOLVER_URL`). If no direct stream is configured, the route can use the server-side Python metadata API (`PYMOVIEDB_SERVICE_URL` or `PYMOVIEDB_API_URL`) to resolve an exact IMDb ID and return a VidSrc embed URL. The player is embedded in the browser; it does not download or proxy third-party video.
 
 VidSrc is a third-party provider. Its availability, embed policy, rights status, and individual title playback are not controlled or guaranteed by Streamivio. Streamivio now uses the provider's documented `https://vidsrc.sh/embed/movie/{id}` and `https://vidsrc.sh/embed/tv/{id}` path formats. Use only content you are authorized to access and distribute. A deployment and end-to-end playback test are still required to verify your production configuration.
+
+
+## Optional VidSrc-Streamer-style resolver
+
+A separate FastAPI + SQLite resolver now lives in `../vidsrc-streamer/`. It exposes `GET /stream/{imdb_id}` and only returns an authorized HTTPS `video_url` explicitly mapped to that IMDb ID in the configured JSON catalog. It does not extract third-party streams. Install and run it using the instructions in `../vidsrc-streamer/README.md`.
+
+For the Next.js app to call it, set the server-only Vercel environment variable `STREAMIVIO_RESOLVER_URL` to the private resolver's HTTPS base URL. Set `PYMOVIEDB_SERVICE_URL` to the Python catalog API's HTTPS base URL if you want server-side IMDb metadata lookup for VidSrc embeds. Redeploy after changing environment variables. Do not deploy the resolver's cache-clear endpoint publicly without authentication.
