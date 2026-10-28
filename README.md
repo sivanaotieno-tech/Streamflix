@@ -50,6 +50,14 @@ The Next.js app also exposes `GET /api/title` for the selected title. For exampl
 
 The response returns a `title` object with a consistent shape for the detail dialog: synopsis, release year, genres, poster, rating, age rating, runtime, cast/directors when available, and any resolved IMDb/TMDB identifiers. It prefers the bundled catalog, enriches an exact title match with server-side IMDb metadata when the Python metadata service is configured, and safely falls back to the catalog when enrichment is unavailable. `metadata_available` makes that distinction explicit. Game records use the same detail API but remain discovery listings; they are not presented as playable video streams.
 
+## Search
+
+The website's `GET /api/search` endpoint supports `scope=all|movies|tv|anime|documentaries|kids|reality|games`, optional country/year/age-rating/genre filters, and sorting by best match, rating, newest year, or title. Search is case-, accent-, and punctuation-insensitive and ranks title matches above plot matches; the Python catalog also tolerates small spelling mistakes and searches overview text, genres, alternate titles, keywords, cast, and directors when those fields are present.
+
+For the `all`, `movies`, and `tv` scopes, the website can supplement a short local result set with server-side IMDb title-search results when the Python service is configured through `PYMOVIEDB_SERVICE_URL` or `PYMOVIEDB_API_URL`. Results are merged to avoid duplicate titles, while games remain discovery entries with official-site links rather than video playback. If an external search source fails, the API reports it in `unavailable` and preserves results from sources that still respond.
+
+Example: `/api/search?q=matrx&scope=all&sort=relevance` can find "The Matrix" despite a small typo; `/api/search?q=space&scope=movies&sort=year` orders matching movies by newest year.
+
 ## Local Python development
 
 ```powershell
