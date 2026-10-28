@@ -56,6 +56,18 @@ The local API listens on `http://127.0.0.1:8001` by default. See [the Python API
 
 Streamivio must only play video that you own or have explicit permission to distribute. A poster or metadata record does not grant streaming rights. No unauthorized stream scraping, unlocking, proxying or third-party stream-directory aggregation is included. Playback stays unavailable until a valid authorized `video_url` is added.
 
+## Playback integrations
+
+### VidSrc embedded player
+
+Streamivio can use the third-party VidSrc player when a catalog record has a known IMDb ID (imdb_id) or TMDB ID (tmdb_id). Movie embeds use https://vidsrc.sh/embed/movie/{id}; TV embeds use https://vidsrc.sh/embed/tv/{id}. A TV series can open with its built-in season/episode picker. See the [VidSrc website](https://vidsrc.sh/) and [official embed/API documentation](https://vidsrc.sh/vidsrc/docs/).
+
+VidSrc is an external provider: availability, embed permission, advertising, and playback rights are not controlled by Streamivio. Only use content you are authorized to access and distribute.
+
+### VidSrc-Streamer reference project
+
+Reference: [habitual69/VidSrc-Streamer on GitHub](https://github.com/habitual69/VidSrc-Streamer). Streamivio includes a separate FastAPI + SQLite resolver in the vidsrc-streamer/ folder inspired by the service pattern. It intentionally does not copy third-party URL extraction or IPTV playlist scraping. It only resolves authorized HTTPS video_url values explicitly mapped in Streamivio's own catalog. See [the resolver setup guide](vidsrc-streamer/README.md).
+
 ## Payments
 
 The existing subscription UI and IntaSend/Upstash-based billing code are separate from the catalog database. Their credentials must remain in Vercel environment variables and must never be committed to the repository. Test payment flows with sandbox credentials before enabling live payments.
