@@ -36,7 +36,6 @@ def normalize(row):
         "age_rating": row.get("age_rating"),
         "poster_url": row.get("poster_url"),
         "poster": row.get("poster_url"),
-        "video_url": row.get("video_url"),
         "source": row.get("source") or "Streamivio Library",
         "playback_available": bool(row.get("video_url")),
     }
