@@ -20,7 +20,7 @@
   },
   "rewrites": [
     {
-      "source": "/(health|search|popular|title)",
+      "source": "/(health|search|popular|title|catalog|categories|genres|featured|playback)",
       "destination": {
         "service": "pymoviedb-service"
       }
