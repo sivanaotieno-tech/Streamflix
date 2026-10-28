@@ -49,7 +49,8 @@ function projectDetails(base: AnyRecord, metadata?: AnyRecord | null) {
   const directors = textArray(source.directors ?? source.director);
   const cast = textArray(source.cast ?? source.stars ?? source.actorList ?? source.actors);
   const rating = firstNumber(source, ["rating", "imdb_rating", "imDbRating", "imdbRating", "userRating"]) ?? base.rating;
-  const year = firstText(source, ["year", "release_year", "releaseDate", "release_date"]) || base.year || "";
+  const rawYear = firstText(source, ["year", "release_year", "releaseDate", "release_date"]);
+  const year = rawYear.match(/\d{4}/)?.[0] || base.year || "";
   const contentRating = firstText(source, ["contentRating", "age_rating", "rated", "certificate"]) || base.contentRating || base.ageRating || null;
   const runtime = firstText(source, ["runtime", "runtimeStr", "duration", "length"]) || base.runtime || null;
   const imdbId = firstText(source, ["imdbID", "imdb_id", "imdbId"]) || base.imdbID || base.imdb_id || base.imdbId || null;
@@ -177,10 +178,8 @@ export async function GET(request: NextRequest) {
 
     const searchTitle = titleQuery || String(local?.title || "");
     if (!metadata && searchTitle.length >= 2) {
-      const search = new URL("/search", serviceBase);
-      search.searchParams.set("q", searchTitle);
-      search.searchParams.set("type", kind);
-      const payload = await serviceGet(serviceBase, search.pathname + search.search);
+      const searchPath = "/search?q=" + encodeURIComponent(searchTitle) + "&type=" + encodeURIComponent(kind);
+      const payload = await serviceGet(serviceBase, searchPath);
       const candidates = Array.isArray(payload?.results) ? payload.results.filter(isRecord) : [];
       const exact = candidates.find((row) => normalize(firstText(row, ["title", "name", "titleText"])) === normalize(searchTitle));
       if (exact) {
