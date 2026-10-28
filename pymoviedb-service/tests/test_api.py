@@ -7,6 +7,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import urlopen
+from unittest.mock import patch
 
 SERVICE_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SERVICE_DIR))
@@ -38,6 +39,47 @@ class CatalogTests(unittest.TestCase):
         self.assertIn("The Matrix", titles)
         self.assertIn("Inception", titles)
         self.assertIn("Interstellar", titles)
+
+    def test_typo_tolerant_search_finds_misspelled_title(self):
+        result = catalog.get_catalog({
+            "q": ["matrx"],
+            "limit": ["20"],
+            "offset": ["0"],
+        })
+        self.assertGreaterEqual(result["total"], 1)
+        self.assertEqual(result["results"][0]["title"], "The Matrix")
+
+    def test_title_match_ranks_above_plot_keyword_match(self):
+        rows = [
+            {"id": "plot-hit", "title": "Ordinary Drama", "overview": "A space journey.", "year": "2020", "rating": 7, "type": "movie"},
+            {"id": "title-hit", "title": "Space Jam", "overview": "A basketball comedy.", "year": "1996", "rating": 6, "type": "movie"},
+        ]
+        with patch("catalog.fetch_titles", return_value=rows):
+            result = catalog.get_catalog({"q": ["space"], "limit": ["20"], "offset": ["0"]})
+        self.assertEqual(result["results"][0]["id"], "title-hit")
+
+    def test_search_can_match_alternate_titles_and_cast(self):
+        rows = [
+            {
+                "id": "alias-test", "title": "Example Feature", "overview": "An example story.",
+                "alternate_titles": ["The Silver Comet"], "cast": ["Keanu Reeves"],
+                "year": "2020", "rating": 7, "type": "movie",
+            }
+        ]
+        with patch("catalog.fetch_titles", return_value=rows):
+            alias_result = catalog.get_catalog({"q": ["Silver Comet"], "limit": ["20"], "offset": ["0"]})
+            cast_result = catalog.get_catalog({"q": ["Keanu Reeves"], "limit": ["20"], "offset": ["0"]})
+        self.assertEqual(alias_result["results"][0]["id"], "alias-test")
+        self.assertEqual(cast_result["results"][0]["id"], "alias-test")
+
+    def test_country_filter_accepts_common_us_aliases(self):
+        result = catalog.get_catalog({
+            "country": ["US"],
+            "limit": ["100"],
+            "offset": ["0"],
+        })
+        titles = {item["title"] for item in result["results"]}
+        self.assertIn("The Matrix", titles)
 
     def test_pagination_is_consistent(self):
         all_rows = catalog.get_catalog({"type": ["movie"], "limit": ["100"], "offset": ["0"]})
