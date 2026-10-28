@@ -68,6 +68,14 @@ VidSrc is an external provider: availability, embed permission, advertising, and
 
 Reference: [habitual69/VidSrc-Streamer on GitHub](https://github.com/habitual69/VidSrc-Streamer). Streamivio includes a separate FastAPI + SQLite resolver in the vidsrc-streamer/ folder inspired by the service pattern. It intentionally does not copy third-party URL extraction or IPTV playlist scraping. It only resolves authorized HTTPS video_url values explicitly mapped in Streamivio's own catalog. See [the resolver setup guide](vidsrc-streamer/README.md).
 
+## VidSrc player options and metadata
+
+The playback dialog supports documented VidSrc embed options: subtitle-language preference, custom HTTPS subtitle tracks, autoplay request, TV season/episode selection, optional auto-next, manual start time, and saved-position resume based on validated player messages. TV seasons and provider quality/availability metadata are fetched through Streamivio's same-origin `/api/playback/info` route, which calls the documented `/info/movie/{id}.json` and `/info/tv/{id}.json` endpoints. Metadata responses are cached by the browser/CDN for approximately five minutes.
+
+The frontend accepts progress messages only from the exact `https://vidsrc.sh` iframe origin and the current iframe window. Progress is kept in the viewer's browser local storage; it is not sent to Streamivio servers. The official/default VidSrc domain may still require a user click even when autoplay is requested.
+
+References: [VidSrc home](https://vidsrc.sh/), [embed/API documentation](https://vidsrc.sh/vidsrc/docs/).
+
 ## Payments
 
 The existing subscription UI and IntaSend/Upstash-based billing code are separate from the catalog database. Their credentials must remain in Vercel environment variables and must never be committed to the repository. Test payment flows with sandbox credentials before enabling live payments.
