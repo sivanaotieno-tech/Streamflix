@@ -53,8 +53,13 @@ function projectDetails(base: AnyRecord, metadata?: AnyRecord | null) {
   const year = rawYear.match(/\d{4}/)?.[0] || base.year || "";
   const contentRating = firstText(source, ["contentRating", "age_rating", "rated", "certificate"]) || base.contentRating || base.ageRating || null;
   const runtime = firstText(source, ["runtime", "runtimeStr", "duration", "length"]) || base.runtime || null;
-  const imdbId = firstText(source, ["imdbID", "imdb_id", "imdbId"]) || base.imdbID || base.imdb_id || base.imdbId || null;
-  const tmdbId = firstText(source, ["tmdb_id", "tmdbId", "tmdbID"]) || base.tmdb_id || base.tmdbId || null;
+  const sourceId = firstText(source, ["id"]);
+  const imdbId = firstText(source, ["imdbID", "imdb_id", "imdbId"]) ||
+    (/^tt\d+$/i.test(sourceId) ? sourceId : "") ||
+    base.imdbID || base.imdb_id || base.imdbId || null;
+  const tmdbId = firstText(source, ["tmdb_id", "tmdbId", "tmdbID"]) ||
+    (/^\d{1,12}$/.test(sourceId) ? sourceId : "") ||
+    base.tmdb_id || base.tmdbId || null;
 
   return {
     ...base,
