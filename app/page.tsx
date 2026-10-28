@@ -18,6 +18,8 @@ type Item={
   imdbId?:string;
   imdb_id?:string;
   imdbID?:string;
+  tmdbId?:string|number;
+  tmdb_id?:string|number;
   media_type?:string;
   type?:string;
   genres?:string[];
@@ -93,7 +95,7 @@ export default function Home(){
     setPlaybackLoading(true);setPlaybackError("");setPlaybackUrl("");
     try{
       // First ask Streamivio's playback API for an explicitly configured authorized stream.
-      const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||"movie")+"&imdb_id="+encodeURIComponent(selected.imdbId||selected.imdb_id||selected.imdbID||""),{cache:"no-store"});
+      const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||"movie")+"&imdb_id="+encodeURIComponent(selected.imdbId||selected.imdb_id||selected.imdbID||"")+"&tmdb_id="+encodeURIComponent(String(selected.tmdbId||selected.tmdb_id||"")),{cache:"no-store"});
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data.available&&typeof data.stream_url==="string"){
         setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
