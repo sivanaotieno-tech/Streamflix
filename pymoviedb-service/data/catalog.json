@@ -1,7 +1,28 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-28T14:09:56.521Z",
+  "updated_at": "2026-10-28T14:38:29.723Z",
   "titles": [
+    {
+      "id": "demo-big-buck-bunny",
+      "title": "Big Buck Bunny — Public-Domain Demo",
+      "overview": "A playable demonstration title using the Blender Foundation's openly licensed animated short. This demo verifies Streamivio's video player; it is not a full commercial-movie stream.",
+      "year": "2008",
+      "rating": 7,
+      "type": "movie",
+      "genres": [
+        "Animation",
+        "Family",
+        "Comedy"
+      ],
+      "country": [
+        "Open movie"
+      ],
+      "age_rating": "G",
+      "poster_url": "https://peach.blender.org/wp-content/uploads/title_anouncement.jpg?x11217",
+      "video_url": "https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4",
+      "video_source": "Blender Foundation / Internet Archive public demo",
+      "published": true
+    },
     {
       "id": "m-matrix",
       "title": "The Matrix",
