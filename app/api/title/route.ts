@@ -111,7 +111,8 @@ export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const id = (params.get("id") || "").trim().slice(0, 128);
   const titleQuery = (params.get("title") || "").trim().slice(0, 100);
-  const suppliedType = (params.get("type") || "movie").trim().toLowerCase();
+  const suppliedTypeParam = params.get("type");
+  const suppliedType = (suppliedTypeParam || "movie").trim().toLowerCase();
   const imdbId = (params.get("imdb_id") || params.get("imdbId") || "").trim();
   const tmdbId = (params.get("tmdb_id") || params.get("tmdbId") || "").trim();
 
@@ -157,7 +158,7 @@ export async function GET(request: NextRequest) {
     id: id || imdbId || tmdbId || undefined,
     title: titleQuery,
     name: titleQuery,
-    type: suppliedType,
+    type: suppliedTypeParam ? suppliedType : undefined,
     overview: "",
     description: "",
     genres: [],
