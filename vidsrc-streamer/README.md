@@ -29,12 +29,19 @@ The example URL is illustrative; replace it with a real HTTPS MP4/HLS URL you ar
 
 - `GET /health` — health status.
 - `GET /stream/tt0133093` — returns a configured authorized URL and its format; cache entries expire after 300 seconds by default.
-- `DELETE /cache` — clears the SQLite cache. Keep this service private or protect this endpoint before any public deployment.
 
 Environment variables: `STREAMIVIO_CATALOG_PATH`, `STREAMIVIO_STREAM_CACHE`, `STREAMIVIO_CACHE_TTL`, and optional comma-separated `STREAMIVIO_CORS_ORIGINS`.
 
+## Upstream references
+
+- [VidSrc-Streamer reference project](https://github.com/habitual69/VidSrc-Streamer)
+- [VidSrc website](https://vidsrc.sh/)
+- [VidSrc embed/API documentation](https://vidsrc.sh/vidsrc/docs/)
+
+Streamivio uses the official documented embed URL formats for the browser player. The local resolver is intentionally limited to authorized HTTPS URLs configured in the Streamivio catalog; it does not implement third-party stream extraction or the upstream project's IPTV playlist generator.
+
 ## Streamivio frontend
 
-The Next.js app has `GET /api/playback?id=...` for configured direct streams and falls back to the VidSrc embedded player when an IMDb ID is present on the catalog item. To resolve authorized streams through this service, deploy it privately or behind authentication, then add a server-only `STREAMIVIO_RESOLVER_URL=https://your-service.example` environment variable and wire it to the resolver. Do not expose a private resolver or admin endpoint publicly without authentication.
+The Next.js app has `GET /api/playback?id=...` for configured direct streams and falls back to the VidSrc embedded player when an IMDb ID is present on the catalog item. To resolve authorized streams through this service, deploy it privately or behind authentication, then set the server-only `STREAMIVIO_RESOLVER_URL=https://your-service.example` environment variable. The Next.js playback route is already wired to call this endpoint. Do not expose a private resolver or admin endpoint publicly without authentication.
 
 VidSrc embed URLs are third-party and are not guaranteed to be available, licensed, or embeddable. Use the player only for content you are authorized to access.
