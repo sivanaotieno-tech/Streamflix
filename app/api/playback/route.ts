@@ -86,6 +86,6 @@ export async function GET(request:NextRequest){
   }
   return NextResponse.json({
     available:false,
-    message:"No authorized direct stream or exact IMDb ID could be resolved. Add imdb_id and, for direct playback, an authorized video_url to this catalog item.",
+    message:"No authorized direct stream or valid IMDb/TMDB content ID could be resolved. Add an imdb_id or tmdb_id; direct playback additionally requires an authorized HTTPS video_url.",
   },{status:404,headers:{"Cache-Control":"no-store"}});
 }
