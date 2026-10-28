@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { catalog } from "../../data/catalog";
+import { gamesCatalog } from "../../data/games";
 
 type AnyRecord = Record<string, any>;
 const NO_STORE = { "Cache-Control": "no-store" };
@@ -118,13 +119,33 @@ export async function GET(request: NextRequest) {
   const local = catalog.find((item) => String(item.id) === id) ??
     catalog.find((item) => normalize(item.title) === normalize(titleQuery) &&
       (suppliedType === "all" || item.type === suppliedType || (suppliedType === "tv" && ["anime", "documentary", "kids", "reality"].includes(item.type)))) ?? null;
+  const game = gamesCatalog.find((item) => String(item.id) === id) ??
+    gamesCatalog.find((item) => normalize(item.title) === normalize(titleQuery)) ?? null;
 
-  const baseTitle = local ? {
+  const baseTitle: AnyRecord = local ? {
     ...local,
     description: local.overview,
     poster_url: local.poster,
     age_rating: local.ageRating,
-  } as AnyRecord : {
+  } : game ? {
+    id: game.id,
+    title: game.title,
+    name: game.title,
+    overview: game.overview,
+    description: game.overview,
+    year: game.year,
+    genres: game.genres,
+    country: [],
+    source: "Local Games Catalog",
+    platforms: game.platforms,
+    developer: game.developer,
+    publisher: game.publisher,
+    contentRating: game.ageRating,
+    ageRating: game.ageRating,
+    poster: null,
+    poster_url: null,
+    playback_available: false,
+  } : {
     id: id || imdbId || tmdbId || undefined,
     title: titleQuery,
     name: titleQuery,
@@ -135,7 +156,7 @@ export async function GET(request: NextRequest) {
     country: [],
     source: "Metadata lookup",
     playback_available: false,
-  } as AnyRecord;
+  };
 
   const serviceBase = (process.env.PYMOVIEDB_SERVICE_URL || process.env.PYMOVIEDB_API_URL || "").replace(/\/+$/, "");
   let metadata: AnyRecord | null = null;
@@ -144,7 +165,7 @@ export async function GET(request: NextRequest) {
     ["tv", "anime", "documentary", "kids", "reality"].includes(String(local?.type || ""))
     ? "tv" : "movie";
 
-  if (serviceBase) {
+  if (serviceBase && !game) {
     if (resolvedProviderId) {
       metadata = await serviceGet(serviceBase, "/title?id=" + encodeURIComponent(resolvedProviderId));
     } else if (/^\d{1,12}$/.test(tmdbId)) {
@@ -172,7 +193,7 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  if (!local && !metadata && !resolvedProviderId) {
+  if (!local && !game && !metadata && !resolvedProviderId) {
     return NextResponse.json({
       available: false,
       error: "No matching title was found.",
