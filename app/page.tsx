@@ -94,6 +94,11 @@ export default function Home(){
   const searchAbort=useRef<AbortController|null>(null);
   const searchTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const[selected,setSelected]=useState<Item|null>(null);
+  const[titleDetails,setTitleDetails]=useState<any|null>(null);
+  const[titleDetailsLoading,setTitleDetailsLoading]=useState(false);
+  const[titleDetailsMessage,setTitleDetailsMessage]=useState("");
+  const[titleDetailsMetadataAvailable,setTitleDetailsMetadataAvailable]=useState(false);
+  const[titleDetailsError,setTitleDetailsError]=useState("");
   const[detailError,setDetailError]=useState("");
   const[playbackUrl,setPlaybackUrl]=useState("");
   const[playbackFormat,setPlaybackFormat]=useState("");
@@ -130,6 +135,44 @@ export default function Home(){
     setSelected(m);setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");
     setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(0);setPendingDirectResume(0);setStartAt("");
   };
+
+  useEffect(()=>{
+    if(!selected){
+      setTitleDetails(null);setTitleDetailsLoading(false);setTitleDetailsMessage("");
+      setTitleDetailsMetadataAvailable(false);setTitleDetailsError("");
+      return;
+    }
+    const controller=new AbortController();
+    const title=String(selected.title||selected.name||"");
+    const params=new URLSearchParams({
+      id:String(selected.id),
+      title,
+      type:String(selected.type||selected.media_type||"movie")
+    });
+    const imdbId=String(selected.imdbId||selected.imdb_id||selected.imdbID||"");
+    const tmdbId=String(selected.tmdbId||selected.tmdb_id||"");
+    if(imdbId)params.set("imdb_id",imdbId);
+    if(tmdbId)params.set("tmdb_id",tmdbId);
+    setTitleDetails(null);setTitleDetailsLoading(true);setTitleDetailsMessage("");
+    setTitleDetailsMetadataAvailable(false);setTitleDetailsError("");
+    fetch("/api/title?"+params.toString(),{signal:controller.signal,cache:"no-store"})
+      .then(async response=>{
+        const payload=await response.json().catch(()=>({}));
+        if(!response.ok||!payload.available||!payload.title){
+          throw new Error(payload.message||payload.error||"Title details could not be loaded.");
+        }
+        setTitleDetails(payload.title);
+        setTitleDetailsMessage(typeof payload.message==="string"?payload.message:"");
+        setTitleDetailsMetadataAvailable(Boolean(payload.metadata_available));
+      })
+      .catch(error=>{
+        if(error instanceof Error&&error.name==="AbortError")return;
+        console.error("Title details could not be loaded",error);
+        setTitleDetailsError("Extra title details are temporarily unavailable. Showing the information available in the Streamivio catalog.");
+      })
+      .finally(()=>{if(!controller.signal.aborted)setTitleDetailsLoading(false);});
+    return()=>controller.abort();
+  },[selected]);
 
   const buildVidSrcUrl=(baseUrl:string,contentId:string,kind:"movie"|"tv",resumeOverride?:number)=>{
     const url=new URL(baseUrl);
@@ -393,6 +436,7 @@ export default function Home(){
   };
 
   const add=(m:Item)=>{if(!list.some(x=>x.id===m.id))setList(list.concat(m))};
+  const detailTitle=titleDetails||selected;
 
   return <main className="min-h-screen bg-[#141414] pb-12">
     <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-16 items-center gap-5 px-4 md:gap-8 md:px-12">
@@ -515,19 +559,22 @@ export default function Home(){
     </div>}
 
     {selected&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5" onClick={()=>setSelected(null)}><div className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-lg bg-[#181818] p-6" onClick={e=>e.stopPropagation()}>
-      <div className="text-xs font-bold uppercase tracking-wider text-red-400">{selected.source}</div>
-      <h2 className="mt-2 text-2xl font-bold">{selected.title||selected.name}</h2>
-      {(selected.year||selected.rating||selected.contentRating||selected.runtime)&&<div className="mt-3 flex flex-wrap gap-3 text-sm text-zinc-400">
-        {selected.year&&<span>{selected.year}</span>}{selected.contentRating&&<span>{selected.contentRating}</span>}{selected.runtime&&<span>{selected.runtime}</span>}{selected.rating&&<span>★ {selected.rating.toFixed(1)}</span>}
+      <div className="text-xs font-bold uppercase tracking-wider text-red-400">{detailTitle?.source||selected.source}</div>
+      <h2 className="mt-2 text-2xl font-bold">{detailTitle?.title||detailTitle?.name||selected.title||selected.name}</h2>
+      {(detailTitle?.year||detailTitle?.rating||detailTitle?.contentRating||detailTitle?.ageRating||detailTitle?.runtime)&&<div className="mt-3 flex flex-wrap gap-3 text-sm text-zinc-400">
+        {detailTitle?.year&&<span>{detailTitle.year}</span>}{(detailTitle?.contentRating||detailTitle?.ageRating)&&<span>{detailTitle.contentRating||detailTitle.ageRating}</span>}{detailTitle?.runtime&&<span>{detailTitle.runtime}</span>}{typeof detailTitle?.rating==="number"&&<span>★ {detailTitle.rating.toFixed(1)}</span>}
       </div>}
-      {selected.genres&&selected.genres.length>0&&<p className="mt-3 text-sm text-zinc-400">{selected.genres.join(" · ")}</p>}
+      {detailTitle?.genres&&detailTitle.genres.length>0&&<p className="mt-3 text-sm text-zinc-400">{detailTitle.genres.join(" · ")}</p>}
       {selected.platforms&&selected.platforms.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Platforms:</span> {selected.platforms.join(", ")}</p>}
       {selected.developer&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Developer:</span> {selected.developer}</p>}
       {selected.publisher&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Publisher:</span> {selected.publisher}</p>}
       {selected.url&&<a href={selected.url} target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm font-semibold text-red-400 hover:text-red-300">Official game page ↗</a>}
-      <p className="mt-3 text-zinc-300">{selected.overview||"This title is available for discovery only. Streamivio does not provide playback until distribution rights are secured."}</p>
-      {selected.directors&&selected.directors.length>0&&<p className="mt-3 text-sm text-zinc-400"><span className="text-zinc-200">Director:</span> {selected.directors.join(", ")}</p>}
-      {selected.cast&&selected.cast.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Cast:</span> {selected.cast.join(", ")}</p>}
+      {titleDetailsLoading&&<p role="status" className="mt-3 text-xs text-zinc-400"><LoaderCircle className="mr-1 inline h-3.5 w-3.5 animate-spin"/>Loading title details and credits…</p>}
+      {titleDetailsMessage&&!titleDetailsLoading&&!titleDetailsMetadataAvailable&&<p className="mt-3 text-xs text-zinc-500">{titleDetailsMessage}</p>}
+      {titleDetailsError&&<p role="status" className="mt-3 text-xs text-amber-300">{titleDetailsError}</p>}
+      <p className="mt-3 leading-6 text-zinc-300">{detailTitle?.overview||detailTitle?.description||"A synopsis has not been added for this title yet. Check back later for more information."}</p>
+      {detailTitle?.directors&&detailTitle.directors.length>0&&<p className="mt-3 text-sm text-zinc-400"><span className="text-zinc-200">Director:</span> {detailTitle.directors.join(", ")}</p>}
+      {detailTitle?.cast&&detailTitle.cast.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Cast:</span> {detailTitle.cast.join(", ")}</p>}
       {detailError&&<p role="status" className="mt-4 text-sm text-amber-300">{detailError}</p>}
       <div className="mt-4 rounded-lg border border-white/10 bg-black/20">
         <button type="button" onClick={()=>setVidSrcOptionsOpen(open=>!open)} aria-expanded={vidsrcOptionsOpen} className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm font-semibold">
