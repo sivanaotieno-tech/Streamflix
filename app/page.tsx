@@ -16,6 +16,9 @@ type Item={
   video_url?:string|null;
   playback_available?:boolean;
   imdbId?:string;
+  imdb_id?:string;
+  imdbID?:string;
+  media_type?:string;
   genres?:string[];
   country?:string[];
   ageRating?:string|null;
@@ -88,10 +91,33 @@ export default function Home(){
     if(!selected)return;
     setPlaybackLoading(true);setPlaybackError("");setPlaybackUrl("");
     try{
+      // Prefer a URL explicitly configured in Streamivio's own catalog.
       const response=await fetch("/playback?id="+encodeURIComponent(String(selected.id)),{cache:"no-store"});
       const data=await response.json();
-      if(!response.ok||!data.available||!data.stream_url)throw new Error(data.message||data.error||"This title has no playable, authorized video configured yet.");
-      setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");
+      if(response.ok&&data.available&&data.stream_url){
+        setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
+      }
+      // VidSrc embed needs a real IMDb ID; local catalog IDs such as "m-matrix" are not valid.
+      let imdbId=selected.imdbId||selected.imdb_id||selected.imdbID||(typeof selected.id==="string"&&/^tt\d+$/.test(selected.id)?selected.id:"");
+      if(!imdbId){
+        const kind=(selected.source||"").toLowerCase().includes("tv")||selected.media_type==="tv"?"tv":"movie";
+        const lookup=await fetch("/search?q="+encodeURIComponent(selected.title||selected.name||"")+"&type="+kind,{cache:"no-store"});
+        if(lookup.ok){
+          const payload=await lookup.json();
+          const candidates=Array.isArray(payload.results)?payload.results:[];
+          const norm=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,"");
+          const exact=candidates.find((item:any)=>norm(String(item.title||item.name||""))===norm(selected.title||selected.name||""));
+          const found=exact||null;
+          imdbId=found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"";
+          if(!/^tt\d+$/.test(String(imdbId)))imdbId="";
+        }
+      }
+      if(!imdbId)throw new Error("Could not resolve an exact IMDb ID for this title. Add its IMDb ID to the catalog and try again.");
+      const isTv=selected.media_type==="tv"||(selected.source||"").toLowerCase().includes("tv");
+      const embedUrl=isTv
+        ? "https://vidsrc.me/embed/tv?imdb="+encodeURIComponent(imdbId)+"&season=1&episode=1"
+        : "https://vidsrc.me/embed/movie?imdb="+encodeURIComponent(imdbId);
+      setPlaybackFormat("iframe");setPlaybackUrl(embedUrl);
     }catch(error){setPlaybackError(error instanceof Error?error.message:"Playback is unavailable right now.");}
     finally{setPlaybackLoading(false);}
   };
