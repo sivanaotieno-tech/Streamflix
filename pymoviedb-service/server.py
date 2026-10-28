@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, urlsplit
 from PyMovieDb import IMDB
 from requests.exceptions import RequestException
 
-from catalog import CatalogUnavailable, get_catalog, get_categories, get_featured, get_genres
+from catalog import CatalogUnavailable, fetch_titles, get_catalog, get_categories, get_featured, get_genres, normalize
 
 IMDB_ID_PATTERN = re.compile(r"^tt\d+$")
 IMDB_TYPES = {"movie", "tv"}
@@ -72,9 +72,26 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 return
 
             if path == "/playback":
-                self.send_json(HTTPStatus.NOT_IMPLEMENTED, {
-                    "available": False,
-                    "message": "Streamivio currently provides discovery and metadata only. Playback requires an authorized video delivery provider and licensed media."
+                title_id = query.get("id", [""])[0].strip()
+                if not title_id:
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "A catalog title id is required"})
+                    return
+                title = next((row for row in fetch_titles() if row.get("id") == title_id), None)
+                if title is None:
+                    self.send_json(HTTPStatus.NOT_FOUND, {"available": False, "error": "Title not found"})
+                    return
+                item = normalize(title)
+                stream_url = item.get("video_url")
+                if not stream_url:
+                    self.send_json(HTTPStatus.NOT_FOUND, {
+                        "id": title_id, "available": False,
+                        "message": "No authorized stream URL is configured for this title."
+                    })
+                    return
+                self.send_json(HTTPStatus.OK, {
+                    "id": title_id, "available": True,
+                    "title": item["title"], "stream_url": stream_url,
+                    "format": "hls" if ".m3u8" in stream_url.lower() else ("mp4" if ".mp4" in stream_url.lower() else "external")
                 })
                 return
 
@@ -114,12 +131,16 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 return
 
             if path == "/title":
-                imdb_id = query.get("id", [""])[0].strip()
-                if not IMDB_ID_PATTERN.fullmatch(imdb_id):
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "A valid IMDb title ID is required"})
+                title_id = query.get("id", [""])[0].strip()
+                local = next((row for row in fetch_titles() if row.get("id") == title_id), None)
+                if local:
+                    self.send_json(HTTPStatus.OK, normalize(local))
+                    return
+                if not IMDB_ID_PATTERN.fullmatch(title_id):
+                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Use a catalog title id or a valid IMDb id (tt followed by digits)"})
                     return
                 imdb = create_imdb_client()
-                data = decode_result(imdb.get_by_id(imdb_id))
+                data = decode_result(imdb.get_by_id(title_id))
                 status = HTTPStatus.NOT_FOUND if data.get("status") == HTTPStatus.NOT_FOUND else HTTPStatus.OK
                 self.send_json(status, data)
                 return
