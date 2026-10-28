@@ -108,11 +108,11 @@ export async function GET(request: NextRequest) {
   const imdbId = (params.get("imdb_id") || params.get("imdbId") || "").trim();
   const tmdbId = (params.get("tmdb_id") || params.get("tmdbId") || "").trim();
 
-  if (!id && titleQuery.length < 2 && !/^tt\d+$/i.test(imdbId) && !/^\d{1,12}$/.test(tmdbId)) {
+  if (!id && titleQuery.length < 2 && !/^tt\d+$/i.test(imdbId)) {
     return NextResponse.json({
       available: false,
-      error: "Provide a catalog ID, an IMDb/TMDB ID, or a title with at least two characters.",
-      message: "Choose a title from Streamivio or search by its exact name.",
+      error: "Provide a catalog title ID, an IMDb ID, or a title with at least two characters.",
+      message: "A TMDB ID can be included alongside a title, but the metadata service needs a name or IMDb ID to retrieve descriptive details.",
     }, { status: 400, headers: NO_STORE });
   }
 
@@ -137,6 +137,7 @@ export async function GET(request: NextRequest) {
     genres: game.genres,
     country: [],
     source: "Local Games Catalog",
+    type: "game",
     platforms: game.platforms,
     developer: game.developer,
     publisher: game.publisher,
