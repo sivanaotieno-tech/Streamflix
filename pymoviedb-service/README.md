@@ -1,19 +1,18 @@
-# Streamivio Python API
+# Streamivio Python Catalog and Playback API
 
-Python metadata and catalog API for Streamivio. It supports movies, TV shows, anime, documentaries, kids' titles, and reality programming.
+A standalone Python API backed by the repository's own JSON catalog at `data/catalog.json`. It has no Supabase or other database service dependency.
 
-**Important:** this API currently provides discovery and metadata, not video files or unauthorized stream links. Real playback must be connected to a licensed video delivery provider.
+## Catalog database
 
-## Deploy on Vercel
+Edit `data/catalog.json` and commit the changes to update the catalog. Each title supports:
 
-The repository's root `vercel.json` routes API paths to this service. The service entrypoint is `server:handler`. Vercel deploys from the repository root; no separate project is required.
+- `id`, `title`, `overview` (description), `year`, `rating`, `type`
+- `genres`, `country`, `age_rating`
+- `poster_url`: public HTTPS image URL for artwork you own or are licensed to use
+- `video_url`: HTTPS MP4 or HLS (.m3u8) URL for video you own or are licensed to distribute
+- `published`: set to false to hide a title from the API
 
-Configure these environment variables in Vercel for the Python service (and local development):
-
-- `SUPABASE_URL` — your Supabase project URL.
-- `SUPABASE_ANON_KEY` — the public anon/publishable key. Never use a service-role or secret key here.
-
-The catalog endpoints require a configured Supabase catalog. The existing IMDb metadata endpoints remain separate.
+The API is read-only at runtime. Vercel functions do not provide durable writable local storage, so changes to the bundled JSON database must be committed to the repository and redeployed. Large video files should live on a licensed video hosting/CDN service; this API stores the authorized playback URL, not the video bytes.
 
 ## Run locally
 
@@ -22,40 +21,25 @@ cd pymoviedb-service
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -r requirements.txt
-$env:SUPABASE_URL = "https://YOUR_PROJECT.supabase.co"
-$env:SUPABASE_ANON_KEY = "YOUR_PUBLIC_ANON_KEY"
 python server.py
 ```
 
-The local server listens at `http://127.0.0.1:8001` by default.
+Default address: `http://127.0.0.1:8001`.
 
 ## Endpoints
 
 | Endpoint | Purpose |
 | --- | --- |
-| `GET /health` | Health check |
-| `GET /catalog` | Search/filter the Streamivio catalog |
-| `GET /categories` | Media categories and published title counts |
-| `GET /genres` | Genres found in the catalog |
-| `GET /featured` | Highest-rated catalog titles |
-| `GET /search?q=matrix&type=movie` | IMDb metadata search for movies or TV |
-| `GET /popular?type=movie` | IMDb popular movies or TV |
-| `GET /title?id=tt0133093` | IMDb title details |
-| `GET /playback` | Explicit playback availability status; does not serve media |
+| `GET /health` | API health |
+| `GET /catalog` | Search/filter titles |
+| `GET /categories` | Categories and counts |
+| `GET /genres` | Available genres |
+| `GET /featured` | Highest-rated titles |
+| `GET /title?id=m-matrix` | Full local title metadata |
+| `GET /playback?id=m-matrix` | Returns configured authorized playback URL |
+| `GET /search?q=matrix&type=movie` | Optional IMDb metadata search |
+| `GET /popular?type=movie` | Optional IMDb popular list |
 
-### Catalog examples
+Catalog examples: `/catalog?type=movie`, `/catalog?type=anime&genre=adventure`, `/catalog?q=space&limit=20&offset=0`.
 
-- `/catalog?type=movie`
-- `/catalog?type=tv&genre=drama`
-- `/catalog?type=anime&sort=year`
-- `/catalog?type=documentary&country=Kenya`
-- `/catalog?q=space&limit=20&offset=0`
-- `/catalog?year=2024&sort=rating`
-
-Supported catalog types: `movie`, `tv`, `anime`, `documentary`, `kids`, `reality`.
-
-Catalog filters are case-insensitive. `limit` accepts 1–100; `offset` supports pagination. Responses include normalized title fields and `playback_available: false` until a licensed playback provider is actually configured.
-
-## Metadata source note
-
-The `/search`, `/popular`, and `/title` endpoints use PyMovieDb to retrieve IMDb metadata. Respect upstream terms and rate limits. The Streamivio catalog endpoints read published rows from Supabase's `public.titles` table.
+A title's playback endpoint returns unavailable until `video_url` is set to a working, authorized media URL. The API does not scrape, unlock, proxy, or supply unauthorized movie streams.
