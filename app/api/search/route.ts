@@ -237,13 +237,15 @@ export async function GET(request:NextRequest){
         if(response.ok){
           const payload=await response.json();
           if(Array.isArray(payload.results)){
-            mediaResults=payload.results.map((item:SearchRecord)=>({
+            const pythonResults:SearchRecord[]=payload.results.map((item:SearchRecord)=>({
               ...item,name:item.title||item.name,year:item.year==null?"":String(item.year),
               ageRating:item.age_rating||item.ageRating||null,contentRating:item.age_rating||item.contentRating||null,
               poster:item.poster_url||item.poster||null,poster_url:item.poster_url||item.poster||null,
               playback_available:Boolean(item.playback_available)
             }));
-            catalogDatabase="python-json";
+            // Keep valid bundled-only titles when a Python catalog query misses them; merge by provider ID/title.
+            mediaResults=mergeUnique(pythonResults,mediaResults);
+            catalogDatabase="python-json+bundled-fallback";
           }else unavailable.push("Streamivio catalog");
         }else unavailable.push("Streamivio catalog");
       }catch(error){
