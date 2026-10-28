@@ -54,7 +54,7 @@ The local API listens on `http://127.0.0.1:8001` by default. See [the Python API
 
 ## Playback and content rights
 
-Streamivio must only play video that you own or have explicit permission to distribute. A poster or metadata record does not grant streaming rights. No unauthorized stream scraping, unlocking, proxying or third-party stream-directory aggregation is included. Playback stays unavailable until a valid authorized `video_url` is added.
+Streamivio's own direct-stream resolver only returns HTTPS `video_url` values you have configured for content you own or are licensed to distribute. A poster or metadata record does not grant streaming rights. The VidSrc iframe and its third-party availability/rights are controlled by that provider, not Streamivio; use it only where you are authorized to access and display the content. Streamivio does not extract protected player URLs or proxy third-party media bytes.
 
 ## Playback integrations
 
