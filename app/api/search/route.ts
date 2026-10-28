@@ -71,7 +71,7 @@ function scoreResult(item:SearchRecord,query:string){
   else if(compactTitle.startsWith(compactQuery))score+=8500;
   else if(compactTitle.includes(compactQuery))score+=6500;
   else if(fold(title).includes(foldedQuery))score+=5500;
-  if(titleFlat.slice(1).some(value=>value.join(" ").includes(foldedQuery)))score+=4000;
+  if(titleFlat.slice(1).some(value=>value.includes(foldedQuery)))score+=4000;
   if(metadata.some(value=>value.join(" ").includes(foldedQuery)))score+=250;
 
   const queryWords=words(query).filter(word=>!["a","an","and","for","in","of","or","the","to","with"].includes(word));
@@ -324,7 +324,7 @@ export async function GET(request:NextRequest){
   else combined.sort((a,b)=>(numberOrUndefined(b.rating)||0)-(numberOrUndefined(a.rating)||0));
 
   const total=combined.length;
-  const results=combined.slice(0,limit).map(({search_score,...item})=>item);
+  const results=combined.slice(0,limit).map((entry: SearchRecord)=>{ const {search_score,...item}=entry; return item; });
   return NextResponse.json({
     results,total,limit,offset:0,query:rawQuery,scope,
     sources:[...new Set(sources)],unavailable:[...new Set(unavailable)],database:catalogDatabase
