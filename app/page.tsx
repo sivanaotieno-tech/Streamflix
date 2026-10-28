@@ -98,6 +98,9 @@ export default function Home(){
       if(response.ok&&data.available&&typeof data.stream_url==="string"){
         setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
       }
+      if(response.ok&&data.available&&typeof data.embed_url==="string"){
+        setPlaybackUrl(data.embed_url);setPlaybackFormat("iframe");return;
+      }
       // Prefer a real IMDb ID from the catalog. Never treat a local catalog key as a provider ID.
       let imdbId=selected.imdbId||selected.imdb_id||selected.imdbID||
         (typeof selected.id==="string"&&/^tt\\d+$/.test(selected.id)?selected.id:"");
