@@ -259,7 +259,7 @@ export default function Home(){
           if(lookup.ok){
             const payload=await lookup.json();
             const candidates=Array.isArray(payload.results)?payload.results:[];
-            const norm=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,"");
+            const norm=(value:string)=>value.replace(/\s*\(\d{4}\)\s*$/,"").toLowerCase().replace(/[^a-z0-9]/g,"");
             const exact=candidates.find((item:any)=>norm(String(item.title||item.name||item.titleText||""))===norm(selected.title||selected.name||""));
             const found=exact||null;
             const foundImdb=String(found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"");
