@@ -301,7 +301,7 @@ export async function GET(request:NextRequest){
     }));
     const external=remote.flatMap(entry=>{
       if(entry.failed){unavailable.push(entry.kind==="movie"?"IMDb movie search":"IMDb TV search");return [];}
-      return entry.results.filter(item=>{
+      return entry.results.filter((item: SearchRecord)=>{
         if(genre&&!textList(item.genres).some(value=>compact(value)===genre))return false;
         if(country&&!countryMatches(item,country))return false;
         if(year&&String(item.year||"")!==year)return false;
