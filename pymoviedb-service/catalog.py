@@ -1,9 +1,9 @@
-"""Streamivio catalog endpoints backed by the public Supabase titles table."""
-import os
-import requests
+"""Standalone JSON-backed Streamivio catalog API (no external database required)."""
+import json
+from pathlib import Path
 
+DATA_FILE = Path(__file__).resolve().parent / "data" / "catalog.json"
 ALLOWED_TYPES = {"movie", "tv", "anime", "documentary", "kids", "reality"}
-SELECT = "id,title,overview,release_year,rating,type,genres,country,age_rating,poster_url"
 
 
 class CatalogUnavailable(RuntimeError):
@@ -11,21 +11,14 @@ class CatalogUnavailable(RuntimeError):
 
 
 def fetch_titles():
-    base = os.getenv("SUPABASE_URL", "").rstrip("/")
-    key = os.getenv("SUPABASE_ANON_KEY", "")
-    if not base or not key:
-        raise CatalogUnavailable("Catalog database is not configured")
-    response = requests.get(
-        f"{base}/rest/v1/titles",
-        params={"select": SELECT, "is_published": "eq.true", "order": "rating.desc.nullslast", "limit": "1000"},
-        headers={"apikey": key, "Authorization": f"Bearer {key}"},
-        timeout=8,
-    )
-    response.raise_for_status()
-    rows = response.json()
+    try:
+        payload = json.loads(DATA_FILE.read_text(encoding="utf-8"))
+        rows = payload.get("titles", [])
+    except (OSError, json.JSONDecodeError) as error:
+        raise CatalogUnavailable("The bundled JSON catalog could not be read") from error
     if not isinstance(rows, list):
-        raise CatalogUnavailable("Catalog database returned an invalid response")
-    return rows
+        raise CatalogUnavailable("The JSON catalog must contain a titles array")
+    return [row for row in rows if isinstance(row, dict) and row.get("published", True)]
 
 
 def normalize(row):
@@ -33,16 +26,19 @@ def normalize(row):
         "id": row.get("id"),
         "title": row.get("title"),
         "name": row.get("title"),
-        "overview": row.get("overview") or "",
-        "year": row.get("release_year"),
+        "overview": row.get("overview") or row.get("description") or "",
+        "description": row.get("overview") or row.get("description") or "",
+        "year": row.get("year"),
         "rating": row.get("rating"),
         "type": row.get("type"),
         "genres": row.get("genres") or [],
         "country": row.get("country") or [],
         "age_rating": row.get("age_rating"),
         "poster_url": row.get("poster_url"),
-        "source": "Streamivio catalog",
-        "playback_available": False,
+        "poster": row.get("poster_url"),
+        "video_url": row.get("video_url"),
+        "source": row.get("source") or "Streamivio Library",
+        "playback_available": bool(row.get("video_url")),
     }
 
 
@@ -71,7 +67,8 @@ def get_catalog(params):
 
     rows = [normalize(row) for row in fetch_titles()]
     if q:
-        rows = [r for r in rows if q in (r["title"] or "").casefold() or q in r["overview"].casefold()]
+        rows = [r for r in rows if q in (r["title"] or "").casefold()
+                or q in r["overview"].casefold()]
     if media_type:
         rows = [r for r in rows if r["type"] == media_type]
     if genre:
@@ -84,7 +81,7 @@ def get_catalog(params):
     if sort == "title":
         rows.sort(key=lambda r: (r["title"] or "").casefold())
     elif sort == "year":
-        rows.sort(key=lambda r: r["year"] or 0, reverse=True)
+        rows.sort(key=lambda r: int(r["year"] or 0), reverse=True)
     else:
         rows.sort(key=lambda r: r["rating"] if r["rating"] is not None else -1, reverse=True)
 
@@ -95,17 +92,12 @@ def get_catalog(params):
 
 def get_categories():
     rows = fetch_titles()
-    counts = {}
-    for row in rows:
-        kind = row.get("type")
-        if kind in ALLOWED_TYPES:
-            counts[kind] = counts.get(kind, 0) + 1
-    return {"categories": [{"type": kind, "count": counts.get(kind, 0)} for kind in sorted(ALLOWED_TYPES)]}
+    counts = {kind: sum(1 for row in rows if row.get("type") == kind) for kind in sorted(ALLOWED_TYPES)}
+    return {"categories": [{"type": kind, "count": count} for kind, count in counts.items()]}
 
 
 def get_genres():
-    rows = fetch_titles()
-    genres = sorted({str(genre) for row in rows for genre in (row.get("genres") or [])}, key=str.casefold)
+    genres = sorted({str(g) for row in fetch_titles() for g in (row.get("genres") or [])}, key=str.casefold)
     return {"genres": genres}
 
 
