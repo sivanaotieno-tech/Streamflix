@@ -19,6 +19,7 @@ type Item={
   imdb_id?:string;
   imdbID?:string;
   media_type?:string;
+  type?:string;
   genres?:string[];
   country?:string[];
   ageRating?:string|null;
@@ -100,7 +101,7 @@ export default function Home(){
       // VidSrc embed needs a real IMDb ID; local catalog IDs such as "m-matrix" are not valid.
       let imdbId=selected.imdbId||selected.imdb_id||selected.imdbID||(typeof selected.id==="string"&&/^tt\d+$/.test(selected.id)?selected.id:"");
       if(!imdbId){
-        const kind=(selected.source||"").toLowerCase().includes("tv")||selected.media_type==="tv"?"tv":"movie";
+        const kind=selected.type==="tv"||selected.media_type==="tv"||(selected.source||"").toLowerCase().includes("tv")?"tv":"movie";
         const lookup=await fetch("/search?q="+encodeURIComponent(selected.title||selected.name||"")+"&type="+kind,{cache:"no-store"});
         if(lookup.ok){
           const payload=await lookup.json();
@@ -113,10 +114,10 @@ export default function Home(){
         }
       }
       if(!imdbId)throw new Error("Could not resolve an exact IMDb ID for this title. Add its IMDb ID to the catalog and try again.");
-      const isTv=selected.media_type==="tv"||(selected.source||"").toLowerCase().includes("tv");
+      const isTv=selected.type==="tv"||selected.media_type==="tv"||(selected.source||"").toLowerCase().includes("tv");
       const embedUrl=isTv
-        ? "https://vidsrc.me/embed/tv?imdb="+encodeURIComponent(imdbId)+"&season=1&episode=1"
-        : "https://vidsrc.me/embed/movie?imdb="+encodeURIComponent(imdbId);
+        ? "https://vidsrc.sh/embed/tv/"+encodeURIComponent(imdbId)
+        : "https://vidsrc.sh/embed/movie/"+encodeURIComponent(imdbId);
       setPlaybackFormat("iframe");setPlaybackUrl(embedUrl);
     }catch(error){setPlaybackError(error instanceof Error?error.message:"Playback is unavailable right now.");}
     finally{setPlaybackLoading(false);}
