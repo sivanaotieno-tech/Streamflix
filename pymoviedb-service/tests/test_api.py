@@ -132,10 +132,16 @@ class HttpSmokeTests(unittest.TestCase):
         self.assertEqual(payload["database"], "local-json")
         self.assertFalse(payload["supabase"])
 
-    def test_catalog_route(self):
+    def test_catalog_route_ranks_title_matches(self):
         status, payload = self.request_json("/catalog?q=matrix&type=movie")
         self.assertEqual(status, 200)
-        self.assertTrue(any(row["title"] == "The Matrix" for row in payload["results"]))
+        self.assertEqual(payload["results"][0]["title"], "The Matrix")
+
+    def test_catalog_http_route_recovers_from_a_small_typo(self):
+        status, payload = self.request_json("/catalog?q=matrx&type=movie")
+        self.assertEqual(status, 200)
+        self.assertGreaterEqual(payload["total"], 1)
+        self.assertEqual(payload["results"][0]["title"], "The Matrix")
 
     def test_title_route_returns_details_for_every_published_catalog_item(self):
         for row in catalog.fetch_titles():
