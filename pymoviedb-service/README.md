@@ -44,6 +44,12 @@ Default address: `http://127.0.0.1:8001`.
 
 Catalog examples: `/catalog?type=movie`, `/catalog?type=anime&genre=adventure`, `/catalog?q=space&limit=20&offset=0`.
 
+### Search behavior
+
+`/catalog?q=...` ranks exact and partial title matches ahead of matches found in plot descriptions. The local search index is tolerant of case, accents, punctuation, and small spelling mistakes. When present in the JSON records, it also searches original and alternate titles, genres, keywords, cast, directors, countries, and descriptions. You can use `sort=relevance` (the default for a non-empty query), `sort=rating`, `sort=year`, or `sort=title`. Country filters accept common aliases such as `US`/`USA`/`United States` and `UK`/`United Kingdom`.
+
+The website combines these catalog results with optional IMDb search results for broader movie and TV searches when the configured metadata service is available. Its same-origin `/api/search` endpoint normalizes and merges duplicates, exposes the `total`, `sources`, and `unavailable` fields, and provides a title-sort option and clear error messages for empty or failed searches.
+
 A title's playback endpoint returns unavailable until `video_url` is set to a working, authorized media URL. The API does not scrape, unlock, proxy, or supply unauthorized movie streams.
 
 
