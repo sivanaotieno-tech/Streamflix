@@ -10,6 +10,8 @@ from urllib.parse import parse_qs, urlsplit
 from PyMovieDb import IMDB
 from requests.exceptions import RequestException
 
+from catalog import CatalogUnavailable, get_catalog, get_categories, get_featured, get_genres
+
 IMDB_ID_PATTERN = re.compile(r"^tt\d+$")
 IMDB_TYPES = {"movie", "tv"}
 IMDB_GENRES = {
@@ -52,6 +54,30 @@ class MetadataHandler(BaseHTTPRequestHandler):
             self.send_json(HTTPStatus.OK, {"status": "ok"})
             return
         try:
+            if path == "/catalog":
+                data = get_catalog(query)
+                self.send_json(HTTPStatus.OK, data)
+                return
+
+            if path == "/categories":
+                self.send_json(HTTPStatus.OK, get_categories())
+                return
+
+            if path == "/genres":
+                self.send_json(HTTPStatus.OK, get_genres())
+                return
+
+            if path == "/featured":
+                self.send_json(HTTPStatus.OK, get_featured())
+                return
+
+            if path == "/playback":
+                self.send_json(HTTPStatus.NOT_IMPLEMENTED, {
+                    "available": False,
+                    "message": "Streamivio currently provides discovery and metadata only. Playback requires an authorized video delivery provider and licensed media."
+                })
+                return
+
             if path == "/search":
                 title = query.get("q", [""])[0].strip()
                 title_type = query.get("type", ["movie"])[0].strip().lower()
@@ -98,11 +124,20 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 self.send_json(status, data)
                 return
             self.send_json(HTTPStatus.NOT_FOUND, {"error": "Route not found"})
+        except ValueError as error:
+            self.send_json(HTTPStatus.BAD_REQUEST, {"error": str(error)})
+            return
+        except CatalogUnavailable as error:
+            self.send_json(HTTPStatus.SERVICE_UNAVAILABLE, {
+                "error": "Streamivio catalog is unavailable",
+                "detail": str(error)
+            })
+            return
         except (
-            RequestException, OSError, ValueError, TypeError, KeyError,
+            RequestException, OSError, TypeError, KeyError,
             AttributeError, IndexError, UnboundLocalError,
         ) as error:
-            print(f"PyMovieDb request failed: {error}", file=sys.stderr, flush=True)
+            print(f"Streamivio API request failed: {error}", file=sys.stderr, flush=True)
             if path == "/search":
                 self.send_json(HTTPStatus.BAD_GATEWAY, {"result_count": 0, "results": [], "error": "IMDb search is currently unavailable"})
                 return
