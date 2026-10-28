@@ -90,6 +90,7 @@ export default function Home(){
   const[searchError,setSearchError]=useState("");
   const[movieGenre,setMovieGenre]=useState("");
   const[movieShelfLoading,setMovieShelfLoading]=useState(false);
+  const[gamesLoading,setGamesLoading]=useState(true);
   const searchAbort=useRef<AbortController|null>(null);
   const searchTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const[selected,setSelected]=useState<Item|null>(null);
@@ -486,7 +487,8 @@ export default function Home(){
     {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 text-3xl font-black text-[#e50914]">STREAMIVIO</div><div>Loading your entertainment...</div></div></div>}
 
     {!q.trim()&&<div className="relative z-10 mx-auto max-w-[1700px] pt-5">
-      {browse==="Games"&&gamesLoading&&<div className="mb-4 flex items-center gap-2 px-4 text-sm text-zinc-400 md:px-12"><LoaderCircle className="h-4 w-4 animate-spin"/>Loading games from Supabase…</div>}\n      {browse==="Movies"&&<div className="mb-5 flex flex-wrap items-center gap-2 px-4 md:px-12">
+      {browse==="Games"&&gamesLoading&&<div className="mb-4 flex items-center gap-2 px-4 text-sm text-zinc-400 md:px-12"><LoaderCircle className="h-4 w-4 animate-spin"/>Loading games from the local catalog…</div>}
+      {browse==="Movies"&&<div className="mb-5 flex flex-wrap items-center gap-2 px-4 md:px-12">
         <span className="mr-1 text-xs text-zinc-400">Genre</span>
         {MOVIE_GENRES.map(([label,value])=><button
           key={value||"all"}
