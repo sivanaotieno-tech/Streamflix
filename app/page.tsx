@@ -13,6 +13,8 @@ type Item={
   year?:string;
   source:string;
   url?:string;
+  video_url?:string|null;
+  playback_available?:boolean;
   imdbId?:string;
   genres?:string[];
   country?:string[];
@@ -67,6 +69,10 @@ export default function Home(){
   const searchTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
   const[selected,setSelected]=useState<Item|null>(null);
   const[detailError,setDetailError]=useState("");
+  const[playbackUrl,setPlaybackUrl]=useState("");
+  const[playbackFormat,setPlaybackFormat]=useState("");
+  const[playbackLoading,setPlaybackLoading]=useState(false);
+  const[playbackError,setPlaybackError]=useState("");
   const[list,setList]=useState<Item[]>([]);
   const [browse,setBrowse]=useState("Home");
   const [loading,setLoading]=useState(true);
@@ -77,7 +83,18 @@ export default function Home(){
     return r.json();
   };
 
-  const play=(m:Item)=>setSelected(m);
+  const play=(m:Item)=>{setSelected(m);setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");};
+  const startPlayback=async()=>{
+    if(!selected)return;
+    setPlaybackLoading(true);setPlaybackError("");setPlaybackUrl("");
+    try{
+      const response=await fetch("/playback?id="+encodeURIComponent(String(selected.id)),{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok||!data.available||!data.stream_url)throw new Error(data.message||data.error||"This title has no playable, authorized video configured yet.");
+      setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");
+    }catch(error){setPlaybackError(error instanceof Error?error.message:"Playback is unavailable right now.");}
+    finally{setPlaybackLoading(false);}
+  };
 
   const runSearch=async(query:string,category:string,country=searchCountry,year=searchYear,ageRating=searchAgeRating)=>{
     if(query.trim().length<2)return;
@@ -318,8 +335,14 @@ export default function Home(){
       {selected.directors&&selected.directors.length>0&&<p className="mt-3 text-sm text-zinc-400"><span className="text-zinc-200">Director:</span> {selected.directors.join(", ")}</p>}
       {selected.cast&&selected.cast.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Cast:</span> {selected.cast.join(", ")}</p>}
       {detailError&&<p role="status" className="mt-4 text-sm text-amber-300">{detailError}</p>}
+      {playbackUrl&&<div className="mt-5 overflow-hidden rounded-lg bg-black">
+        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl}>Your browser cannot play this video format.</video>:<iframe title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
+        <p className="px-3 py-2 text-xs text-zinc-400">If playback fails, the provider may block embedding or the URL may not be browser-compatible.</p>
+      </div>}
+      {playbackError&&<p role="status" className="mt-4 text-sm text-amber-300">{playbackError}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
         
+        <button onClick={()=>void startPlayback()} disabled={playbackLoading} className="flex items-center gap-2 rounded bg-[#e50914] px-5 py-2 font-bold disabled:opacity-60"><Play className="h-4 w-4 fill-current"/>{playbackLoading?"Checking stream…":playbackUrl?"Reload player":"Play"}</button>
         <button onClick={()=>setSelected(null)} className="rounded bg-zinc-700 px-5 py-2 font-bold">Close</button>
       </div>
     </div></div>}
