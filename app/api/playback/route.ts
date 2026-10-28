@@ -10,7 +10,7 @@ export async function GET(request:NextRequest){
   const title=(params.get("title")||"").trim();
   const requestedType=(params.get("type")||"movie").trim().toLowerCase();
   const kind=(requestedType==="tv"||requestedType==="anime"||requestedType==="documentary"||requestedType==="kids"||requestedType==="reality")?"tv":"movie";
-  if(!id&&!title)return NextResponse.json({available:false,error:"Provide a catalog id or title."},{status:400});
+  if(!id&&!title)return NextResponse.json({available:false,error:"Choose a title from the catalog or provide its title text."},{status:400,headers:{"Cache-Control":"no-store"}});
   const local=catalog.find((item:any)=>String(item.id)===id);
   const localUrl=typeof (local as any)?.video_url==="string"?(local as any).video_url:"";
   if(localUrl&&isSafeHttps(localUrl)){
@@ -56,8 +56,7 @@ export async function GET(request:NextRequest){
   }
 
   // Resolve an exact title using Streamivio's configured Python metadata API.
-  // This builds an embed URL only; it does not extract or proxy provider streams.
-  // This builds an embed URL only; it does not extract or proxy provider streams.
+  // This creates an embedded-player URL only; it never extracts or proxies media streams.
   const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/$/,"");
   const searchTitle=title||(local as any)?.title||"";
   if(metadataBase&&searchTitle.length>=2){
@@ -74,7 +73,7 @@ export async function GET(request:NextRequest){
         const found=exact||null;
         const foundImdbId=String(found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"");
         const foundTmdbId=String(found?.tmdb_id||found?.tmdbId||found?.tmdbID||"");
-        const foundId=/^tt\d+$/i.test(foundImdbId)?foundImdbId:(/^\d+$/.test(foundTmdbId)?foundTmdbId:"");
+        const foundId=/^tt\d{1,12}$/i.test(foundImdbId)?foundImdbId:(/^\d{1,12}$/.test(foundTmdbId)?foundTmdbId:(/^\d{1,12}$/.test(foundImdbId)?foundImdbId:""));
         if(foundId){
           const embedUrl=kind==="tv"
             ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(foundId)
@@ -86,6 +85,6 @@ export async function GET(request:NextRequest){
   }
   return NextResponse.json({
     available:false,
-    message:"No authorized direct stream or valid IMDb/TMDB content ID could be resolved. Add an imdb_id or tmdb_id; direct playback additionally requires an authorized HTTPS video_url.",
+    message:"We couldn't match this title to a supported player. Add a valid IMDb/TMDB ID, or configure an authorized HTTPS video_url for media you have rights to distribute.",
   },{status:404,headers:{"Cache-Control":"no-store"}});
 }
