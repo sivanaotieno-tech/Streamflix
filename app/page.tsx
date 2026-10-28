@@ -41,6 +41,7 @@ const isTvItem=(item:Item|null)=>{
   const source=String(item?.source||"").toLowerCase();
   return ["tv","tvshow","tv show","series","anime","documentary","documentaries","kids","reality"].includes(type)||source.includes("tv show");
 };
+const isGameItem=(item:Item|null)=>String(item?.type||"").toLowerCase()==="game"||String(item?.id||"").startsWith("game-");
 const getIdFromEmbedUrl=(value:string)=>{
   try{
     const parts=new URL(value).pathname.split("/").filter(Boolean);
@@ -216,15 +217,21 @@ export default function Home(){
 
   const startPlayback=async(resumeOverride?:number)=>{
     if(!selected)return;
+    if(isGameItem(selected)){
+      setPlaybackError("Games are listed for discovery, not streamed in Streamivio. Use the official game page above for platform and purchase information.");
+      return;
+    }
     setPlaybackLoading(true);setPlaybackError("");setPlaybackUrl("");
     setVidSrcInfo(null);setVidSrcInfoError("");
     const kind:"movie"|"tv"=isTvItem(selected)?"tv":"movie";
+    const resolvedImdbId=String(selected.imdbId||selected.imdb_id||selected.imdbID||titleDetails?.imdbId||titleDetails?.imdb_id||titleDetails?.imdbID||"");
+    const resolvedTmdbId=String(selected.tmdbId||selected.tmdb_id||titleDetails?.tmdbId||titleDetails?.tmdb_id||"");
     try{
-      // Prefer explicitly configured authorized media URLs, then use the documented VidSrc iframe.
-      const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||"movie")+"&imdb_id="+encodeURIComponent(selected.imdbId||selected.imdb_id||selected.imdbID||"")+"&tmdb_id="+encodeURIComponent(String(selected.tmdbId||selected.tmdb_id||"")),{cache:"no-store"});
+      // Prefer authorized catalog URLs; otherwise ask the server to resolve a known title ID.
+      const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||(isGameItem(selected)?"game":"movie"))+"&imdb_id="+encodeURIComponent(resolvedImdbId)+"&tmdb_id="+encodeURIComponent(resolvedTmdbId),{cache:"no-store"});
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data.available&&typeof data.stream_url==="string"){
-        const directProgressId=String(selected.imdbId||selected.imdb_id||selected.imdbID||selected.tmdbId||selected.tmdb_id||selected.id);
+        const directProgressId=String(resolvedImdbId||resolvedTmdbId||selected.id);
         let initialStart=resumeOverride!==undefined?resumeOverride:(startAt.trim()?Number(startAt):0);
         if(!initialStart){
           try{initialStart=Number(localStorage.getItem(progressKeyFor(directProgressId))||0);}catch{initialStart=0;}
@@ -234,7 +241,7 @@ export default function Home(){
         setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
       }
       if(response.ok&&data.available&&typeof data.embed_url==="string"){
-        const contentId=String(data.content_id||data.imdb_id||data.tmdb_id||selected.imdbId||selected.imdb_id||selected.imdbID||selected.tmdbId||selected.tmdb_id||getIdFromEmbedUrl(data.embed_url)||"");
+        const contentId=String(data.content_id||data.imdb_id||data.tmdb_id||resolvedImdbId||resolvedTmdbId||getIdFromEmbedUrl(data.embed_url)||"");
         if(!contentId)throw new Error("The player URL did not include a valid IMDb or TMDB ID.");
         setPlayerContentId(contentId);
         setPlaybackUrl(buildVidSrcUrl(data.embed_url,contentId,kind,resumeOverride));
@@ -242,8 +249,8 @@ export default function Home(){
       }
 
       // Use only a real IMDb ID or numeric TMDB ID; never treat an ordinary catalog key as a provider ID.
-      const listedImdb=String(selected.imdbId||selected.imdb_id||selected.imdbID||(typeof selected.id==="string"&&/^tt\d{5,10}$/i.test(selected.id)?selected.id:""));
-      const listedTmdb=String(selected.tmdbId||selected.tmdb_id||(/^\d{1,12}$/.test(String(selected.id))?selected.id:""));
+      const listedImdb=String(resolvedImdbId||(typeof selected.id==="string"&&/^tt\d{5,10}$/i.test(selected.id)?selected.id:""));
+      const listedTmdb=String(resolvedTmdbId||(/^\d{1,12}$/.test(String(selected.id))?selected.id:""));
       let contentId=/^tt\d{5,10}$/i.test(listedImdb)?listedImdb:(/^\d{1,12}$/.test(listedTmdb)?listedTmdb:"");
       if(!contentId){
         const serviceBase=(process.env.NEXT_PUBLIC_PYMOVIEDB_SERVICE_URL||"").replace(/\/+$/,"");
@@ -634,7 +641,8 @@ export default function Home(){
       {playbackError&&<p role="status" className="mt-4 text-sm text-amber-300">{playbackError}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
         
-        <button onClick={()=>void startPlayback()} disabled={playbackLoading} className="flex items-center gap-2 rounded bg-[#e50914] px-5 py-2 font-bold disabled:opacity-60"><Play className="h-4 w-4 fill-current"/>{playbackLoading?"Checking stream…":playbackUrl?"Reload player":"Play"}</button>
+        {!isGameItem(selected)&&<button onClick={()=>void startPlayback()} disabled={playbackLoading} className="flex items-center gap-2 rounded bg-[#e50914] px-5 py-2 font-bold disabled:opacity-60"><Play className="h-4 w-4 fill-current"/>{playbackLoading?"Checking source…":playbackUrl?"Reload player":"Play"}</button>}
+        {isGameItem(selected)&&<p className="self-center text-xs text-zinc-400">Game discovery only — Streamivio does not stream playable game builds.</p>}
         <button onClick={()=>setSelected(null)} className="rounded bg-zinc-700 px-5 py-2 font-bold">Close</button>
       </div>
     </div></div>}
