@@ -147,7 +147,7 @@ export default function Home(){
     const params=new URLSearchParams({
       id:String(selected.id),
       title,
-      type:String(selected.type||selected.media_type||"movie")
+      type:String(selected.type||selected.media_type||(String(selected.id).startsWith("game-")?"game":"movie"))
     });
     const imdbId=String(selected.imdbId||selected.imdb_id||selected.imdbID||"");
     const tmdbId=String(selected.tmdbId||selected.tmdb_id||"");
