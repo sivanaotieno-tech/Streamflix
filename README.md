@@ -40,6 +40,16 @@ Examples:
 - `/catalog?q=space&limit=20&offset=0`
 - `/playback?id=m-matrix`
 
+### Per-title details API
+
+The Next.js app also exposes `GET /api/title` for the selected title. For example:
+
+```text
+/api/title?id=m-matrix&title=The%20Matrix&type=movie
+```
+
+The response returns a `title` object with a consistent shape for the detail dialog: synopsis, release year, genres, poster, rating, age rating, runtime, cast/directors when available, and any resolved IMDb/TMDB identifiers. It prefers the bundled catalog, enriches an exact title match with server-side IMDb metadata when the Python metadata service is configured, and safely falls back to the catalog when enrichment is unavailable. `metadata_available` makes that distinction explicit. Game records use the same detail API but remain discovery listings; they are not presented as playable video streams.
+
 ## Local Python development
 
 ```powershell
