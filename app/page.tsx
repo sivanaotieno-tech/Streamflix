@@ -103,10 +103,10 @@ export default function Home(){
       }
       // Prefer a real IMDb ID from the catalog. Never treat a local catalog key as a provider ID.
       let imdbId=selected.imdbId||selected.imdb_id||selected.imdbID||
-        (typeof selected.id==="string"&&/^tt\\d+$/.test(selected.id)?selected.id:"");
+        (typeof selected.id==="string"&&/^tt\d+$/.test(selected.id)?selected.id:"");
       if(!imdbId){
         const kind=selected.type==="tv"||selected.media_type==="tv"||(selected.source||"").toLowerCase().includes("tv")?"tv":"movie";
-        const serviceBase=(process.env.NEXT_PUBLIC_PYMOVIEDB_SERVICE_URL||"").replace(/\\/$/,"");
+        const serviceBase=(process.env.NEXT_PUBLIC_PYMOVIEDB_SERVICE_URL||"").replace(/\/+$/,"");
         if(serviceBase){
           const lookup=await fetch(serviceBase+"/search?q="+encodeURIComponent(selected.title||selected.name||"")+"&type="+kind,{cache:"no-store"});
           if(lookup.ok){
@@ -116,7 +116,7 @@ export default function Home(){
             const exact=candidates.find((item:any)=>norm(String(item.title||item.name||item.titleText||""))===norm(selected.title||selected.name||""));
             const found=exact||null;
             imdbId=found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"";
-            if(!/^tt\\d+$/.test(String(imdbId)))imdbId="";
+            if(!/^tt\d+$/.test(String(imdbId)))imdbId="";
           }
         }
       }
