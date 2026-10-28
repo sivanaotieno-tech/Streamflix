@@ -50,7 +50,7 @@ A title's playback endpoint returns unavailable until `video_url` is set to a wo
 
 The Streamivio title dialog includes a Play button. It first calls the Next.js `/api/playback` route for a configured authorized HTTPS MP4/HLS URL or an optional private resolver URL (`STREAMIVIO_RESOLVER_URL`). If no direct stream is configured, the route can use the server-side Python metadata API (`PYMOVIEDB_SERVICE_URL` or `PYMOVIEDB_API_URL`) to resolve an exact IMDb ID and return a VidSrc embed URL. The player is embedded in the browser; it does not download or proxy third-party video.
 
-VidSrc is a third-party provider. Its availability, embed policy, rights status, and individual title playback are not controlled or guaranteed by Streamivio. Streamivio now uses the provider's documented `https://vidsrc.sh/embed/movie/{id}` and `https://vidsrc.sh/embed/tv/{id}` path formats. Use only content you are authorized to access and distribute. A deployment and end-to-end playback test are still required to verify your production configuration.
+VidSrc is a third-party provider. See the [VidSrc website](https://vidsrc.sh/) and [official embed/API documentation](https://vidsrc.sh/vidsrc/docs/). Its availability, embed policy, rights status, and individual title playback are not controlled or guaranteed by Streamivio. Streamivio now uses the provider's documented `https://vidsrc.sh/embed/movie/{id}` and `https://vidsrc.sh/embed/tv/{id}` path formats. Use only content you are authorized to access and distribute. A deployment and end-to-end playback test are still required to verify your production configuration.
 
 
 ## Optional VidSrc-Streamer-style resolver
