@@ -1,100 +1,65 @@
 # Streamivio
 
-Legitimate entertainment discovery and playback platform built with Next.js, React and Tailwind CSS.
+Streamivio is a movie, TV, anime, documentary, kids/family and reality-entertainment discovery platform. The website is built with Next.js and the standalone catalog/playback API is Python.
 
-The GitHub repository retains its historical name; the user-facing brand is **Streamivio**.
+## Catalog database (no Supabase)
 
-## Supabase entertainment database
+The Python API uses `pymoviedb-service/data/catalog.json` as its bundled catalog database. The file stores each title's description, year, genres, country, age rating, poster URL and optional authorized playback URL.
 
-Streamivio uses **Supabase PostgreSQL** as its catalog source when configured. It supports movies, TV, anime, documentaries, kids/family, and reality titles, with genre, release year, country, age-rating, rating, overview, and poster fields. The local `app/data/catalog.ts` remains a fallback when Supabase environment variables are not configured or the database is unavailable.
+To add or update titles, edit that JSON file and commit the change to GitHub. Vercel then redeploys the catalog. The API is read-only at runtime because Vercel serverless functions do not offer durable writable local filesystems.
 
-### Connect Supabase
+### Title fields
 
-1. Create a project at [Supabase](https://supabase.com/).
-2. Open **SQL Editor → New query**, paste the complete contents of [`supabase/schema.sql`](./supabase/schema.sql), and run it. This creates the `public.titles` table, indexes, read-only public catalog policy, public-read `title-posters` storage bucket, and seeds 33 starter entries. Then run the complete [`supabase/seed-more.sql`](./supabase/seed-more.sql) file to add 75 more curated entries (108 total).
-3. In **Project Settings → API**, copy the project URL and the **anon/publishable key**. Add these variables to Vercel under **Project → Settings → Environment Variables** for Production and Preview:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-4. Add the same two variables to your local `.env.local` when developing. Restart the dev server after changing environment variables.
-5. Redeploy the Vercel project. The existing `/api/search` route will query Supabase automatically. Without these values it falls back to the local starter catalog.
+- `id`, `title`, `overview`, `year`, `rating`, `type`
+- `genres`, `country`, `age_rating`
+- `poster_url`: public HTTPS poster artwork URL that you own or are licensed to use
+- `video_url`: authorized HTTPS MP4 or HLS (.m3u8) media URL
+- `published`: set false to hide a record from the public API
 
-**Security:** only use the anon/publishable key in these variables. Never put a Supabase `service_role` or secret key in `NEXT_PUBLIC_*`, browser code, or GitHub. The public policy only allows reading published titles; do catalog edits/imports from the Supabase Dashboard or a trusted admin environment.
+Posters are referenced by URL; this repository does not currently host poster image files. Full-length videos should be stored with a licensed video hosting/CDN provider. The API stores and returns your configured playback URL, rather than trying to store movie files inside Vercel.
 
-### Add hundreds or thousands of titles
+## Python API
 
-- For bulk additions, use **Supabase → Table Editor → titles → Import data from CSV** and prepare a CSV using [`supabase/titles-import-template.csv`](./supabase/titles-import-template.csv). The repository's starter SQL seeds 108 curated entries across multiple entertainment categories; bulk import can expand this to hundreds or thousands. Give each title a unique `id`; use one of the supported `type` values (`movie`, `tv`, `anime`, `documentary`, `kids`, `reality`). Genre and country arrays use PostgreSQL array syntax, for example `"{Action,Drama}"` and `"{Kenya,United Kingdom}"`.
-- Keep `release_year` numeric, `rating` between 0 and 10 (or blank), `age_rating` a text label, and `poster_url` a public URL to artwork you have permission to use.
-- For poster files, upload artwork you own or are licensed to use into **Storage → title-posters**. Copy each file's public URL into `poster_url`. The bucket allows public reads only; public uploads are not enabled.
-- Search supports category, genre, country, release year, and age-rating filters. Titles are metadata for discovery and do not imply streaming or distribution rights.
+Public API routes are configured in `vercel.json` and routed to `pymoviedb-service/server.py`.
 
-The legacy `pymoviedb-service/` and IMDb route remain in the repository for compatibility, but homepage shelves and the main search route use the local catalog/Supabase rather than depending on those external metadata sources.
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /health` | Health check |
+| `GET /catalog` | Search and filter the JSON catalog |
+| `GET /categories` | Category counts |
+| `GET /genres` | Genres in the catalog |
+| `GET /featured` | Highest-rated titles |
+| `GET /title?id=m-matrix` | Local title details |
+| `GET /playback?id=m-matrix` | Returns configured playback URL when available |
+| `GET /search?q=matrix&type=movie` | Optional IMDb metadata lookup |
+| `GET /popular?type=movie` | Optional IMDb popular list |
 
-## Rights policy
+Examples:
+- `/catalog?type=movie`
+- `/catalog?type=anime&genre=adventure`
+- `/catalog?q=space&limit=20&offset=0`
+- `/playback?id=m-matrix`
 
-Streamivio is an entertainment discovery platform, not a third-party stream aggregator. The site must only play media that you own or have explicit rights to distribute. Movie, TV and anime metadata does not grant streaming rights.
+## Local Python development
 
-Unverified third-party stream directories, external stream-resolver backends, public live-TV stream lists, remote PeerTube catalogs, personal media-server integrations, and all in-site video playback have been removed. Streamivio is metadata-only and does not resolve, embed, proxy, or play video streams. Metadata results are for discovery only.
+```powershell
+cd pymoviedb-service
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
+python server.py
+```
 
-## Subscriptions and payments
+The local API listens on `http://127.0.0.1:8001` by default. See [the Python API README](pymoviedb-service/README.md) for endpoint details.
 
-The subscription UI is at `/subscribe`. It offers Streamivio Plus (KSh 299/month or KSh 2,990/year) and Streamivio Premium (KSh 499/month or KSh 4,990/year). These are configurable starter prices, not a statement that licensed premium titles are already available.
+## Playback and content rights
 
-Payments use IntaSend hosted checkout. For KES, IntaSend can display M-Pesa and card methods enabled on your merchant account. A customer selects a plan and period, then leaves Streamivio for the hosted checkout page. Streamivio does **not** activate a membership based on the browser redirect: the status route checks the invoice with IntaSend and verifies the invoice ID, amount, currency and unique order reference. The webhook also validates the configured challenge and independently checks the payment with IntaSend. Subscription records are stored in Upstash Redis, not process memory.
+Streamivio must only play video that you own or have explicit permission to distribute. A poster or metadata record does not grant streaming rights. No unauthorized stream scraping, unlocking, proxying or third-party stream-directory aggregation is included. Playback stays unavailable until a valid authorized `video_url` is added.
 
-### Configure locally and on Vercel
+## Payments
 
-1. Create an IntaSend account at [IntaSend Developers](https://developers.intasend.com/) and use sandbox API keys first. In **Settings → API Keys**, copy the publishable key and secret key. Keep the secret key server-side.
-2. Create an Upstash Redis database and copy its **REST URL** and **REST token**.
-3. Copy `.env.example` to `.env.local` locally, then set:
-   - `INTASEND_PUBLISHABLE_KEY`
-   - `INTASEND_SECRET_KEY`
-   - `INTASEND_WEBHOOK_CHALLENGE` (use a long random secret; it must match the dashboard challenge)
-   - `UPSTASH_REDIS_REST_URL`
-   - `UPSTASH_REDIS_REST_TOKEN`
-   - `NEXT_PUBLIC_APP_URL` (the canonical public HTTPS URL, without a trailing slash)
-4. Add the same values in **Vercel → Project → Settings → Environment Variables** for Preview and Production as appropriate, then redeploy.
-5. In IntaSend, open **Settings → Webhooks → New**. Set the endpoint to `https://YOUR-DOMAIN/api/billing/webhook`, use the exact same challenge as `INTASEND_WEBHOOK_CHALLENGE`, and subscribe to `collection_event`. Test failed, pending and completed transactions using sandbox keys before going live.
-6. When tests pass, switch to live IntaSend keys, verify your merchant account and checkout methods, and redeploy.
+The existing subscription UI and IntaSend/Upstash-based billing code are separate from the catalog database. Their credentials must remain in Vercel environment variables and must never be committed to the repository. Test payment flows with sandbox credentials before enabling live payments.
 
-### Important billing limitations
+## Deployment
 
-- Checkout charges one selected billing period at a time. Renewal is **manual**; this implementation does not silently auto-charge a saved card. IntaSend's separate recurring-subscription API is for recurring card billing, and should be integrated only after its customer/plan setup and subscription webhooks are explicitly configured. Do not assume M-Pesa supports automatic recurring charges.
-- The site currently has no full account/login system. After a verified checkout, a secure HTTP-only membership cookie identifies that browser. For a public commercial launch, add proper user accounts, account recovery, membership management/cancellation, refund and privacy flows, rate limiting, monitoring, and support processes before relying on this cookie-only model for a full customer account.
-- The catalog's metadata rows are not marked as premium content, so this integration does not gate existing catalog browsing or claim any titles are licensed. Gate only playback for content explicitly tagged as authorized premium content once that catalog entitlement model exists.
-- Do not commit `.env.local` or put secret values in client-side code. Never enable live payments until you have permission to sell the service and the relevant content rights.
-
-## Vercel multi-service deployment
-
-The root `vercel.json` configures two services in one Vercel project:
-
-- **`app`** — the public Next.js website and its `/api/*` routes. All unmatched public paths are routed here.
-- **`pymoviedb-service`** — the Python metadata API. It is also public at `/health`, `/search`, `/popular`, and `/title`; these routes are forwarded to the Python service before the catch-all app rewrite.
-
-The `app` service declares a binding to `pymoviedb-service`. Vercel injects the backend base URL into `PYMOVIEDB_SERVICE_URL` at runtime. Do not create a Vercel environment variable with that name manually. The app's legacy IMDb routes use this binding first; `PYMOVIEDB_API_URL` remains as a local-development fallback. The local entertainment catalog and search do not call these routes.
-
-**Vercel project setup:** in Project Settings → Build and Deployment, set the project's framework to **Services**. Services-mode deployments require this project setting in addition to `vercel.json`. Then deploy the `main` branch. To test the services together locally, use a current Vercel CLI and run `vercel dev` from the repository root.
-
-The Python entrypoint is `server:handler`, with the handler exported from `pymoviedb-service/server.py`. Since the metadata service is public, consider adding authentication/rate limiting before exposing it on a production domain to prevent abuse of the upstream IMDb scraping requests.
-
-## Local development
-
-1. Copy `.env.example` to `.env.local` and add Supabase URL/key if you have created a project.
-2. (Optional legacy service) Configure the PyMovieDb service URL in `.env.local`.
-3. To run the legacy PyMovieDb service, start it in a separate terminal:
-
-   ```powershell
-   cd pymoviedb-service
-   python -m venv .venv
-   .\.venv\Scripts\Activate.ps1
-   python -m pip install -r requirements.txt
-   python server.py
-   ```
-
-   The default `PYMOVIEDB_API_URL` is `http://127.0.0.1:8001`. See [pymoviedb-service/README.md](./pymoviedb-service/README.md) for details.
-4. Run `npm install` and `npm run dev` from the website directory.
-
-PyMovieDb scrapes IMDb for metadata. Use it in accordance with IMDb's terms and applicable laws.
-
-## Playback model
-
-Movie, TV and anime search is metadata-only and does not supply video. Streamivio currently provides metadata and discovery only. No video playback, stream embedding, personal media server, or third-party streaming integration is included. Playback may be added only after the appropriate distribution rights and authorized content delivery are in place.
+The root `vercel.json` routes API paths to the Python service and the remaining website paths to the Next.js app. Push commits to the configured production branch and verify the Vercel deployment and `/health` endpoint before relying on production behavior.
