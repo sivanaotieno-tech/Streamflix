@@ -506,7 +506,8 @@ export default function Home(){
             || (browse==="Kids & Family"&&title==="Family & Kids")
             || (browse==="Reality"&&title==="Reality & Competition")
             || (browse==="Anime"&&title==="Anime Spotlight")
-            || (browse==="Movies"&&title==="Popular Movies")\n            || (browse==="Games"&&title==="Games Spotlight")
+            || (browse==="Movies"&&title==="Popular Movies")
+            || (browse==="Games"&&title==="Games Spotlight")
 )
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
     </div>}
