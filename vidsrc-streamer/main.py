@@ -98,10 +98,3 @@ def stream(imdb_id: str):
         )
     return {"imdb_id": imdb_id, "available": True, "stream_url": url, "format": fmt, "cached": False}
 
-
-@app.delete("/cache")
-def clear_cache():
-    # This endpoint is intended for a private/admin-only deployment.
-    with db() as connection:
-        connection.execute("DELETE FROM stream_cache")
-    return {"cleared": True}
