@@ -58,3 +58,8 @@ VidSrc is a third-party provider. See the [VidSrc website](https://vidsrc.sh/) a
 A separate FastAPI + SQLite resolver now lives in `../vidsrc-streamer/`. It exposes `GET /stream/{imdb_id}` and only returns an authorized HTTPS `video_url` explicitly mapped to that IMDb ID in the configured JSON catalog. It does not extract third-party streams. Install and run it using the instructions in `../vidsrc-streamer/README.md`.
 
 For the Next.js app to call it, set the server-only Vercel environment variable `STREAMIVIO_RESOLVER_URL` to the private resolver's HTTPS base URL. Set `PYMOVIEDB_SERVICE_URL` to the Python catalog API's HTTPS base URL if you want server-side IMDb metadata lookup for VidSrc embeds. Redeploy after changing environment variables. Do not deploy the resolver's cache-clear endpoint publicly without authentication.
+
+
+## VidSrc metadata API proxy
+
+The Next.js app also exposes `GET /api/playback/info?id={imdb-or-tmdb-id}&type=movie|tv`, with optional paired `season` and `episode` parameters for TV episodes. It validates input and calls the official VidSrc metadata endpoints for availability, title, year, seasons and reported quality. No media bytes or direct provider stream URLs are extracted by this route.
