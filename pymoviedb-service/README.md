@@ -14,6 +14,8 @@ Edit `data/catalog.json` and commit the changes to update the catalog. Each titl
 
 The API is read-only at runtime. Vercel functions do not provide durable writable local storage, so changes to the bundled JSON database must be committed to the repository and redeployed. Large video files should live on a licensed video hosting/CDN service; this API stores the authorized playback URL, not the video bytes.
 
+For the website's enriched detail dialog, the Next.js route `GET /api/title?id=...&title=...&type=movie|tv` wraps this catalog and optionally enriches an exact title match with IMDb metadata. It returns the catalog details when the metadata service is unreachable, so a temporary third-party outage does not make local titles disappear.
+
 ## Run locally
 
 ```powershell
