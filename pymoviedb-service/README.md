@@ -45,8 +45,9 @@ Catalog examples: `/catalog?type=movie`, `/catalog?type=anime&genre=adventure`, 
 A title's playback endpoint returns unavailable until `video_url` is set to a working, authorized media URL. The API does not scrape, unlock, proxy, or supply unauthorized movie streams.
 
 
-## Playback demo
 
-The web title dialog now has a **Play** button. It calls `GET /playback?id=<catalog-id>` and renders configured MP4/HLS URLs in a browser video element; configured external player URLs are embedded in an iframe. A public demo entry, `demo-big-buck-bunny`, uses an openly licensed Blender Foundation short hosted by Internet Archive to verify the playback flow. This is a playback test, not a licensed catalog of commercial films.
+## Browser playback
 
-For commercial titles, configure `video_url` only with a working URL you own or are licensed to distribute. MP4 playback depends on browser-supported codecs; HLS compatibility varies by browser, and some external providers prohibit iframe embedding. A successful API response does not guarantee the provider will permit playback.
+The Streamivio title dialog includes a Play button. It first checks the local JSON catalog for a configured authorized MP4/HLS or external player URL. If none is configured, it attempts to resolve an exact IMDb ID through the metadata search endpoint and builds a VidSrc embed URL for the selected movie or the first episode (season 1, episode 1) of a TV title. The player is embedded in the browser; it does not download or proxy the video.
+
+VidSrc is a third-party provider. Its availability, embed policy, rights status, and individual title playback are not controlled or guaranteed by Streamivio. The provider's public page currently announces updated embed domains, so the legacy `vidsrc.me` host may not always work. Use only content you are authorized to access and distribute. A deployment and end-to-end playback test are still required to verify your production configuration.
