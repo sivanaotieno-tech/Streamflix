@@ -36,6 +36,23 @@ def create_imdb_client():
     return client
 
 
+def describe_video_url(stream_url):
+    """Classify a configured HTTPS playback URL; never fetch or proxy the media."""
+    if not isinstance(stream_url, str) or not stream_url.strip():
+        return None
+    parsed = urlsplit(stream_url.strip())
+    if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+        return None
+    path = parsed.path.lower()
+    if path.endswith(".m3u8"):
+        fmt = "hls"
+    elif path.endswith(".mp4"):
+        fmt = "mp4"
+    else:
+        fmt = "external"
+    return {"stream_url": stream_url.strip(), "format": fmt, "delivery": "external-provider"}
+
+
 class MetadataHandler(BaseHTTPRequestHandler):
     def send_json(self, status, data):
         body = json.dumps(data).encode("utf-8")
@@ -92,17 +109,21 @@ class MetadataHandler(BaseHTTPRequestHandler):
                     self.send_json(HTTPStatus.NOT_FOUND, {"available": False, "error": "Title not found"})
                     return
                 item = normalize(title)
-                stream_url = title.get("video_url")
-                if not stream_url:
+                playback = describe_video_url(title.get("video_url"))
+                if not playback:
                     self.send_json(HTTPStatus.NOT_FOUND, {
-                        "id": title_id, "available": False,
-                        "message": "No authorized stream URL is configured for this title."
+                        "id": title_id,
+                        "available": False,
+                        "title": item["title"],
+                        "message": "No valid HTTPS playback URL is configured. Add a video_url for a video you own or are licensed to distribute.",
                     })
                     return
                 self.send_json(HTTPStatus.OK, {
-                    "id": title_id, "available": True,
-                    "title": item["title"], "stream_url": stream_url,
-                    "format": "hls" if ".m3u8" in stream_url.lower() else ("mp4" if ".mp4" in stream_url.lower() else "external")
+                    "id": title_id,
+                    "available": True,
+                    "title": item["title"],
+                    **playback,
+                    "source": title.get("video_source") or "configured-authorized-source",
                 })
                 return
 
