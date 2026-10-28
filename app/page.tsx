@@ -110,6 +110,7 @@ export default function Home(){
   const[startAt,setStartAt]=useState("");
   const[playerContentId,setPlayerContentId]=useState("");
   const[resumeSeconds,setResumeSeconds]=useState(0);
+  const[pendingDirectResume,setPendingDirectResume]=useState(0);
   const[vidsrcInfo,setVidSrcInfo]=useState<any|null>(null);
   const[vidsrcInfoLoading,setVidSrcInfoLoading]=useState(false);
   const[vidsrcInfoError,setVidSrcInfoError]=useState("");
@@ -126,7 +127,7 @@ export default function Home(){
 
   const play=(m:Item)=>{
     setSelected(m);setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");
-    setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(0);setStartAt("");
+    setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(0);setPendingDirectResume(0);setStartAt("");
   };
 
   const buildVidSrcUrl=(baseUrl:string,contentId:string,kind:"movie"|"tv",resumeOverride?:number)=>{
@@ -179,7 +180,14 @@ export default function Home(){
       const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||"movie")+"&imdb_id="+encodeURIComponent(selected.imdbId||selected.imdb_id||selected.imdbID||"")+"&tmdb_id="+encodeURIComponent(String(selected.tmdbId||selected.tmdb_id||"")),{cache:"no-store"});
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data.available&&typeof data.stream_url==="string"){
-        setPlayerContentId("");setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
+        const directProgressId=String(selected.imdbId||selected.imdb_id||selected.imdbID||selected.tmdbId||selected.tmdb_id||selected.id);
+        let initialStart=resumeOverride!==undefined?resumeOverride:(startAt.trim()?Number(startAt):0);
+        if(!initialStart){
+          try{initialStart=Number(localStorage.getItem(progressKeyFor(directProgressId))||0);}catch{initialStart=0;}
+        }
+        setPlayerContentId(directProgressId);
+        setPendingDirectResume(Number.isFinite(initialStart)&&initialStart>0?initialStart:0);
+        setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
       }
       if(response.ok&&data.available&&typeof data.embed_url==="string"){
         const contentId=String(data.content_id||data.imdb_id||data.tmdb_id||selected.imdbId||selected.imdb_id||selected.imdbID||selected.tmdbId||selected.tmdb_id||getIdFromEmbedUrl(data.embed_url)||"");
@@ -523,10 +531,9 @@ export default function Home(){
           <span>VidSrc player settings</span><span className="text-xs text-zinc-400">{vidsrcOptionsOpen?"Hide options":"Subtitles, resume, episodes"}</span>
         </button>
         {vidsrcOptionsOpen&&<div className="grid gap-4 border-t border-white/10 p-4 sm:grid-cols-2">
-          <label className="grid gap-1 text-xs text-zinc-300">Default subtitle language
-            <select value={subtitleLanguage} onChange={e=>setSubtitleLanguage(e.target.value)} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm">
-              <option value="">Provider default</option><option value="en">English</option><option value="es">Spanish</option><option value="fr">French</option><option value="de">German</option><option value="it">Italian</option><option value="pt">Portuguese</option><option value="ar">Arabic</option><option value="sw">Swahili</option><option value="ja">Japanese</option><option value="ko">Korean</option><option value="zh">Chinese</option>
-            </select>
+          <label className="grid gap-1 text-xs text-zinc-300">Subtitle language or priority list
+            <input value={subtitleLanguage} onChange={e=>setSubtitleLanguage(e.target.value)} maxLength={11} placeholder="en or en,fr,de" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"/>
+            <span className="text-[10px] text-zinc-500">Use ISO codes, e.g. en, fr, de. Leave blank for provider default.</span>
           </label>
           <label className="grid gap-1 text-xs text-zinc-300">Start time in seconds
             <input inputMode="numeric" type="number" min="0" value={startAt} onChange={e=>setStartAt(e.target.value)} placeholder={resumeSeconds>0?String(Math.floor(resumeSeconds)):"0"} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"/>
@@ -571,7 +578,7 @@ export default function Home(){
       </div>}
       {vidsrcInfoError&&<p role="status" className="mt-3 text-xs text-amber-300">{vidsrcInfoError}</p>}
       {playbackUrl&&<div className="mt-5 overflow-hidden rounded-lg bg-black">
-        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{};}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
+        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0){video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
         <p className="px-3 py-2 text-xs text-zinc-400">VidSrc quality controls and built-in subtitles are provided by the embedded player. Availability and playback can vary by title and region.</p>
       </div>}
       {playbackError&&<p role="status" className="mt-4 text-sm text-amber-300">{playbackError}</p>}
