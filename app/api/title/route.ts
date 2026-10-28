@@ -20,7 +20,7 @@ const firstText = (row: AnyRecord, keys: string[]) => {
 const firstNumber = (row: AnyRecord, keys: string[]) => {
   for (const key of keys) {
     const raw = row?.[key];
-    const parsed = typeof raw === "number" ? raw : typeof raw === "string" ? Number(raw.replace(/[^0-9.]/g, "")) : NaN;
+    const parsed = typeof raw === "number" ? raw : typeof raw === "string" ? Number.parseFloat(raw.trim()) : NaN;
     if (Number.isFinite(parsed) && parsed >= 0) return parsed;
   }
   return undefined;
