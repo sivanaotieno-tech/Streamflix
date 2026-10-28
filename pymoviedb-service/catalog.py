@@ -21,6 +21,11 @@ def fetch_titles():
     return [row for row in rows if isinstance(row, dict) and row.get("published", True)]
 
 
+def normalize_facet(value):
+    """Normalize labels so Sci-Fi and sci_fi compare equally."""
+    return "".join(character for character in str(value).casefold() if character.isalnum())
+
+
 def normalize(row):
     return {
         "id": row.get("id"),
@@ -71,7 +76,11 @@ def get_catalog(params):
     if media_type:
         rows = [r for r in rows if r["type"] == media_type]
     if genre:
-        rows = [r for r in rows if any(genre == str(g).casefold() for g in r["genres"])]
+        wanted_genre = normalize_facet(genre)
+        rows = [
+            r for r in rows
+            if any(wanted_genre == normalize_facet(g) for g in r["genres"])
+        ]
     if country:
         rows = [r for r in rows if any(country == str(c).casefold() for c in r["country"])]
     if year_text:
