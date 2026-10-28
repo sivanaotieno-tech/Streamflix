@@ -93,7 +93,7 @@ export default function Home(){
     setPlaybackLoading(true);setPlaybackError("");setPlaybackUrl("");
     try{
       // First ask Streamivio's playback API for an explicitly configured authorized stream.
-      const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||"movie"),{cache:"no-store"});
+      const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||"movie")+"&imdb_id="+encodeURIComponent(selected.imdbId||selected.imdb_id||selected.imdbID||""),{cache:"no-store"});
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data.available&&typeof data.stream_url==="string"){
         setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
