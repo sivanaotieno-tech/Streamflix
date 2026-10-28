@@ -45,3 +45,8 @@ Streamivio uses the official documented embed URL formats for the browser player
 The Next.js app has `GET /api/playback?id=...` for configured direct streams and falls back to the VidSrc embedded player when an IMDb ID is present on the catalog item. To resolve authorized streams through this service, deploy it privately or behind authentication, then set the server-only `STREAMIVIO_RESOLVER_URL=https://your-service.example` environment variable. The Next.js playback route is already wired to call this endpoint. Do not expose a private resolver or admin endpoint publicly without authentication.
 
 VidSrc embed URLs are third-party and are not guaranteed to be available, licensed, or embeddable. Use the player only for content you are authorized to access.
+
+
+## VidSrc embed features used by the frontend
+
+The Streamivio player can pass documented embed parameters for subtitle language (`ds_lang`), HTTPS custom subtitles (`sub_url`, `sub_label`, `sub_lang`), autoplay, TV auto-next, and resume (`startAt`). When a TV season and episode are chosen, it uses `/embed/tv/{id}/{season}/{episode}`; otherwise it opens the series picker. The separate `/api/playback/info` route reads VidSrc availability and quality metadata. These features apply only to the browser embed; the authorized direct-stream resolver remains limited to HTTPS media URLs explicitly configured in the catalog.
