@@ -92,28 +92,32 @@ export default function Home(){
     if(!selected)return;
     setPlaybackLoading(true);setPlaybackError("");setPlaybackUrl("");
     try{
-      // Prefer a URL explicitly configured in Streamivio's own catalog.
-      const response=await fetch("/playback?id="+encodeURIComponent(String(selected.id)),{cache:"no-store"});
-      const data=await response.json();
-      if(response.ok&&data.available&&data.stream_url){
+      // First ask Streamivio's playback API for an explicitly configured authorized stream.
+      const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||"movie"),{cache:"no-store"});
+      const data=await response.json().catch(()=>({}));
+      if(response.ok&&data.available&&typeof data.stream_url==="string"){
         setPlaybackUrl(data.stream_url);setPlaybackFormat(data.format||"external");return;
       }
-      // VidSrc embed needs a real IMDb ID; local catalog IDs such as "m-matrix" are not valid.
-      let imdbId=selected.imdbId||selected.imdb_id||selected.imdbID||(typeof selected.id==="string"&&/^tt\d+$/.test(selected.id)?selected.id:"");
+      // Prefer a real IMDb ID from the catalog. Never treat a local catalog key as a provider ID.
+      let imdbId=selected.imdbId||selected.imdb_id||selected.imdbID||
+        (typeof selected.id==="string"&&/^tt\\d+$/.test(selected.id)?selected.id:"");
       if(!imdbId){
         const kind=selected.type==="tv"||selected.media_type==="tv"||(selected.source||"").toLowerCase().includes("tv")?"tv":"movie";
-        const lookup=await fetch("/search?q="+encodeURIComponent(selected.title||selected.name||"")+"&type="+kind,{cache:"no-store"});
-        if(lookup.ok){
-          const payload=await lookup.json();
-          const candidates=Array.isArray(payload.results)?payload.results:[];
-          const norm=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,"");
-          const exact=candidates.find((item:any)=>norm(String(item.title||item.name||""))===norm(selected.title||selected.name||""));
-          const found=exact||null;
-          imdbId=found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"";
-          if(!/^tt\d+$/.test(String(imdbId)))imdbId="";
+        const serviceBase=(process.env.NEXT_PUBLIC_PYMOVIEDB_SERVICE_URL||"").replace(/\\/$/,"");
+        if(serviceBase){
+          const lookup=await fetch(serviceBase+"/search?q="+encodeURIComponent(selected.title||selected.name||"")+"&type="+kind,{cache:"no-store"});
+          if(lookup.ok){
+            const payload=await lookup.json();
+            const candidates=Array.isArray(payload.results)?payload.results:[];
+            const norm=(value:string)=>value.toLowerCase().replace(/[^a-z0-9]/g,"");
+            const exact=candidates.find((item:any)=>norm(String(item.title||item.name||item.titleText||""))===norm(selected.title||selected.name||""));
+            const found=exact||null;
+            imdbId=found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"";
+            if(!/^tt\\d+$/.test(String(imdbId)))imdbId="";
+          }
         }
       }
-      if(!imdbId)throw new Error("Could not resolve an exact IMDb ID for this title. Add its IMDb ID to the catalog and try again.");
+      if(!imdbId)throw new Error("No IMDb ID is configured for this title. Add imdb_id to the catalog or configure the Python metadata service to resolve it.");
       const isTv=selected.type==="tv"||selected.media_type==="tv"||(selected.source||"").toLowerCase().includes("tv");
       const embedUrl=isTv
         ? "https://vidsrc.sh/embed/tv/"+encodeURIComponent(imdbId)
