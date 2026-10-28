@@ -188,7 +188,7 @@ export async function GET(request: NextRequest) {
     if (!metadata && searchTitle.length >= 2) {
       const searchPath = "/search?q=" + encodeURIComponent(searchTitle) + "&type=" + encodeURIComponent(kind);
       const payload = await serviceGet(serviceBase, searchPath);
-      const candidates = Array.isArray(payload?.results) ? payload.results.filter(isRecord) : [];
+      const candidates: AnyRecord[] = Array.isArray(payload?.results) ? payload.results.filter((row: unknown): row is AnyRecord => isRecord(row)) : [];
       const exact = candidates.find((row) => normalize(firstText(row, ["title", "name", "titleText"])) === normalize(searchTitle));
       if (exact) {
         metadata = exact;
