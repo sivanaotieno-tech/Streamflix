@@ -95,6 +95,20 @@ class HttpSmokeTests(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertTrue(any(row["title"] == "The Matrix" for row in payload["results"]))
 
+    def test_title_route_returns_details_for_every_published_catalog_item(self):
+        for row in catalog.fetch_titles():
+            with self.subTest(title_id=row["id"]):
+                status, payload = self.request_json("/title?id=" + row["id"])
+                self.assertEqual(status, 200)
+                self.assertEqual(payload["id"], row["id"])
+                self.assertEqual(payload["title"], row["title"])
+                self.assertIsInstance(payload["overview"], str)
+
+    def test_title_route_rejects_invalid_external_id(self):
+        status, payload = self.request_json("/title?id=not-an-imdb-id")
+        self.assertEqual(status, 400)
+        self.assertIn("valid IMDb id", payload["error"])
+
     def test_playback_is_honest_when_no_stream_is_configured(self):
         status, payload = self.request_json("/playback?id=m-matrix")
         self.assertEqual(status, 404)
