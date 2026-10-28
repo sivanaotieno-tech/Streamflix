@@ -2,11 +2,13 @@ import {NextRequest,NextResponse} from "next/server";
 import {catalog} from "../../../data/catalog";
 
 const isSafeHttps=(value:string)=>{try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password;}catch{return false;}};
+const normalize=(value:string)=>value.toLocaleLowerCase().replace(/[^a-z0-9]/g,"");
 
 export async function GET(request:NextRequest){
-  const id=(request.nextUrl.searchParams.get("id")||"").trim();
-  const title=(request.nextUrl.searchParams.get("title")||"").trim();
-  const type=(request.nextUrl.searchParams.get("type")||"movie").trim().toLowerCase();
+  const params=request.nextUrl.searchParams;
+  const id=(params.get("id")||"").trim();
+  const title=(params.get("title")||"").trim();
+  const requestedType=(params.get("type")||"movie").trim().toLowerCase();
   if(!id&&!title)return NextResponse.json({available:false,error:"Provide a catalog id or title."},{status:400});
   const local=catalog.find((item:any)=>String(item.id)===id);
   const localUrl=typeof (local as any)?.video_url==="string"?(local as any).video_url:"";
@@ -16,22 +18,47 @@ export async function GET(request:NextRequest){
     return NextResponse.json({available:true,stream_url:localUrl,format,source:"configured-authorized-catalog"});
   }
 
-  // Optional connection to Streamivio's own Python metadata/catalog service.
-  // This route never scrapes, downloads, or proxies third-party media.
-  const base=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/$/,"");
-  if(base&&local){
+  const imdbId=String((local as any)?.imdb_id||(local as any)?.imdbId||(local as any)?.imdbID||"");
+  const resolverBase=(process.env.STREAMIVIO_RESOLVER_URL||"").replace(/\/$/,"");
+  if(resolverBase&&/^tt\d+$/i.test(imdbId)){
     try{
-      const upstream=new URL("/playback",base);
-      upstream.searchParams.set("id",id);
-      const response=await fetch(upstream.toString(),{cache:"no-store",signal:AbortSignal.timeout(4500)});
+      const response=await fetch(resolverBase+"/stream/"+encodeURIComponent(imdbId),{cache:"no-store",signal:AbortSignal.timeout(4500)});
       const data=await response.json();
       if(response.ok&&data.available&&typeof data.stream_url==="string"&&isSafeHttps(data.stream_url)){
-        return NextResponse.json(data,{headers:{"Cache-Control":"no-store"}});
+        return NextResponse.json({...data,source:"streamivio-authorized-resolver"},{headers:{"Cache-Control":"no-store"}});
       }
-    }catch(error){console.error("Authorized playback API unavailable",error);}
+    }catch(error){console.error("Streamivio resolver unavailable",error);}
+  }
+
+  // Resolve a real IMDb ID using Streamivio's configured Python metadata API.
+  // This builds an embed URL only; it does not extract or proxy provider streams.
+  const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/$/,"");
+  const searchTitle=title||(local as any)?.title||"";
+  if(metadataBase&&searchTitle.length>=2){
+    try{
+      const kind=(requestedType==="tv"||requestedType==="anime"||requestedType==="documentary"||requestedType==="kids"||requestedType==="reality")?"tv":"movie";
+      const searchUrl=new URL("/search",metadataBase);
+      searchUrl.searchParams.set("q",searchTitle);
+      searchUrl.searchParams.set("type",kind);
+      const response=await fetch(searchUrl.toString(),{cache:"no-store",signal:AbortSignal.timeout(5000)});
+      if(response.ok){
+        const payload=await response.json();
+        const candidates=Array.isArray(payload.results)?payload.results:[];
+        const normTitle=normalize(searchTitle);
+        const exact=candidates.find((item:any)=>normalize(String(item.title||item.name||item.titleText||""))===normTitle);
+        const found=exact||null;
+        const foundId=String(found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"");
+        if(/^tt\d+$/i.test(foundId)){
+          const embedUrl=kind==="tv"
+            ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(foundId)
+            :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(foundId);
+          return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,imdb_id:foundId,source:"vidsrc-embed"});
+        }
+      }
+    }catch(error){console.error("IMDb metadata lookup unavailable",error);}
   }
   return NextResponse.json({
     available:false,
-    message:"No authorized direct stream is configured for this title. The player can use the embedded provider if a valid IMDb ID is available.",
+    message:"No authorized direct stream or exact IMDb ID could be resolved. Add imdb_id and, for direct playback, an authorized video_url to this catalog item.",
   },{status:404,headers:{"Cache-Control":"no-store"}});
 }
