@@ -6,7 +6,7 @@ type AnyRecord = Record<string, any>;
 const NO_STORE = { "Cache-Control": "no-store" };
 
 const normalize = (value: unknown) =>
-  String(value ?? "").normalize("NFKD").toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
+  String(value ?? "").replace(/\s*\(\d{4}\)\s*$/, "").normalize("NFKD").toLocaleLowerCase().replace(/[^a-z0-9]/g, "");
 
 const firstText = (row: AnyRecord, keys: string[]) => {
   for (const key of keys) {
@@ -39,7 +39,7 @@ const isRecord = (value: unknown): value is AnyRecord =>
 
 function projectDetails(base: AnyRecord, metadata?: AnyRecord | null) {
   const source = metadata ?? {};
-  const title = firstText(source, ["title", "name", "titleText"]) || base.title || base.name || "";
+  const title = base.title || base.name || firstText(source, ["title", "name", "titleText"]) || "";
   const overview = firstText(source, ["overview", "description", "plot", "synopsis", "plotOutline", "storyline"]) ||
     base.overview || base.description || "";
   const poster = firstText(source, ["poster_url", "poster", "image", "imageUrl", "primaryImage"]) ||
@@ -47,9 +47,10 @@ function projectDetails(base: AnyRecord, metadata?: AnyRecord | null) {
   const genres = textArray(source.genres ?? source.genre).length ? textArray(source.genres ?? source.genre) : (base.genres ?? []);
   const country = textArray(source.country ?? source.countries).length ? textArray(source.country ?? source.countries) : (base.country ?? []);
   const directors = textArray(source.directors ?? source.director);
-  const cast = textArray(source.cast ?? source.stars ?? source.actorList ?? source.actors);
-  const rating = firstNumber(source, ["rating", "imdb_rating", "imDbRating", "imdbRating", "userRating"]) ?? base.rating;
-  const rawYear = firstText(source, ["year", "release_year", "releaseDate", "release_date"]);
+  const cast = textArray(source.cast ?? source.stars ?? source.actorList ?? source.actors ?? source.actor);
+  const ratingSource = isRecord(source.rating) ? { ...source, rating: source.rating.ratingValue } : source;
+  const rating = firstNumber(ratingSource, ["rating", "imdb_rating", "imDbRating", "imdbRating", "userRating", "ratingValue"]) ?? base.rating;
+  const rawYear = firstText(source, ["year", "release_year", "datePublished", "date_published", "releaseDate", "release_date"]);
   const year = rawYear.match(/\d{4}/)?.[0] || base.year || "";
   const contentRating = firstText(source, ["contentRating", "age_rating", "rated", "certificate"]) || base.contentRating || base.ageRating || null;
   const runtime = firstText(source, ["runtime", "runtimeStr", "duration", "length"]) || base.runtime || null;
