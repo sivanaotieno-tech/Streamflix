@@ -52,7 +52,13 @@ export function authStorageReady() {
 }
 
 export function emailDeliveryReady() {
-  return Boolean(process.env.RESEND_API_KEY && process.env.STREAMIVIO_EMAIL_FROM);
+  const apiKey = process.env.RESEND_API_KEY?.trim() || "";
+  const sender = process.env.STREAMIVIO_EMAIL_FROM?.trim() || "";
+  const address = sender.match(/<([^<>]+)>/)?.[1]?.trim() || sender;
+  const domain = address.split("@")[1]?.toLocaleLowerCase("en-US") || "";
+  const validAddress = /^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$/.test(address);
+  const placeholderDomain = /\.(example|invalid|test)$/i.test(domain);
+  return Boolean(apiKey && validAddress && !placeholderDomain);
 }
 
 export function normalizeEmail(email: string) {
