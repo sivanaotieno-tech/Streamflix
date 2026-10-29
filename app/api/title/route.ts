@@ -184,7 +184,7 @@ export async function GET(request: NextRequest) {
       if (catalogRecord && firstText(catalogRecord, ["title", "name"])) metadata = catalogRecord;
     }
 
-    const searchTitle = titleQuery || String(local?.title || game?.title || "");
+    const searchTitle = titleQuery || String(local?.title || "");
     if (!metadata && searchTitle.length >= 2) {
       const searchPath = "/search?q=" + encodeURIComponent(searchTitle) + "&type=" + encodeURIComponent(kind);
       const payload = await serviceGet(serviceBase, searchPath);
