@@ -88,7 +88,8 @@ export async function POST(request: NextRequest) {
       amount,
       currency: "KES",
       status: "PENDING",
-      invoiceId: checkout.invoice_id,
+      // Hosted checkout can return its invoice reference as either invoice_id or id.
+      invoiceId: checkout.invoice_id || checkout.id,
       checkoutUrl: checkout.url,
       createdAt: new Date().toISOString(),
     };
