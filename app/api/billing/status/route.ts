@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getRecord, intasendStatus, updateRecord, type SubscriptionRecord } from "@/lib/billing";
+import { AUTH_COOKIE_NAME, getAuthenticatedUser } from "@/lib/auth";
+import { getLatestRecordForEmail, getRecord, intasendStatus, updateRecord, type SubscriptionRecord } from "@/lib/billing";
 
 export const runtime = "nodejs";
 const COOKIE_NAME = "streamivio_member";
@@ -12,6 +13,7 @@ function expiryFrom(now: Date, period: SubscriptionRecord["period"]) {
 }
 
 async function verifyAndActivate(record: SubscriptionRecord) {
+  if (record.status === "ACTIVE" && record.expiresAt && Date.parse(record.expiresAt) > Date.now()) return record;
   if (!record.invoiceId && !record.checkoutId) return record;
   const verified = await intasendStatus(record.invoiceId, record.checkoutId);
   const invoice = verified.invoice;
@@ -65,34 +67,53 @@ function publicStatus(record: SubscriptionRecord | null) {
   };
 }
 
+function statusResponse(record: SubscriptionRecord | null) {
+  const response = NextResponse.json(publicStatus(record), { headers: { "Cache-Control": "no-store" } });
+  if (record?.status === "ACTIVE" && record.expiresAt && Date.parse(record.expiresAt) > Date.now()) {
+    response.cookies.set(COOKIE_NAME, record.sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires: new Date(record.expiresAt),
+    });
+  }
+  return response;
+}
+
 export async function GET(request: NextRequest) {
   const session = request.nextUrl.searchParams.get("session");
   const cookieToken = request.cookies.get(COOKIE_NAME)?.value;
   try {
+    // Checkout return page: session comes from a server-created, random checkout reference.
     if (session) {
       let record = await getRecord(session);
-      if (!record) return NextResponse.json({ status: "not_found" }, { status: 404 });
+      if (!record) return NextResponse.json({ status: "not_found" }, { status: 404, headers: { "Cache-Control": "no-store" } });
       record = await verifyAndActivate(record);
-      const response = NextResponse.json(publicStatus(record));
-      if (record.status === "ACTIVE" && record.expiresAt && Date.parse(record.expiresAt) > Date.now()) {
-        response.cookies.set(COOKIE_NAME, record.sessionToken, {
-          httpOnly: true,
-          secure: process.env.NODE_ENV === "production",
-          sameSite: "lax",
-          path: "/",
-          expires: new Date(record.expiresAt),
-        });
-      }
-      return response;
+      return statusResponse(record);
     }
 
-    if (!cookieToken) return NextResponse.json({ status: "inactive" });
+    // Normal account page: show membership based on the verified account email, not only this browser.
+    const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    if (authToken) {
+      const user = await getAuthenticatedUser(authToken);
+      if (user) {
+        let accountRecord = await getLatestRecordForEmail(user.email);
+        if (accountRecord) {
+          accountRecord = await verifyAndActivate(accountRecord);
+          return statusResponse(accountRecord);
+        }
+      }
+    }
+
+    // Legacy browser membership cookie remains a fallback for existing sessions.
+    if (!cookieToken) return NextResponse.json({ status: "inactive" }, { headers: { "Cache-Control": "no-store" } });
     let record = await getRecord(cookieToken);
-    if (!record) return NextResponse.json({ status: "inactive" });
+    if (!record) return NextResponse.json({ status: "inactive" }, { headers: { "Cache-Control": "no-store" } });
     record = await verifyAndActivate(record);
-    return NextResponse.json(publicStatus(record));
+    return statusResponse(record);
   } catch (error) {
     console.error("Subscription status check failed", error instanceof Error ? error.message : "unknown error");
-    return NextResponse.json({ error: "Could not verify subscription status right now." }, { status: 503 });
+    return NextResponse.json({ error: "Could not verify subscription status right now." }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
 }
