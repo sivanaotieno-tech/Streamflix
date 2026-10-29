@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME, getAuthenticatedUser } from "@/lib/auth";
 import { getLatestRecordForEmail, getRecord, intasendStatus, updateRecord, type SubscriptionRecord } from "@/lib/billing";
+import { getHyperswitchPayment, normalizeHyperswitchStatus } from "@/lib/hyperswitch";
 
 export const runtime = "nodejs";
 const COOKIE_NAME = "streamivio_member";
@@ -14,6 +15,38 @@ function expiryFrom(now: Date, period: SubscriptionRecord["period"]) {
 
 async function verifyAndActivate(record: SubscriptionRecord) {
   if (record.status === "ACTIVE" && record.expiresAt && Date.parse(record.expiresAt) > Date.now()) return record;
+  if (record.provider === "hyperswitch") {
+    if (!record.paymentId) return record;
+    const payment = await getHyperswitchPayment(record.paymentId);
+    const metadata = payment.metadata || {};
+    const verifiedAmount = Number(payment.amount);
+    const matches = payment.payment_id === record.paymentId &&
+      payment.currency === record.currency &&
+      verifiedAmount === record.amount * 100 &&
+      metadata.streamivio_reference === record.apiRef &&
+      metadata.streamivio_plan === record.plan &&
+      metadata.streamivio_period === record.period;
+    if (!matches) {
+      console.error("Hyperswitch payment verification mismatch", record.apiRef);
+      return record;
+    }
+    const status = normalizeHyperswitchStatus(payment.status);
+    if (status === "ACTIVE" && record.status !== "ACTIVE") {
+      const paidAt = new Date();
+      const updated: SubscriptionRecord = {
+        ...record, status: "ACTIVE", paidAt: paidAt.toISOString(),
+        expiresAt: expiryFrom(paidAt, record.period).toISOString(),
+      };
+      await updateRecord(updated);
+      return updated;
+    }
+    if ((status === "FAILED" || status === "CANCELED") && record.status === "PENDING") {
+      const updated: SubscriptionRecord = { ...record, status };
+      await updateRecord(updated);
+      return updated;
+    }
+    return record;
+  }
   if (!record.invoiceId && !record.checkoutId) return record;
   const verified = await intasendStatus(record.invoiceId, record.checkoutId);
   const invoice = verified.invoice;
