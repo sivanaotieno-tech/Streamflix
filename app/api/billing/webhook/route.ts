@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { findSessionByReference, getRecord, intasendStatus, updateRecord, type SubscriptionRecord } from "@/lib/billing";
 
@@ -14,19 +15,29 @@ export async function POST(request: Request) {
   const challenge = process.env.INTASEND_WEBHOOK_CHALLENGE;
   if (!challenge) return NextResponse.json({ error: "Webhook is not configured." }, { status: 503 });
 
-  let event: {
-    challenge?: string;
-    topic?: string;
-    api_ref?: string;
-    invoice_id?: string;
-  };
+  let payload: unknown;
   try {
-    event = await request.json();
+    payload = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid webhook payload." }, { status: 400 });
   }
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return NextResponse.json({ error: "Invalid webhook payload." }, { status: 400 });
+  }
+  const event = payload as {
+    challenge?: unknown;
+    topic?: unknown;
+    api_ref?: unknown;
+    invoice_id?: unknown;
+  };
 
-  if (!event.challenge || event.challenge !== challenge) {
+  const providedChallenge = typeof event.challenge === "string" ? Buffer.from(event.challenge) : Buffer.alloc(0);
+  const expectedChallenge = Buffer.from(challenge);
+  if (
+    providedChallenge.length !== expectedChallenge.length ||
+    providedChallenge.length === 0 ||
+    !timingSafeEqual(providedChallenge, expectedChallenge)
+  ) {
     return NextResponse.json({ error: "Invalid webhook challenge." }, { status: 401 });
   }
   if (event.topic !== "collection_event" || !event.api_ref || !event.invoice_id) {
