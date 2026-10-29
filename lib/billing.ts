@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 const BASE_URL = "https://api.intasend.com/api/v1/";
 
@@ -67,21 +67,32 @@ export async function redisCommand<T = unknown>(...args: (string | number)[]): P
   return payload.result as T;
 }
 
+const SUBSCRIPTION_TTL_SECONDS = 60 * 60 * 24 * 400;
+
+function subscriptionEmailIndexKey(email: string) {
+  const normalized = email.trim().toLocaleLowerCase("en-US");
+  const hash = createHash("sha256").update(normalized).digest("hex");
+  return `streamivio:subscription-email:${hash}`;
+}
+
 export async function saveRecord(record: SubscriptionRecord) {
   await redisCommand(
     "SET",
     `streamivio:subscription:${record.sessionToken}`,
     JSON.stringify(record),
     "EX",
-    60 * 60 * 24 * 400
+    SUBSCRIPTION_TTL_SECONDS
   );
   await redisCommand(
     "SET",
     `streamivio:order:${record.apiRef}`,
     record.sessionToken,
     "EX",
-    60 * 60 * 24 * 400
+    SUBSCRIPTION_TTL_SECONDS
   );
+  const emailIndexKey = subscriptionEmailIndexKey(record.email);
+  await redisCommand("SADD", emailIndexKey, record.sessionToken);
+  await redisCommand("EXPIRE", emailIndexKey, SUBSCRIPTION_TTL_SECONDS);
 }
 
 export async function getRecord(sessionToken: string): Promise<SubscriptionRecord | null> {
@@ -93,6 +104,28 @@ export async function getRecord(sessionToken: string): Promise<SubscriptionRecor
   } catch {
     return null;
   }
+}
+
+export async function getLatestRecordForEmail(email: string): Promise<SubscriptionRecord | null> {
+  const sessionTokens = await redisCommand<string[]>("SMEMBERS", subscriptionEmailIndexKey(email));
+  if (!Array.isArray(sessionTokens) || sessionTokens.length === 0) return null;
+
+  const records = (await Promise.all(sessionTokens.map(getRecord)))
+    .filter((record): record is SubscriptionRecord => Boolean(record));
+  if (records.length === 0) return null;
+
+  const byNewest = (left: SubscriptionRecord, right: SubscriptionRecord) =>
+    Date.parse(right.createdAt) - Date.parse(left.createdAt);
+  const now = Date.now();
+  const active = records
+    .filter((record) => record.status === "ACTIVE" && (!record.expiresAt || Date.parse(record.expiresAt) > now))
+    .sort(byNewest);
+  if (active.length) return active[0];
+
+  const pending = records.filter((record) => record.status === "PENDING").sort(byNewest);
+  if (pending.length) return pending[0];
+
+  return [...records].sort(byNewest)[0] || null;
 }
 
 export async function findSessionByReference(apiRef: string): Promise<string | null> {
