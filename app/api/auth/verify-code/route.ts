@@ -76,6 +76,19 @@ export async function POST(request: Request) {
       return error("That code does not match. Check the email and try again.", 400);
     }
 
+    // Atomically consume the exact OTP record we checked. This prevents two simultaneous
+    // verification requests from exchanging the same one-time code for two sessions.
+    const consumed = await authRedisCommand<number>(
+      "EVAL",
+      "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) else return 0 end",
+      1,
+      authOtpKey(email),
+      rawOtp
+    );
+    if (consumed !== 1) {
+      return error("That code was already used or replaced. Request a new code.", 409);
+    }
+
     const userKey = authUserKey(email);
     const existingRaw = await authRedisCommand<string | null>("GET", userKey);
     if (otp.mode === "signin" && !existingRaw) {
