@@ -1,9 +1,21 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { AUTH_COOKIE_NAME, getAuthenticatedUser } from "@/lib/auth";
 import { appUrl, envReady, makeSessionToken, PLANS, saveRecord, type BillingPeriod, type PlanId, type SubscriptionRecord } from "@/lib/billing";
 
 export const runtime = "nodejs";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  let authUser;
+  try {
+    authUser = await getAuthenticatedUser(request.cookies.get(AUTH_COOKIE_NAME)?.value);
+  } catch (error) {
+    console.error("Subscription checkout could not check the sign-in session", error instanceof Error ? error.message : "unknown error");
+    return NextResponse.json({ error: "Your sign-in session could not be verified. Please sign in again." }, { status: 503 });
+  }
+  if (!authUser) {
+    return NextResponse.json({ error: "Please sign in with your verified email before starting checkout.", signInRequired: true }, { status: 401 });
+  }
+
   if (!envReady()) {
     return NextResponse.json(
       { error: "Subscriptions are not configured yet. The site owner must finish the payment and database setup." },
@@ -18,12 +30,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Please provide valid checkout details." }, { status: 400 });
   }
 
-  const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+  // The verified session is the source of truth. Never let the browser charge a different email.
+  const email = authUser.email;
   const plan = body.plan;
   const period = body.period;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
-    return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
-  }
   if ((plan !== "plus" && plan !== "premium") || (period !== "monthly" && period !== "yearly")) {
     return NextResponse.json({ error: "Choose a valid subscription plan and billing period." }, { status: 400 });
   }
