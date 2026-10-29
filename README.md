@@ -58,6 +58,42 @@ For the `all`, `movies`, and `tv` scopes, the website can supplement a short loc
 
 Example: `/api/search?q=matrx&scope=all&sort=relevance` can find "The Matrix" despite a small typo; `/api/search?q=space&scope=movies&sort=year` orders matching movies by newest year.
 
+## Email sign-in and account creation
+
+Streamivio uses passwordless email verification. Visit `/sign-in`, choose **Create account** or **Sign in**, and request a six-digit code. The message uses the black-and-red Streamivio design from the email reference image. Codes are generated securely on the server, expire after 10 minutes, allow at most five verification attempts, and have a 60-second resend cooldown. Successful verification creates or signs in the account and sets an HTTP-only, same-site session cookie for up to 30 days.
+
+API endpoints:
+
+- `POST /api/auth/request-code` — rate-limited verification-email request.
+- `POST /api/auth/verify-code` — validates the one-time code and creates a session.
+- `GET /api/auth/me` — checks the current signed-in user.
+- `POST /api/auth/signout` — revokes the current session.
+
+### Required account and email configuration
+
+Set the following as **server-side** environment variables in Vercel Project Settings → Environment Variables. Do not put secrets into client-side variables or commit them to GitHub.
+
+- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` — persistent authentication, rate-limit, and payment records.
+- `STREAMIVIO_AUTH_SECRET` — a random secret of at least 32 characters. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`.
+- `RESEND_API_KEY` — transactional-email API key.
+- `STREAMIVIO_EMAIL_FROM` — sender address on a domain verified in Resend, for example `Streamivio <no-reply@yourdomain.com>`.
+
+The sign-in API returns a clear configuration error until these values exist and the sender domain is verified. The email is an automated transactional security message; the code itself is cryptographically generated, not produced by a language model.
+
+## Subscription payments
+
+The membership page at `/subscribe` requires a verified Streamivio account. It creates an IntaSend hosted checkout for the server-defined plan price and uses the account's verified email address (the browser cannot override it). The current plan prices are KSh 299/2,990 for Plus monthly/yearly and KSh 499/4,990 for Premium monthly/yearly. Payment options depend on what IntaSend has enabled for the account and currency.
+
+Configure these server-side variables:
+
+- `INTASEND_PUBLISHABLE_KEY` and `INTASEND_SECRET_KEY`.
+- `INTASEND_WEBHOOK_CHALLENGE` — configure the same challenge in IntaSend's webhook settings.
+- `NEXT_PUBLIC_APP_URL` — the public HTTPS origin of the deployed Streamivio site.
+
+Configure IntaSend's collection-event webhook to point to `https://YOUR-DOMAIN/api/billing/webhook`. The server validates the challenge and verifies the invoice with IntaSend before activating a membership. A redirect alone never counts as proof of payment. The hosted-checkout reference is persisted even when IntaSend returns it as `id` rather than `invoice_id`, so the return page can query payment status.
+
+Payment references: [IntaSend hosted checkout documentation](https://developers.intasend.com/guides/collections/checkout/) and [Resend email API](https://resend.com/docs/api-reference/emails/send-email).
+
 ## Local Python development
 
 ```powershell
