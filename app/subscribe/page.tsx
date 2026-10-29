@@ -21,12 +21,40 @@ export default function SubscribePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [membership, setMembership] = useState<{status:string;plan?:string;expiresAt?:string|null}|null>(null);
+  const [authState, setAuthState] = useState<"checking"|"signed-in"|"required"|"unavailable">("checking");
+  const [authError, setAuthError] = useState("");
 
   useEffect(() => {
-    fetch("/api/billing/status", { cache: "no-store" })
-      .then((response) => response.json())
-      .then((data) => setMembership(data))
-      .catch(() => setMembership(null));
+    let cancelled = false;
+    async function loadAccountAndMembership() {
+      try {
+        const authResponse = await fetch("/api/auth/me", { cache: "no-store" });
+        const auth = await authResponse.json().catch(() => ({}));
+        if (cancelled) return;
+        if (!authResponse.ok && auth.configured === false) {
+          setAuthState("unavailable");
+          setAuthError("Account sign-in is not configured yet. Please try again after the site owner completes setup.");
+          return;
+        }
+        if (!auth.authenticated || !auth.user?.email) {
+          setAuthState("required");
+          window.location.replace("/sign-in?next=%2Fsubscribe");
+          return;
+        }
+        setEmail(String(auth.user.email));
+        setAuthState("signed-in");
+        const statusResponse = await fetch("/api/billing/status", { cache: "no-store" });
+        const membershipData = await statusResponse.json().catch(() => ({}));
+        if (!cancelled) setMembership(membershipData);
+      } catch {
+        if (!cancelled) {
+          setAuthState("unavailable");
+          setAuthError("We couldn't verify your sign-in. Check your connection and try again.");
+        }
+      }
+    }
+    void loadAccountAndMembership();
+    return () => { cancelled = true; };
   }, []);
 
   async function startCheckout(event: FormEvent<HTMLFormElement>) {
@@ -40,6 +68,10 @@ export default function SubscribePage() {
         body: JSON.stringify({ email, firstName, lastName, phoneNumber, plan, period }),
       });
       const data = await response.json();
+      if (response.status === 401 || data.signInRequired) {
+        window.location.assign("/sign-in?next=%2Fsubscribe");
+        return;
+      }
       if (!response.ok || !data.checkoutUrl) throw new Error(data.error || "Could not start checkout.");
       window.location.assign(data.checkoutUrl);
     } catch (err) {
@@ -66,6 +98,9 @@ export default function SubscribePage() {
             Choose a membership to support Streamivio as its authorized movie and creator catalog grows.
             Browsing remains free. Premium playback will only be enabled for content Streamivio is licensed to offer.
           </p>
+          {authState === "checking" && <p role="status" className="mt-5 text-sm text-zinc-400">Checking your Streamivio account…</p>}
+          {authError && <p role="alert" className="mt-5 rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-200">{authError}</p>}
+          {authState === "signed-in" && <p className="mt-4 text-sm text-zinc-400">Signed in as <span className="font-semibold text-white">{email}</span></p>}
           {membership?.status === "active" && <div className="mt-6 rounded-xl border border-emerald-700/50 bg-emerald-950/40 p-4 text-sm text-emerald-200">
             Your Streamivio membership is active{membership.expiresAt ? ` until ${new Date(membership.expiresAt).toLocaleDateString()}` : ""}.
           </div>}
@@ -105,10 +140,10 @@ export default function SubscribePage() {
           <form onSubmit={startCheckout} className="mt-6 grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm text-zinc-300">First name <input value={firstName} onChange={(e) => setFirstName(e.target.value)} maxLength={80} autoComplete="given-name" className="rounded-lg border border-white/15 bg-black/30 px-3 py-3 text-white outline-none focus:border-red-500" /></label>
             <label className="grid gap-2 text-sm text-zinc-300">Last name <input value={lastName} onChange={(e) => setLastName(e.target.value)} maxLength={80} autoComplete="family-name" className="rounded-lg border border-white/15 bg-black/30 px-3 py-3 text-white outline-none focus:border-red-500" /></label>
-            <label className="grid gap-2 text-sm text-zinc-300 sm:col-span-2">Email address <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} maxLength={254} autoComplete="email" className="rounded-lg border border-white/15 bg-black/30 px-3 py-3 text-white outline-none focus:border-red-500" placeholder="you@example.com" /></label>
+            <label className="grid gap-2 text-sm text-zinc-300 sm:col-span-2">Verified account email <input required readOnly type="email" value={email} maxLength={254} autoComplete="email" className="rounded-lg border border-white/15 bg-black/30 px-3 py-3 text-white outline-none read-only:cursor-not-allowed read-only:opacity-80" placeholder="Sign in to load your email" /><span className="text-xs text-zinc-500">Checkout is tied to the email address you verified when signing in.</span></label>
             <label className="grid gap-2 text-sm text-zinc-300 sm:col-span-2">Phone number (optional) <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} maxLength={20} autoComplete="tel" className="rounded-lg border border-white/15 bg-black/30 px-3 py-3 text-white outline-none focus:border-red-500" placeholder="+254712345678" /></label>
             {error && <p role="alert" className="sm:col-span-2 rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-200">{error}</p>}
-            <button disabled={busy} type="submit" className="rounded-lg bg-[#e50914] px-5 py-3 font-bold transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60 sm:col-span-2">{busy ? "Connecting to secure checkout…" : `Continue · KSh ${amount.toLocaleString("en-KE")}`}</button>
+            <button disabled={busy || authState !== "signed-in"} type="submit" className="rounded-lg bg-[#e50914] px-5 py-3 font-bold transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60 sm:col-span-2">{busy ? "Connecting to secure checkout…" : authState === "checking" ? "Checking your account…" : authState !== "signed-in" ? "Sign in to continue" : `Continue · KSh ${amount.toLocaleString("en-KE")}`}</button>
           </form>
           <p className="mt-4 text-xs leading-5 text-zinc-500">Payments are processed by IntaSend. A successful return to this site does not itself activate membership: Streamivio checks the payment status with the provider. Membership is valid for the selected period and must be renewed manually unless automatic renewal is separately enabled by the payment provider.</p>
         </section>
