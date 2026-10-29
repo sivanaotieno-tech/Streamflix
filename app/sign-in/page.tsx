@@ -22,9 +22,21 @@ export default function SignInPage() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [resendWait, setResendWait] = useState(0);
+  const [emailServiceReady, setEmailServiceReady] = useState<boolean | null>(null);
 
   useEffect(() => {
     setNextPath(safeNext(new URLSearchParams(window.location.search).get("next")));
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/system/status", { cache: "no-store" })
+      .then(async (response) => {
+        const data = await response.json().catch(() => ({}));
+        if (!cancelled) setEmailServiceReady(data.services?.verificationEmail?.ready === true);
+      })
+      .catch(() => { if (!cancelled) setEmailServiceReady(null); });
+    return () => { cancelled = true; };
   }, []);
 
   useEffect(() => {
@@ -105,6 +117,7 @@ export default function SignInPage() {
               ? "Sign in or create your free account using a secure, one-time email code. No password to remember."
               : <>We sent a six-digit code to <span className="font-semibold text-white">{email}</span>. Enter it below to continue.</>}
           </p>
+          {emailServiceReady === false && <p role="status" className="mx-auto mt-5 max-w-sm rounded-lg border border-amber-900/60 bg-amber-950/30 p-3 text-left text-xs leading-5 text-amber-200">Email verification is not configured on this deployment yet. Streamivio’s security email service and account storage must be connected before sign-in codes can be delivered.</p>}
         </div>
 
         {stage === "email" ? (
