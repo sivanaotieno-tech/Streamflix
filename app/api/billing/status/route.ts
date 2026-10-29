@@ -41,7 +41,11 @@ async function verifyAndActivate(record: SubscriptionRecord) {
   }
 
   if (["FAILED", "CANCELED"].includes(String(invoice.state)) && record.status === "PENDING") {
-    const updated = { ...record, status: invoice.state as "FAILED" | "CANCELED" };
+    const updated: SubscriptionRecord = {
+      ...record,
+      invoiceId: invoice.invoice_id || record.invoiceId,
+      status: invoice.state as "FAILED" | "CANCELED",
+    };
     await updateRecord(updated);
     return updated;
   }
