@@ -88,8 +88,9 @@ export async function POST(request: NextRequest) {
       amount,
       currency: "KES",
       status: "PENDING",
-      // Hosted checkout can return its invoice reference as either invoice_id or id.
-      invoiceId: checkout.invoice_id || checkout.id,
+      // Keep checkout and invoice IDs separate: IntaSend may return only a checkout id initially.
+      invoiceId: checkout.invoice_id,
+      checkoutId: checkout.id,
       checkoutUrl: checkout.url,
       createdAt: new Date().toISOString(),
     };
