@@ -39,20 +39,20 @@ const isRecord = (value: unknown): value is AnyRecord =>
 
 function projectDetails(base: AnyRecord, metadata?: AnyRecord | null) {
   const source = metadata ?? {};
-  const title = base.title || base.name || firstText(source, ["title", "name", "titleText"]) || "";
-  const overview = firstText(source, ["overview", "description", "plot", "synopsis", "plotOutline", "storyline"]) ||
+  const title = base.title || base.name || firstText(source, ["title", "Title", "name", "Name", "titleText"]) || "";
+  const overview = firstText(source, ["overview", "description", "plot", "Plot", "synopsis", "plotOutline", "storyline"]) ||
     base.overview || base.description || "";
-  const poster = firstText(source, ["poster_url", "poster", "image", "imageUrl", "primaryImage"]) ||
+  const poster = firstText(source, ["poster_url", "poster", "Poster", "image", "imageUrl", "primaryImage"]) ||
     base.poster_url || base.poster || null;
-  const genres = textArray(source.genres ?? source.genre).length ? textArray(source.genres ?? source.genre) : (base.genres ?? []);
-  const country = textArray(source.country ?? source.countries).length ? textArray(source.country ?? source.countries) : (base.country ?? []);
+  const genres = textArray(source.genres ?? source.genre ?? source.Genre).length ? textArray(source.genres ?? source.genre ?? source.Genre) : (base.genres ?? []);
+  const country = textArray(source.country ?? source.countries ?? source.Country).length ? textArray(source.country ?? source.countries ?? source.Country) : (base.country ?? []);
   const directors = textArray(source.directors ?? source.director);
   const cast = textArray(source.cast ?? source.stars ?? source.actorList ?? source.actors ?? source.actor);
   const ratingSource = isRecord(source.rating) ? { ...source, rating: source.rating.ratingValue } : source;
   const rating = firstNumber(ratingSource, ["rating", "imdb_rating", "imDbRating", "imdbRating", "userRating", "ratingValue"]) ?? base.rating;
-  const rawYear = firstText(source, ["year", "release_year", "datePublished", "date_published", "releaseDate", "release_date"]);
+  const rawYear = firstText(source, ["year", "Year", "release_year", "datePublished", "date_published", "releaseDate", "release_date"]);
   const year = rawYear.match(/\d{4}/)?.[0] || base.year || "";
-  const contentRating = firstText(source, ["contentRating", "age_rating", "rated", "certificate"]) || base.contentRating || base.ageRating || null;
+  const contentRating = firstText(source, ["contentRating", "age_rating", "rated", "Rated", "certificate"]) || base.contentRating || base.ageRating || null;
   const runtime = firstText(source, ["runtime", "runtimeStr", "duration", "length"]) || base.runtime || null;
   const sourceId = firstText(source, ["id"]);
   const imdbId = firstText(source, ["imdbID", "imdb_id", "imdbId"]) ||
@@ -189,7 +189,7 @@ export async function GET(request: NextRequest) {
       const searchPath = "/search?q=" + encodeURIComponent(searchTitle) + "&type=" + encodeURIComponent(kind);
       const payload = await serviceGet(serviceBase, searchPath);
       const candidates: AnyRecord[] = Array.isArray(payload?.results) ? payload.results.filter((row: unknown): row is AnyRecord => isRecord(row)) : [];
-      const exact = candidates.find((row) => normalize(firstText(row, ["title", "name", "titleText"])) === normalize(searchTitle));
+      const exact = candidates.find((row) => normalize(firstText(row, ["title", "Title", "name", "Name", "titleText"])) === normalize(searchTitle));
       if (exact) {
         metadata = exact;
         const externalId = firstText(exact, ["imdbID", "imdb_id", "imdbId", "id"]);
