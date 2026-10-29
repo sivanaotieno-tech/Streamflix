@@ -124,8 +124,8 @@ export async function GET(request: NextRequest) {
     }, { status: 400, headers: NO_STORE });
   }
 
-  const local = catalog.find((item) => String(item.id) === id) ??
-    catalog.find((item) => normalize(item.title) === normalize(titleQuery) &&
+  const local: AnyRecord | null = (catalog as AnyRecord[]).find((item) => String(item.id) === id) ??
+    (catalog as AnyRecord[]).find((item) => normalize(item.title) === normalize(titleQuery) &&
       (suppliedType === "all" || item.type === suppliedType || (suppliedType === "tv" && ["anime", "documentary", "kids", "reality"].includes(item.type)))) ?? null;
   const game: AnyRecord | null = (gamesCatalog as unknown as AnyRecord[]).find((item) => String(item.id) === id) ??
     (gamesCatalog as unknown as AnyRecord[]).find((item) => normalize(item.title) === normalize(titleQuery)) ?? null;
