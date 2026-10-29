@@ -1,4 +1,4 @@
-import { createHmac, createHash, randomBytes, timingSafeEqual } from "node:crypto";
+import { createHmac, createHash, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 
 export const AUTH_COOKIE_NAME = "streamivio_auth";
 export const AUTH_SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -47,7 +47,7 @@ export function authStorageReady() {
   return Boolean(
     process.env.UPSTASH_REDIS_REST_URL &&
     process.env.UPSTASH_REDIS_REST_TOKEN &&
-    process.env.STREAMIVIO_AUTH_SECRET
+    (process.env.STREAMIVIO_AUTH_SECRET?.length ?? 0) >= 32
   );
 }
 
@@ -103,7 +103,7 @@ export function equalHex(left: string, right: string) {
 }
 
 export function createOtpCode() {
-  return randomBytes(4).readUInt32BE(0) % 1_000_000;
+  return randomInt(0, 1_000_000);
 }
 
 export function createAuthSessionToken() {
