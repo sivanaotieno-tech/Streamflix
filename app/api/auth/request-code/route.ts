@@ -49,7 +49,9 @@ export async function POST(request: Request) {
 
   const forward = request.headers.get("x-forwarded-for") || "";
   const realIp = request.headers.get("x-real-ip") || "";
-  const ip = (realIp || forward.split(",").pop() || "unknown").trim().slice(0, 128);
+  // X-Forwarded-For is ordered client-first, followed by proxies. Use the first value,
+  // not the last shared proxy address, so per-IP throttling is effective behind Vercel.
+  const ip = (realIp || forward.split(",")[0] || "unknown").trim().slice(0, 128);
 
   try {
     const cooldown = await authRedisCommand<string | null>("SET", authCooldownKey(email), "1", "NX", "EX", 60);
