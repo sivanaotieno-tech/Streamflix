@@ -149,7 +149,7 @@ export default function SubscribePage() {
 
         <section className="mx-auto mt-8 max-w-2xl rounded-lg border border-white/10 bg-[#1b1b1b] p-5 sm:p-8">
           <h2 className="text-xl font-bold">Continue to secure checkout</h2>
-          <p className="mt-2 text-sm text-zinc-400">Selected: {selectedPlan.name} · {period} · KSh {amount.toLocaleString("en-KE")}. Checkout offers the payment methods enabled for your IntaSend account, including M-Pesa and cards when enabled.</p>
+          <p className="mt-2 text-sm text-zinc-400">Selected: {selectedPlan.name} · {period} · KSh {amount.toLocaleString("en-KE")}. Checkout displays the payment methods enabled for the configured payment provider. Available methods depend on the provider and environment.</p>
           <form onSubmit={startCheckout} className="mt-6 grid gap-4 sm:grid-cols-2">
             <label className="grid gap-2 text-sm text-zinc-300">First name <input value={firstName} onChange={(e) => setFirstName(e.target.value)} maxLength={80} autoComplete="given-name" className="rounded-lg border border-white/15 bg-black/30 px-3 py-3 text-white outline-none focus:border-red-500" /></label>
             <label className="grid gap-2 text-sm text-zinc-300">Last name <input value={lastName} onChange={(e) => setLastName(e.target.value)} maxLength={80} autoComplete="family-name" className="rounded-lg border border-white/15 bg-black/30 px-3 py-3 text-white outline-none focus:border-red-500" /></label>
@@ -158,7 +158,7 @@ export default function SubscribePage() {
             {error && <p role="alert" className="sm:col-span-2 rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-200">{error}</p>}
             <button disabled={busy || authState !== "signed-in" || paymentGatewayReady === false} type="submit" className="rounded-lg bg-[#e50914] px-5 py-3 font-bold transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60 sm:col-span-2">{busy ? "Connecting to secure checkout…" : authState === "checking" ? "Checking your account…" : authState !== "signed-in" ? "Sign in to continue" : paymentGatewayReady === false ? "Checkout is being configured" : `Continue · KSh ${amount.toLocaleString("en-KE")}`}</button>
           </form>
-          <p className="mt-4 text-xs leading-5 text-zinc-500">Payments are processed by IntaSend. A successful return to this site does not itself activate membership: Streamivio checks the payment status with the provider. Membership is valid for the selected period and must be renewed manually unless automatic renewal is separately enabled by the payment provider.</p>
+          <p className="mt-4 text-xs leading-5 text-zinc-500">Payments are handled by the configured payment provider. A return to this site is not proof of payment: Streamivio checks the provider payment record, amount, currency, subscription reference and plan before activating membership. Sandbox transactions are tests, not real payments. Membership is valid for the selected period and must be renewed manually unless automatic renewal is separately enabled.</p>
         </section>
       </div>
     </main>
