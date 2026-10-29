@@ -40,7 +40,7 @@ function wordScore(queryWord:string,candidates:string[]){
   for(const candidate of candidates){
     if(candidate===queryWord)best=Math.max(best,50);
     else if(queryWord.length>=3&&candidate.startsWith(queryWord))best=Math.max(best,32);
-    else if(queryWord.length>=4&&(candidate.includes(queryWord)||queryWord.includes(candidate)))best=Math.max(best,18);
+    else if(queryWord.length>=4&&candidate.length>=4&&(candidate.includes(queryWord)||queryWord.includes(candidate)))best=Math.max(best,18);
     else if(queryWord.length>=4){
       const allowance=queryWord.length<=7?1:2;
       if(levenshtein(queryWord,candidate,allowance)<=allowance)best=Math.max(best,14);
