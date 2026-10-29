@@ -76,7 +76,8 @@ export function authCooldownKey(email: string) {
 }
 
 export function authSessionKey(token: string) {
-  return `streamivio:auth:session:${token}`;
+  // Never store the raw bearer session token in Redis key names.
+  return `streamivio:auth:session:${createHash("sha256").update(token).digest("hex")}`;
 }
 
 export function authRateLimitKey(kind: "email" | "ip", value: string) {
