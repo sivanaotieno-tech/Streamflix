@@ -102,23 +102,28 @@ function textList(value:unknown):string[]{
 }
 
 function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"):SearchRecord|null{
-  const title=String(row.title||row.name||row.titleText||row.originalTitle||"").trim();
+  const titleValue=row.title||row.name||row.titleText||row.originalTitle||row.original_title;
+  const title=typeof titleValue==="string"?titleValue.trim():String(titleValue??"").trim();
   if(!title)return null;
-  const providerId=String(row.imdbID||row.imdb_id||row.imdbId||row.id||"");
-  const year=String(row.year||row.releaseYear||row.release_year||"").match(/\d{4}/)?.[0]||"";
-  const poster=String(row.poster||row.poster_url||row.image||"").trim()||null;
+  const providerId=String(row.imdbID||row.imdb_id||row.imdbId||row.id||"").trim();
+  const rawYear=row.year||row.releaseYear||row.release_year||row.releaseDate||row.release_date||row.datePublished||row.date_published;
+  const year=String(rawYear||"").match(/\\d{4}/)?.[0]||"";
+  const posterValue=row.poster||row.poster_url||row.image||row.imageUrl||row.primaryImage||row.thumbnail;
+  const poster=typeof posterValue==="string"&&/^https:\/\//i.test(posterValue.trim())?posterValue.trim():null;
+  const rawOverview=row.overview||row.description||row.plot||row.plotOutline||row.synopsis||row.storyline;
+  const ratingValue=typeof row.rating==="object"&&row.rating!==null?row.rating.ratingValue:row.rating;
+  const genres=textList(row.genres||row.genre);
+  const countries=textList(row.country||row.countries);
+  const imdbId=/^tt\\d+$/i.test(providerId)?providerId:undefined;
   return {
-    id:/^tt\d+$/i.test(providerId)?providerId:"imdb-search-"+compact(title)+(year?"-"+year:""),
-    title,name:title,overview:String(row.overview||row.description||row.plot||row.plotOutline||""),
-    description:String(row.overview||row.description||row.plot||row.plotOutline||""),
-    year,rating:numberOrUndefined(row.rating??row.imDbRating??row.imdbRating),
-    type:kind,genres:textList(row.genres||row.genre),country:textList(row.country||row.countries),
+    id:imdbId||"imdb-search-"+compact(title)+(year?"-"+year:""),
+    title,name:title,overview:String(rawOverview||""),description:String(rawOverview||""),
+    year,rating:numberOrUndefined(ratingValue??row.imDbRating??row.imdbRating??row.userRating),
+    type:kind,genres,country:countries,
     poster,poster_url:poster,
-    contentRating:row.contentRating||row.rated||row.certificate||null,
-    ageRating:row.contentRating||row.rated||row.certificate||null,
-    imdbId:/^tt\d+$/i.test(providerId)?providerId:undefined,
-    imdb_id:/^tt\d+$/i.test(providerId)?providerId:undefined,
-    imdbID:/^tt\d+$/i.test(providerId)?providerId:undefined,
+    contentRating:row.contentRating||row.age_rating||row.rated||row.certificate||null,
+    ageRating:row.contentRating||row.age_rating||row.rated||row.certificate||null,
+    imdbId,imdb_id:imdbId,imdbID:imdbId,
     source:"IMDb Search",metadata_source:"IMDb"
   };
 }
@@ -288,8 +293,7 @@ export async function GET(request:NextRequest){
   combined=combined.filter(filterResult);
 
   const externalEligible=!popular&&Boolean(apiBase)&&rawQuery.length>=2&&
-    (scope==="all"||scope==="movies"||scope==="tv")&&
-    combined.filter(item=>item.source!=="Local Games Catalog").length<10;
+    (scope==="all"||scope==="movies"||scope==="tv");
   const sources:string[]=[];
   if(scope!=="games")sources.push("Streamivio Library");
   if(scope==="all"||scope==="games")sources.push("Games catalog");
