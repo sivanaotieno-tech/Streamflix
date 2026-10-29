@@ -110,7 +110,7 @@ def _word_match_score(query_word, candidate_words):
             best = max(best, 28)
         elif len(query_word) >= 4 and query_word.startswith(word):
             best = max(best, 20)
-        elif len(query_word) >= 4 and (query_word in word or word in query_word):
+        elif len(query_word) >= 4 and len(word) >= 4 and (query_word in word or word in query_word):
             best = max(best, 16)
         elif len(query_word) >= 4:
             tolerance = 1 if len(query_word) <= 7 else 2
