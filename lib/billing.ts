@@ -14,6 +14,7 @@ export type SubscriptionRecord = {
   currency: "KES";
   status: "PENDING" | "ACTIVE" | "FAILED" | "CANCELED";
   invoiceId?: string;
+  checkoutId?: string;
   checkoutUrl?: string;
   createdAt: string;
   expiresAt?: string;
@@ -109,16 +110,17 @@ export function appUrl() {
   return value.replace(/\/$/, "");
 }
 
-export async function intasendStatus(invoiceId: string) {
+export async function intasendStatus(invoiceId?: string, checkoutId?: string) {
   const secret = process.env.INTASEND_SECRET_KEY;
   if (!secret) throw new Error("Payment provider is not configured.");
+  if (!invoiceId && !checkoutId) throw new Error("A payment invoice or checkout reference is required.");
   const response = await fetch(`${BASE_URL}payment/status/`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${secret}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ invoice_id: invoiceId }),
+    body: JSON.stringify(invoiceId ? { invoice_id: invoiceId } : { checkout_id: checkoutId }),
     cache: "no-store",
   });
   if (!response.ok) throw new Error("Could not verify payment with IntaSend.");
