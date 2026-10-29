@@ -32,14 +32,40 @@ export const PLANS = {
   },
 } as const;
 
+function validAppOrigin(value: string | undefined) {
+  if (!value) return false;
+  try {
+    const url = new URL(value);
+    const secure = url.protocol === "https:";
+    const localDevelopment =
+      process.env.NODE_ENV !== "production" &&
+      url.protocol === "http:" &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1");
+    return (secure || localDevelopment) &&
+      !url.username && !url.password &&
+      url.pathname === "/" && !url.search && !url.hash;
+  } catch {
+    return false;
+  }
+}
+
+function intasendKeysMatch() {
+  const publishable = process.env.INTASEND_PUBLISHABLE_KEY?.trim() || "";
+  const secret = process.env.INTASEND_SECRET_KEY?.trim() || "";
+  const publishableMode = /^ISPubKey_(test|live)_/.exec(publishable)?.[1];
+  const secretMode = /^ISSecretKey_(test|live)_/.exec(secret)?.[1];
+  return Boolean(publishableMode && secretMode && publishableMode === secretMode);
+}
+
 export function envReady() {
+  const challenge = process.env.INTASEND_WEBHOOK_CHALLENGE?.trim() || "";
+  const appOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
   return Boolean(
-    process.env.INTASEND_PUBLISHABLE_KEY &&
-      process.env.INTASEND_SECRET_KEY &&
-      process.env.INTASEND_WEBHOOK_CHALLENGE &&
+    intasendKeysMatch() &&
+      challenge.length >= 16 &&
       process.env.UPSTASH_REDIS_REST_URL &&
       process.env.UPSTASH_REDIS_REST_TOKEN &&
-      (process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL)
+      validAppOrigin(appOrigin)
   );
 }
 
