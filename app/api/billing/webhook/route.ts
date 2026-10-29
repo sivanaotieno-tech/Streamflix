@@ -40,22 +40,28 @@ export async function POST(request: Request) {
   ) {
     return NextResponse.json({ error: "Invalid webhook challenge." }, { status: 401 });
   }
-  if (event.topic !== "collection_event" || !event.api_ref || !event.invoice_id) {
+  if (
+    event.topic !== "collection_event" ||
+    typeof event.api_ref !== "string" || !event.api_ref ||
+    typeof event.invoice_id !== "string" || !event.invoice_id
+  ) {
     return NextResponse.json({ received: true, ignored: true });
   }
+  const apiRef = event.api_ref;
+  const invoiceId = event.invoice_id;
 
   try {
-    const sessionToken = await findSessionByReference(event.api_ref);
+    const sessionToken = await findSessionByReference(apiRef);
     if (!sessionToken) return NextResponse.json({ received: true, ignored: true });
     let record = await getRecord(sessionToken);
-    if (!record || record.apiRef !== event.api_ref || (record.invoiceId && record.invoiceId !== event.invoice_id)) {
+    if (!record || record.apiRef !== apiRef || (record.invoiceId && record.invoiceId !== invoiceId)) {
       return NextResponse.json({ received: true, ignored: true });
     }
 
     // Do not trust webhook state alone: confirm invoice state, amount, currency and reference with IntaSend.
-    const result = await intasendStatus(event.invoice_id);
+    const result = await intasendStatus(invoiceId);
     const invoice = result.invoice;
-    if (!invoice || invoice.invoice_id !== event.invoice_id ||
+    if (!invoice || invoice.invoice_id !== invoiceId ||
         invoice.api_ref !== record.apiRef ||
         invoice.currency !== record.currency ||
         Number(invoice.value) !== record.amount) {
@@ -66,7 +72,7 @@ export async function POST(request: Request) {
       const paidAt = new Date();
       record = {
         ...record,
-        invoiceId: event.invoice_id,
+        invoiceId,
         status: "ACTIVE",
         paidAt: paidAt.toISOString(),
         expiresAt: addPeriod(paidAt, record.period),
@@ -74,7 +80,7 @@ export async function POST(request: Request) {
       await updateRecord(record);
     } else if (invoice.state === "FAILED" || invoice.state === "CANCELED") {
       if (record.status === "PENDING") {
-        record = { ...record, invoiceId: event.invoice_id, status: invoice.state };
+        record = { ...record, invoiceId, status: invoice.state };
         await updateRecord(record);
       }
     }
