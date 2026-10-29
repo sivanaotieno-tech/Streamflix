@@ -1,7 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 const SANDBOX_URL = "https://sandbox.hyperswitch.io";
-const PRODUCTION_URL = "https://api.hyperswitch.io";
 
 export type HyperswitchPayment = {
   payment_id?: string;
