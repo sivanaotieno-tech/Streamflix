@@ -12,10 +12,10 @@ function expiryFrom(now: Date, period: SubscriptionRecord["period"]) {
 }
 
 async function verifyAndActivate(record: SubscriptionRecord) {
-  if (!record.invoiceId) return record;
-  const verified = await intasendStatus(record.invoiceId);
+  if (!record.invoiceId && !record.checkoutId) return record;
+  const verified = await intasendStatus(record.invoiceId, record.checkoutId);
   const invoice = verified.invoice;
-  if (!invoice || invoice.invoice_id !== record.invoiceId) return record;
+  if (!invoice || (record.invoiceId && invoice.invoice_id !== record.invoiceId)) return record;
 
   const amount = Number(invoice.value);
   const matches = invoice.currency === record.currency &&
@@ -31,6 +31,7 @@ async function verifyAndActivate(record: SubscriptionRecord) {
     const paidAt = new Date();
     const updated: SubscriptionRecord = {
       ...record,
+      invoiceId: invoice.invoice_id || record.invoiceId,
       status: "ACTIVE",
       paidAt: paidAt.toISOString(),
       expiresAt: expiryFrom(paidAt, record.period).toISOString(),
