@@ -135,8 +135,8 @@ export default function SignInPage() {
                 </span>
               </label>
               {error && <p role="alert" className="rounded-lg border border-red-900/70 bg-red-950/50 p-3 text-sm text-red-200">{error}</p>}
-              <button disabled={busy} type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e50914] px-5 py-3.5 font-extrabold transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60">
-                {busy ? <><LoaderCircle className="h-5 w-5 animate-spin" /> Sending code…</> : <>Email me a code <span aria-hidden="true">→</span></>}
+              <button disabled={busy || emailServiceReady === false} type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e50914] px-5 py-3.5 font-extrabold transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60">
+                {busy ? <><LoaderCircle className="h-5 w-5 animate-spin" /> Sending code…</> : emailServiceReady === false ? "Email verification is being configured" : <>Email me a code <span aria-hidden="true">→</span></>}
               </button>
             </form>
           </>
