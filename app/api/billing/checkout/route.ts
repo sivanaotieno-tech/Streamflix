@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ checkoutUrl, sessionToken });
     }
 
-    const checkoutResponse = await fetch("https://api.intasend.com/api/v1/checkout/",
+    const checkoutResponse = await fetch("https://api.intasend.com/api/v1/checkout/", {
       method: "POST",
       headers: {
         "X-IntaSend-Public-API-Key": process.env.INTASEND_PUBLISHABLE_KEY!,
