@@ -130,9 +130,13 @@ The frontend accepts progress messages only from the exact `https://vidsrc.sh` i
 
 References: [VidSrc home](https://vidsrc.sh/), [embed/API documentation](https://vidsrc.sh/vidsrc/docs/).
 
-## Payments
+## Account sign-in, verification email and payment gateway
 
-The existing subscription UI and IntaSend/Upstash-based billing code are separate from the catalog database. Their credentials must remain in Vercel environment variables and must never be committed to the repository. Test payment flows with sandbox credentials before enabling live payments.
+Streamivio includes passwordless email sign-in and sign-up with a six-digit code, styled with the black-and-red design in the reference email. Codes are generated cryptographically, expire after 10 minutes, and are stored as HMAC hashes in Upstash Redis. Resend delivers the transactional message.
+
+The membership checkout uses IntaSend hosted checkout for the payment methods enabled on the merchant account, including M-Pesa and cards when available. Payment status is checked against the provider before membership is activated. The `/api/system/status` endpoint returns secret-free readiness flags.
+
+**Production credentials must be configured before these flows can operate.** Follow [Production Setup: Sign-in Email and Payments](docs/PRODUCTION_SETUP.md) for the exact Vercel, Resend, Upstash and IntaSend settings and sandbox test procedure. Do not commit API keys or tokens.
 
 ## Deployment
 
