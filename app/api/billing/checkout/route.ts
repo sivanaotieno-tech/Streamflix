@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { AUTH_COOKIE_NAME, getAuthenticatedUser } from "@/lib/auth";
 import { appUrl, envReady, makeSessionToken, PLANS, saveRecord, type BillingPeriod, type PlanId, type SubscriptionRecord } from "@/lib/billing";
+import { createHyperswitchPaymentLink } from "@/lib/hyperswitch";
 
 export const runtime = "nodejs";
 
@@ -52,7 +53,32 @@ export async function POST(request: NextRequest) {
   const app = appUrl();
 
   try {
-    const checkoutResponse = await fetch("https://api.intasend.com/api/v1/checkout/", {
+    if (process.env.PAYMENT_PROVIDER === "hyperswitch") {
+      const checkout = await createHyperswitchPaymentLink({
+        amountKes: amount,
+        email,
+        name: [firstName, lastName].filter(Boolean).join(" "),
+        phone: phoneNumber || undefined,
+        reference: apiRef,
+        returnUrl: `${app}/subscribe/return?session=${encodeURIComponent(sessionToken)}`,
+        plan: plan as PlanId,
+        period: period as BillingPeriod,
+      });
+      const checkoutUrl = checkout.payment_link?.secure_link || checkout.payment_link?.link;
+      if (!checkout.payment_id || !checkoutUrl) {
+        console.error("Hyperswitch sandbox did not return a payment link or payment ID");
+        return NextResponse.json({ error: "Hyperswitch could not start checkout. Check sandbox configuration." }, { status: 502 });
+      }
+      const record: SubscriptionRecord = {
+        sessionToken, apiRef, email, plan: plan as PlanId, period: period as BillingPeriod,
+        amount, currency: "KES", status: "PENDING", provider: "hyperswitch",
+        paymentId: checkout.payment_id, checkoutUrl, createdAt: new Date().toISOString(),
+      };
+      await saveRecord(record);
+      return NextResponse.json({ checkoutUrl, sessionToken });
+    }
+
+    const checkoutResponse = await fetch("https://api.intasend.com/api/v1/checkout/",
       method: "POST",
       headers: {
         "X-IntaSend-Public-API-Key": process.env.INTASEND_PUBLISHABLE_KEY!,
