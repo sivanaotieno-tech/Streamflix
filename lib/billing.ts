@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import { hyperswitchConfigured } from "@/lib/hyperswitch";
 
 const BASE_URL = "https://api.intasend.com/api/v1/";
 
@@ -16,6 +17,8 @@ export type SubscriptionRecord = {
   invoiceId?: string;
   checkoutId?: string;
   checkoutUrl?: string;
+  provider?: "intasend" | "hyperswitch";
+  paymentId?: string;
   createdAt: string;
   expiresAt?: string;
   paidAt?: string;
@@ -58,6 +61,7 @@ function intasendKeysMatch() {
 }
 
 export function envReady() {
+  if (process.env.PAYMENT_PROVIDER === "hyperswitch") return hyperswitchConfigured();
   const challenge = process.env.INTASEND_WEBHOOK_CHALLENGE?.trim() || "";
   const appOrigin = process.env.NEXT_PUBLIC_APP_URL || process.env.APP_URL;
   return Boolean(
