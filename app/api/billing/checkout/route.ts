@@ -5,7 +5,7 @@ import { appUrl, envReady, makeSessionToken, PLANS, saveRecord, type BillingPeri
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
-  let authUser;
+  let authUser: Awaited<ReturnType<typeof getAuthenticatedUser>> = null;
   try {
     authUser = await getAuthenticatedUser(request.cookies.get(AUTH_COOKIE_NAME)?.value);
   } catch (error) {
