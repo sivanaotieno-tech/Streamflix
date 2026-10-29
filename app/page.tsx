@@ -128,6 +128,25 @@ export default function Home(){
   const[list,setList]=useState<Item[]>([]);
   const [browse,setBrowse]=useState("Home");
   const [loading,setLoading]=useState(true);
+  const [authUser,setAuthUser]=useState<{email:string}|null>(null);
+  const [authStatusLoading,setAuthStatusLoading]=useState(true);
+
+  useEffect(()=>{
+    let cancelled=false;
+    fetch("/api/auth/me",{cache:"no-store"})
+      .then(async response=>{
+        const data=await response.json().catch(()=>({}));
+        if(!cancelled&&response.ok&&data.authenticated&&data.user?.email)setAuthUser({email:String(data.user.email)});
+      })
+      .catch(()=>{})
+      .finally(()=>{if(!cancelled)setAuthStatusLoading(false);});
+    return()=>{cancelled=true;};
+  },[]);
+
+  const signOut=async()=>{
+    try{await fetch("/api/auth/signout",{method:"POST",cache:"no-store"});}catch{}
+    setAuthUser(null);
+  };
 
   const get=async(s:string,p:string)=>{
     const r=await fetch("/api/catalog?source="+s+"&path="+encodeURIComponent(p));
@@ -479,6 +498,7 @@ export default function Home(){
           {q&&<button type="button" onClick={()=>setQ("")} aria-label="Clear search" className="absolute right-2 text-zinc-400 hover:text-white"><X className="h-3.5 w-3.5"/></button>}
         </form>
         <button onClick={()=>{setBrowse("My List");setQ("")}} className="hidden text-xs font-semibold sm:block">My List</button>
+        {authUser ? <><span title={authUser.email} className="hidden max-w-28 truncate text-xs text-zinc-300 lg:block">{authUser.email}</span><button onClick={()=>void signOut()} className="text-xs font-semibold text-zinc-300 hover:text-white">Sign out</button></> : <a href="/sign-in" className="whitespace-nowrap text-xs font-semibold text-zinc-200 hover:text-white">{authStatusLoading?"Checking…":"Sign in"}</a>}
         <a href="/subscribe" aria-label="Open Streamivio subscription plans" className="rounded bg-[#e50914] px-4 py-2 text-xs font-bold text-white transition hover:bg-red-700 sm:text-sm">Subscribe</a>
       </div>
     </nav>
