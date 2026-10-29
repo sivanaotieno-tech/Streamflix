@@ -114,17 +114,8 @@ export async function intasendStatus(invoiceId?: string, checkoutId?: string) {
   const secret = process.env.INTASEND_SECRET_KEY;
   if (!secret) throw new Error("Payment provider is not configured.");
   if (!invoiceId && !checkoutId) throw new Error("A payment invoice or checkout reference is required.");
-  const response = await fetch(`${BASE_URL}payment/status/`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${secret}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(invoiceId ? { invoice_id: invoiceId } : { checkout_id: checkoutId }),
-    cache: "no-store",
-  });
-  if (!response.ok) throw new Error("Could not verify payment with IntaSend.");
-  return (await response.json()) as {
+
+  type StatusResult = {
     invoice?: {
       invoice_id?: string;
       state?: string;
@@ -133,6 +124,35 @@ export async function intasendStatus(invoiceId?: string, checkoutId?: string) {
       api_ref?: string;
     };
   };
+
+  const lookup = async (body: Record<string, string>): Promise<StatusResult | null> => {
+    const response = await fetch(`${BASE_URL}payment/status/`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${secret}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) return null;
+    return (await response.json()) as StatusResult;
+  };
+
+  if (invoiceId) {
+    const result = await lookup({ invoice_id: invoiceId });
+    if (result?.invoice) return result;
+    throw new Error("Could not verify payment with IntaSend.");
+  }
+
+  // IntaSend's checkout creation response may include a checkout id before an invoice id.
+  // Try the documented checkout_id lookup first, then the compatible invoice_id form.
+  const byCheckout = await lookup({ checkout_id: checkoutId! });
+  if (byCheckout?.invoice) return byCheckout;
+  const byInvoice = await lookup({ invoice_id: checkoutId! });
+  if (byInvoice?.invoice) return byInvoice;
+  throw new Error("Could not verify payment with IntaSend.");
 }
 
 export function makeSessionToken() {
