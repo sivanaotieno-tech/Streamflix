@@ -66,13 +66,18 @@ export async function POST(request: Request) {
 
     const suppliedHash = hashAuthCode(email, code);
     if (!equalHex(suppliedHash, otp.codeHash)) {
-      otp.attempts += 1;
-      if (otp.attempts >= 5) {
-        await authRedisCommand("DEL", authOtpKey(email));
-        return error("Too many incorrect attempts. Request a new code.", 429);
-      }
-      const secondsLeft = Math.max(1, AUTH_CODE_TTL_SECONDS - Math.floor((Date.now() - issuedAt) / 1000));
-      await authRedisCommand("SET", authOtpKey(email), JSON.stringify(otp), "EX", secondsLeft);
+      // Increment attempts inside Redis so concurrent guesses cannot overwrite one another
+      // and accidentally bypass the five-attempt limit.
+      const attemptResult = await authRedisCommand<number>(
+        "EVAL",
+        "local raw=redis.call('GET',KEYS[1]); if raw ~= ARGV[1] then return -1 end; local record=cjson.decode(raw); local attempts=tonumber(record.attempts or 0)+1; if attempts >= tonumber(ARGV[2]) then redis.call('DEL',KEYS[1]); return -2 end; local ttl=redis.call('TTL',KEYS[1]); if ttl < 1 then return -1 end; record.attempts=attempts; redis.call('SET',KEYS[1],cjson.encode(record),'EX',ttl); return attempts",
+        1,
+        authOtpKey(email),
+        rawOtp,
+        5
+      );
+      if (attemptResult === -2) return error("Too many incorrect attempts. Request a new code.", 429);
+      if (attemptResult < 0) return error("That code expired or was replaced. Request a new one.", 409);
       return error("That code does not match. Check the email and try again.", 400);
     }
 
