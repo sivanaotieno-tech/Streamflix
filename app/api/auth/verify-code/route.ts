@@ -49,9 +49,19 @@ export async function POST(request: Request) {
       return error("That code is no longer valid. Request a new one.", 400);
     }
 
-    if (Date.now() - Date.parse(otp.issuedAt) > AUTH_CODE_TTL_SECONDS * 1000 || otp.attempts >= 5) {
+    const issuedAt = Date.parse(otp.issuedAt);
+    if (
+      !Number.isFinite(issuedAt) ||
+      issuedAt > Date.now() + 30_000 ||
+      Date.now() - issuedAt > AUTH_CODE_TTL_SECONDS * 1000 ||
+      !Number.isInteger(otp.attempts) ||
+      otp.attempts < 0 ||
+      otp.attempts >= 5 ||
+      (otp.mode !== "signup" && otp.mode !== "signin") ||
+      !/^[a-f0-9]{64}$/i.test(otp.codeHash)
+    ) {
       await authRedisCommand("DEL", authOtpKey(email));
-      return error("That code expired or too many attempts were made. Request a new code.", 400);
+      return error("That code expired or is no longer valid. Request a new code.", 400);
     }
 
     const suppliedHash = hashAuthCode(email, code);
@@ -61,7 +71,7 @@ export async function POST(request: Request) {
         await authRedisCommand("DEL", authOtpKey(email));
         return error("Too many incorrect attempts. Request a new code.", 429);
       }
-      const secondsLeft = Math.max(1, AUTH_CODE_TTL_SECONDS - Math.floor((Date.now() - Date.parse(otp.issuedAt)) / 1000));
+      const secondsLeft = Math.max(1, AUTH_CODE_TTL_SECONDS - Math.floor((Date.now() - issuedAt) / 1000));
       await authRedisCommand("SET", authOtpKey(email), JSON.stringify(otp), "EX", secondsLeft);
       return error("That code does not match. Check the email and try again.", 400);
     }
