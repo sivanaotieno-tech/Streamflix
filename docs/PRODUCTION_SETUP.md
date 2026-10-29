@@ -27,7 +27,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"
 
 Generate a separate random challenge for IntaSend. Do not reuse the authentication secret for the webhook challenge.
 
-Use the public production domain, not a preview URL, for payment redirects. The Vercel project currently has SSO protection on its non-custom aliases; a public customer site and payment-provider webhook must be reachable without an interactive Vercel SSO login. Use a public custom domain and verify its deployment-protection settings before enabling payments.
+Use the public production domain, not a preview URL, for payment redirects. I changed the project's Vercel SSO-protection scope to `preview`, keeping previews protected while allowing production aliases to be public. Verify the production alias is reachable without an interactive Vercel login, and confirm no deployment-level password/SSO or trusted-IP rule blocks IntaSend's webhook. If access is still protected, use a verified public custom domain or correct the remaining deployment-protection override before enabling payments.
 
 ## 2. Configure the email sender
 
