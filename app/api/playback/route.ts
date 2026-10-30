@@ -11,7 +11,8 @@ export async function GET(request:NextRequest){
   const requestedType=(params.get("type")||"movie").trim().toLowerCase();
   const kind=(requestedType==="tv"||requestedType==="anime"||requestedType==="documentary"||requestedType==="kids"||requestedType==="reality")?"tv":"movie";
   if(!id&&!title)return NextResponse.json({available:false,error:"Choose a title from the catalog or provide its title text."},{status:400,headers:{"Cache-Control":"no-store"}});
-  const local=catalog.find((item:any)=>String(item.id)===id);
+  const local=catalog.find((item:any)=>String(item.id)===id) || (title ? catalog.find((item:any)=>normalize(String(item.title||""))===normalize(title) && (kind==="tv" ? ["tv","anime","documentary","kids","reality"].includes(String(item.type)) : item.type==="movie")) : undefined);
+  const catalogId=String((local as any)?.id||id);
   const localUrl=typeof (local as any)?.video_url==="string"?(local as any).video_url:"";
   if(localUrl&&isSafeHttps(localUrl)){
     const path=new URL(localUrl).pathname.toLowerCase();
@@ -22,10 +23,10 @@ export async function GET(request:NextRequest){
   const imdbId=String(params.get("imdb_id")||(local as any)?.imdb_id||(local as any)?.imdbId||(local as any)?.imdbID||"");
   const tmdbId=String(params.get("tmdb_id")||(local as any)?.tmdb_id||(local as any)?.tmdbId||(local as any)?.tmdbID||"");
   const pythonCatalogBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/+$/,"");
-  if(pythonCatalogBase&&id){
+  if(pythonCatalogBase&&catalogId){
     try{
       const directUrl=new URL("/playback",pythonCatalogBase);
-      directUrl.searchParams.set("id",id);
+      directUrl.searchParams.set("id",catalogId);
       const response=await fetch(directUrl.toString(),{cache:"no-store",signal:AbortSignal.timeout(4500)});
       const data=await response.json();
       if(response.ok&&data.available&&typeof data.stream_url==="string"&&isSafeHttps(data.stream_url)){
@@ -55,10 +56,36 @@ export async function GET(request:NextRequest){
     return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,content_id:explicitContentId,source:"vidsrc-embed"});
   }
 
-  // Resolve an exact title using Streamivio's configured Python metadata API.
+  // Resolve titles with the server-side IMDb scraper first. It returns IMDb IDs and
+  // metadata only; VidSrc remains an iframe embed and no media URLs are extracted.
+  const searchTitle=title||(local as any)?.title||"";
+  if(searchTitle.length>=2){
+    try{
+      const {Client}=await import("@myno_21/imdb-scraper");
+      const imdbClient=new Client();
+      const scraperLookup=kind==="tv"
+        ? imdbClient.getShowViaName(encodeURIComponent(searchTitle))
+        : imdbClient.getMovieViaName(encodeURIComponent(searchTitle));
+      const scraperResults=await Promise.race([
+        scraperLookup,
+        new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error("IMDb lookup timed out")),5000))
+      ]);
+      const normTitle=normalize(searchTitle);
+      const exact=scraperResults.find((item:any)=>normalize(String(item.title||""))===normTitle);
+      const match=exact||null;
+      const foundId=String(match?.id||"");
+      if(/^tt\d{1,12}$/i.test(foundId)){
+        const embedUrl=kind==="tv"
+          ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(foundId)
+          :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(foundId);
+        return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,content_id:foundId,imdb_id:foundId,title:match?.title||searchTitle,poster:match?.poster||null,source:"imdb-scraper+vidsrc-embed"},{headers:{"Cache-Control":"no-store"}});
+      }
+    }catch(error){console.error("IMDb scraper lookup unavailable",error);}
+  }
+
+  // Fallback to Streamivio's configured Python metadata API if IMDb scraping fails.
   // This creates an embedded-player URL only; it never extracts or proxies media streams.
   const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/$/,"");
-  const searchTitle=title||(local as any)?.title||"";
   if(metadataBase&&searchTitle.length>=2){
     try{
       const searchUrl=new URL("/search",metadataBase);
@@ -69,7 +96,7 @@ export async function GET(request:NextRequest){
         const payload=await response.json();
         const candidates=Array.isArray(payload.results)?payload.results:[];
         const normTitle=normalize(searchTitle);
-        const exact=candidates.find((item:any)=>normalize(String(item.title||item.name||item.titleText||""))===normTitle);
+        const exact=candidates.find((item:any)=>normalize(String(item.title||item.Title||item.name||item.Name||item.titleText||""))===normTitle);
         const found=exact||null;
         const foundImdbId=String(found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"");
         const foundTmdbId=String(found?.tmdb_id||found?.tmdbId||found?.tmdbID||"");
