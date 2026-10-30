@@ -144,6 +144,47 @@ export async function GET(request: NextRequest) {
     }, { headers: { "Cache-Control": "no-store" } });
   }
 
+  // IMDb's public suggestion endpoint is the primary ID discovery fallback.
+  // It returns IMDb title IDs without requiring a private API key.
+  if (catalogTitle.length >= 2) {
+    try {
+      const query = catalogTitle.replace(/[\\/]/g, " ").trim();
+      const first = Array.from(query)[0]?.toLowerCase() || "";
+      const suggestionUrl = `https://v2.sg.media-imdb.com/suggestion/${encodeURIComponent(first)}/${encodeURIComponent(query)}.json`;
+      const response = await fetch(suggestionUrl, {
+        cache: "no-store",
+        headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0 Streamivio/1.0" },
+        signal: AbortSignal.timeout(6500),
+      });
+      if (response.ok) {
+        const payload: any = await response.json();
+        const results: any[] = Array.isArray(payload?.d) ? payload.d : [];
+        const wanted = normalizeTitle(catalogTitle);
+        const match = results.find((item: any) => {
+          const candidateTitle = String(item?.l || item?.title || "");
+          const candidateId = item?.id;
+          if (!isImdbId(candidateId) || normalizeTitle(candidateTitle) !== wanted) return false;
+          const candidateYear = item?.y ? String(item.y) : "";
+          if (catalogYear && candidateYear && candidateYear !== catalogYear.slice(0, 4)) return false;
+          const qid = String(item?.qid || "").toLowerCase();
+          if (resolvedKind === "movie" && qid && !["movie", "tvmovie", "short"].includes(qid)) return false;
+          if (resolvedKind === "tv" && qid && !["tvseries", "tvminiseries", "tvepisode"].includes(qid)) return false;
+          return true;
+        });
+        if (match) {
+          return embedResponse(String(match.id), resolvedKind, {
+            title: String(match.l || catalogTitle),
+            year: match.y || catalogYear,
+            poster: typeof match.i?.imageUrl === "string" ? match.i.imageUrl : null,
+            source: "imdb-public-suggestions",
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Streamivio public IMDb suggestions lookup failed:", error);
+    }
+  }
+
   // IMDb ID discovery runs in the MAIN WEBSITE server route; no API key is required
   // for the scraper package. Only exact title matches are accepted.
   if (catalogTitle.length >= 2) {
