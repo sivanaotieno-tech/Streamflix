@@ -59,7 +59,7 @@ async function lookupImdbId(title: string, year: string | null, kind: "movie" | 
   if (!Array.isArray(results)) return null;
 
   const wanted = normalizeTitle(title);
-  const matches = results.filter((item: any) => {
+  const matches: any[] = (results as any[]).filter((item: any) => {
     const candidateTitle = String(item?.title || item?.name || "");
     if (normalizeTitle(candidateTitle) !== wanted || !isImdbId(item?.id)) return false;
 
