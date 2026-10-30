@@ -12,7 +12,8 @@
     "next": "latest",
     "react": "latest",
     "react-dom": "latest",
-    "lucide-react": "latest"
+    "lucide-react": "latest",
+    "@myno_21/imdb-scraper": "1.0.0"
   },
   "devDependencies": {
     "typescript": "latest",
