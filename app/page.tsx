@@ -270,33 +270,10 @@ export default function Home(){
         setPlaybackFormat("iframe");return;
       }
 
-      // Use only a real IMDb ID or numeric TMDB ID; never treat an ordinary catalog key as a provider ID.
-      const listedImdb=String(resolvedImdbId||(typeof selected.id==="string"&&/^tt\d{5,10}$/i.test(selected.id)?selected.id:""));
-      const listedTmdb=String(resolvedTmdbId||(/^\d{1,12}$/.test(String(selected.id))?selected.id:""));
-      let contentId=/^tt\d{5,10}$/i.test(listedImdb)?listedImdb:(/^\d{1,12}$/.test(listedTmdb)?listedTmdb:"");
-      if(!contentId){
-        const serviceBase=(process.env.NEXT_PUBLIC_PYMOVIEDB_SERVICE_URL||"").replace(/\/+$/,"");
-        if(serviceBase){
-          const lookup=await fetch(serviceBase+"/search?q="+encodeURIComponent(selected.title||selected.name||"")+"&type="+kind,{cache:"no-store"});
-          if(lookup.ok){
-            const payload=await lookup.json();
-            const candidates=Array.isArray(payload.results)?payload.results:[];
-            const norm=(value:string)=>value.replace(/\s*\(\d{4}\)\s*$/,"").toLowerCase().replace(/[^a-z0-9]/g,"");
-            const exact=candidates.find((item:any)=>norm(String(item.title||item.name||item.titleText||""))===norm(selected.title||selected.name||""));
-            const found=exact||null;
-            const foundImdb=String(found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"");
-            const foundTmdb=String(found?.tmdb_id||found?.tmdbId||found?.tmdbID||"");
-            contentId=/^tt\d{5,10}$/i.test(foundImdb)?foundImdb:(/^\d{1,12}$/.test(foundTmdb)?foundTmdb:(/^\d{1,12}$/.test(foundImdb)?foundImdb:""));
-          }
-        }
+      if(!response.ok||!data.available){
+        throw new Error(data.message||data.error||"The website playback resolver could not find a verified provider ID for this title.");
       }
-      if(!contentId)throw new Error("No IMDb or TMDB ID is configured for this title. Add imdb_id or tmdb_id to the catalog, or configure the Python metadata service.");
-      const embedUrl=kind==="tv"
-        ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(contentId)
-        :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(contentId);
-      setPlayerContentId(contentId);
-      setPlaybackUrl(buildVidSrcUrl(embedUrl,contentId,kind,resumeOverride));
-      setPlaybackFormat("iframe");
+      throw new Error("The playback resolver returned an unsupported response. Please try again.");
     }catch(error){
       setPlaybackError(error instanceof Error?error.message:"Playback is unavailable right now.");
     }finally{
