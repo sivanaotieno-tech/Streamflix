@@ -11,7 +11,7 @@ export async function GET(request:NextRequest){
   const requestedType=(params.get("type")||"movie").trim().toLowerCase();
   const kind=(requestedType==="tv"||requestedType==="anime"||requestedType==="documentary"||requestedType==="kids"||requestedType==="reality")?"tv":"movie";
   if(!id&&!title)return NextResponse.json({available:false,error:"Choose a title from the catalog or provide its title text."},{status:400,headers:{"Cache-Control":"no-store"}});
-  const local=catalog.find((item:any)=>String(item.id)===id);
+  const normalizeTitle=(value:string)=>value.replace(/\\s*\\(\\d{4}\\)\\s*$/,"").normalize("NFKD").toLocaleLowerCase().replace(/[^a-z0-9]/g,"");\n  const local=catalog.find((item:any)=>String(item.id)===id) || (title ? catalog.find((item:any)=>normalizeTitle(String(item.title||""))===normalizeTitle(title) && (kind==="tv" ? ["tv","anime","documentary","kids","reality"].includes(String(item.type)) : item.type==="movie")) : undefined);\n  const catalogId=String((local as any)?.id||id);
   const localUrl=typeof (local as any)?.video_url==="string"?(local as any).video_url:"";
   if(localUrl&&isSafeHttps(localUrl)){
     const path=new URL(localUrl).pathname.toLowerCase();
@@ -22,10 +22,10 @@ export async function GET(request:NextRequest){
   const imdbId=String(params.get("imdb_id")||(local as any)?.imdb_id||(local as any)?.imdbId||(local as any)?.imdbID||"");
   const tmdbId=String(params.get("tmdb_id")||(local as any)?.tmdb_id||(local as any)?.tmdbId||(local as any)?.tmdbID||"");
   const pythonCatalogBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/+$/,"");
-  if(pythonCatalogBase&&id){
+  if(pythonCatalogBase&&catalogId){
     try{
       const directUrl=new URL("/playback",pythonCatalogBase);
-      directUrl.searchParams.set("id",id);
+      directUrl.searchParams.set("id",catalogId);
       const response=await fetch(directUrl.toString(),{cache:"no-store",signal:AbortSignal.timeout(4500)});
       const data=await response.json();
       if(response.ok&&data.available&&typeof data.stream_url==="string"&&isSafeHttps(data.stream_url)){
@@ -69,7 +69,7 @@ export async function GET(request:NextRequest){
         const payload=await response.json();
         const candidates=Array.isArray(payload.results)?payload.results:[];
         const normTitle=normalize(searchTitle);
-        const exact=candidates.find((item:any)=>normalize(String(item.title||item.name||item.titleText||""))===normTitle);
+        const exact=candidates.find((item:any)=>normalize(String(item.title||item.Title||item.name||item.Name||item.titleText||""))===normTitle);
         const found=exact||null;
         const foundImdbId=String(found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"");
         const foundTmdbId=String(found?.tmdb_id||found?.tmdbId||found?.tmdbID||"");
