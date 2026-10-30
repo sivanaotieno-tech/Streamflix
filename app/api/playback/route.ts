@@ -56,10 +56,36 @@ export async function GET(request:NextRequest){
     return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,content_id:explicitContentId,source:"vidsrc-embed"});
   }
 
-  // Resolve an exact title using Streamivio's configured Python metadata API.
+  // Resolve titles with the server-side IMDb scraper first. It returns IMDb IDs and
+  // metadata only; VidSrc remains an iframe embed and no media URLs are extracted.
+  const searchTitle=title||(local as any)?.title||"";
+  if(searchTitle.length>=2){
+    try{
+      const {Client}=await import("@myno_21/imdb-scraper");
+      const imdbClient=new Client();
+      const scraperLookup=kind==="tv"
+        ? imdbClient.getShowViaName(encodeURIComponent(searchTitle))
+        : imdbClient.getMovieViaName(encodeURIComponent(searchTitle));
+      const scraperResults=await Promise.race([
+        scraperLookup,
+        new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error("IMDb lookup timed out")),5000))
+      ]);
+      const normTitle=normalize(searchTitle);
+      const exact=scraperResults.find((item:any)=>normalize(String(item.title||""))===normTitle);
+      const match=exact||null;
+      const foundId=String(match?.id||"");
+      if(/^tt\d{1,12}$/i.test(foundId)){
+        const embedUrl=kind==="tv"
+          ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(foundId)
+          :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(foundId);
+        return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,content_id:foundId,imdb_id:foundId,title:match?.title||searchTitle,poster:match?.poster||null,source:"imdb-scraper+vidsrc-embed"},{headers:{"Cache-Control":"no-store"}});
+      }
+    }catch(error){console.error("IMDb scraper lookup unavailable",error);}
+  }
+
+  // Fallback to Streamivio's configured Python metadata API if IMDb scraping fails.
   // This creates an embedded-player URL only; it never extracts or proxies media streams.
   const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/$/,"");
-  const searchTitle=title||(local as any)?.title||"";
   if(metadataBase&&searchTitle.length>=2){
     try{
       const searchUrl=new URL("/search",metadataBase);
