@@ -110,9 +110,9 @@ export async function GET(request:NextRequest){
   // Fallback to Streamivio's configured Python metadata API if IMDb scraping fails.
   // This creates an embedded-player URL only; it never extracts or proxies media streams.
   const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/$/,"");
-  if(metadataBase&&searchTitle.length>=2){
+  if(metadataSearchBase&&searchTitle.length>=2){
     try{
-      const searchUrl=new URL("/search",metadataBase);
+      const searchUrl=new URL("/search",metadataSearchBase);
       searchUrl.searchParams.set("q",searchTitle);
       searchUrl.searchParams.set("type",kind);
       const response=await fetch(searchUrl.toString(),{cache:"no-store",signal:AbortSignal.timeout(5000)});
