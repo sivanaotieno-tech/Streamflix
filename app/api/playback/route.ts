@@ -1,141 +1,185 @@
-import {NextRequest,NextResponse} from "next/server";
-import {catalog} from "../../data/catalog";
+import { NextRequest, NextResponse } from "next/server";
+import { catalog } from "../../data/catalog";
 
-const isSafeHttps=(value:string)=>{try{const u=new URL(value);return u.protocol==="https:"&&!u.username&&!u.password;}catch{return false;}};
-const normalize=(value:string)=>value.replace(/\s*\(\d{4}\)\s*$/,"").toLocaleLowerCase().replace(/[^a-z0-9]/g,"");
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
-export async function GET(request:NextRequest){
-  const params=request.nextUrl.searchParams;
-  const id=(params.get("id")||"").trim();
-  const title=(params.get("title")||"").trim();
-  const requestedType=(params.get("type")||"movie").trim().toLowerCase();
-  const kind=(requestedType==="tv"||requestedType==="anime"||requestedType==="documentary"||requestedType==="kids"||requestedType==="reality")?"tv":"movie";
-  if(!id&&!title)return NextResponse.json({available:false,error:"Choose a title from the catalog or provide its title text."},{status:400,headers:{"Cache-Control":"no-store"}});
-  const local=catalog.find((item:any)=>String(item.id)===id) || (title ? catalog.find((item:any)=>normalize(String(item.title||""))===normalize(title) && (kind==="tv" ? ["tv","anime","documentary","kids","reality"].includes(String(item.type)) : item.type==="movie")) : undefined);
-  const catalogId=String((local as any)?.id||id);
-  const localUrl=typeof (local as any)?.video_url==="string"?(local as any).video_url:"";
-  if(localUrl&&isSafeHttps(localUrl)){
-    const path=new URL(localUrl).pathname.toLowerCase();
-    const format=path.endsWith(".m3u8")?"hls":path.endsWith(".mp4")?"mp4":"external";
-    return NextResponse.json({available:true,stream_url:localUrl,format,source:"configured-authorized-catalog"});
+const isSafeHttps = (value: string) => {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+};
+
+const normalizeTitle = (value: string) =>
+  value
+    .replace(/\s*\(\d{4}\)\s*$/, "")
+    .normalize("NFKD")
+    .toLocaleLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+const isImdbId = (value: unknown): value is string =>
+  typeof value === "string" && /^tt\d{5,12}$/i.test(value);
+
+const isTvType = (value: string) =>
+  ["tv", "anime", "documentary", "kids", "reality"].includes(value);
+
+function embedResponse(imdbId: string, kind: "movie" | "tv", extra: Record<string, unknown> = {}) {
+  return NextResponse.json(
+    {
+      available: true,
+      format: "iframe",
+      embed_url: `https://vidsrc.sh/embed/${kind}/${encodeURIComponent(imdbId)}`,
+      content_id: imdbId,
+      imdb_id: imdbId,
+      ...extra,
+    },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+async function lookupImdbId(title: string, year: string | null, kind: "movie" | "tv") {
+  // The package queries IMDb title suggestions and returns metadata/IDs only.
+  // It does not download, extract, or proxy video streams.
+  const { Client } = await import("@myno_21/imdb-scraper");
+  const client = new Client();
+  const lookup = kind === "tv"
+    ? client.getShowViaName(encodeURIComponent(title))
+    : client.getMovieViaName(encodeURIComponent(title));
+
+  const results = await Promise.race([
+    lookup,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("IMDb lookup timed out")), 5000),
+    ),
+  ]);
+
+  if (!Array.isArray(results)) return null;
+
+  const wanted = normalizeTitle(title);
+  const matches = results.filter((item: any) => {
+    const candidateTitle = String(item?.title || item?.name || "");
+    if (normalizeTitle(candidateTitle) !== wanted || !isImdbId(item?.id)) return false;
+
+    if (year) {
+      const candidateYear = String(item?.year || item?.releaseYear || "").slice(0, 4);
+      if (candidateYear && candidateYear !== year.slice(0, 4)) return false;
+    }
+    return true;
+  });
+
+  const match = matches[0];
+  return match ? {
+    imdbId: String(match.id),
+    title: String(match.title || match.name || title),
+    poster: typeof match.poster === "string" ? match.poster : null,
+    year: match.year || year,
+  } : null;
+}
+
+export async function GET(request: NextRequest) {
+  const params = request.nextUrl.searchParams;
+  const id = (params.get("id") || "").trim();
+  const title = (params.get("title") || "").trim();
+  const requestedType = (params.get("type") || "movie").trim().toLowerCase();
+  const kind: "movie" | "tv" = isTvType(requestedType) ? "tv" : "movie";
+
+  if (!id && !title) {
+    return NextResponse.json(
+      { available: false, error: "Choose a title from the catalog or provide its title." },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
-  const imdbId=String(params.get("imdb_id")||(local as any)?.imdb_id||(local as any)?.imdbId||(local as any)?.imdbID||"");
-  const tmdbId=String(params.get("tmdb_id")||(local as any)?.tmdb_id||(local as any)?.tmdbId||(local as any)?.tmdbID||"");
-  const pythonCatalogBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/+$/,"");
-  if(pythonCatalogBase&&catalogId){
-    try{
-      const directUrl=new URL("/playback",pythonCatalogBase);
-      directUrl.searchParams.set("id",catalogId);
-      const response=await fetch(directUrl.toString(),{cache:"no-store",signal:AbortSignal.timeout(4500)});
-      const data=await response.json();
-      if(response.ok&&data.available&&typeof data.stream_url==="string"&&isSafeHttps(data.stream_url)){
-        return NextResponse.json({...data,source:"python-authorized-catalog"},{headers:{"Cache-Control":"no-store"}});
+  const local = catalog.find((item: any) => String(item.id) === id)
+    || (title
+      ? catalog.find((item: any) =>
+          normalizeTitle(String(item.title || "")) === normalizeTitle(title)
+          && (kind === "tv" ? isTvType(String(item.type || "")) : String(item.type || "") === "movie"),
+        )
+      : undefined);
+
+  const catalogTitle = String((local as any)?.title || title);
+  const catalogYear = (local as any)?.year ? String((local as any).year) : null;
+  const catalogType = String((local as any)?.type || requestedType).toLowerCase();
+  const resolvedKind: "movie" | "tv" = isTvType(catalogType) ? "tv" : "movie";
+
+  // Prefer a configured, rights-cleared HTTPS source from the catalog.
+  const localUrl = typeof (local as any)?.video_url === "string" ? (local as any).video_url : "";
+  if (localUrl && isSafeHttps(localUrl)) {
+    const path = new URL(localUrl).pathname.toLowerCase();
+    const format = path.endsWith(".m3u8") ? "hls" : path.endsWith(".mp4") ? "mp4" : "external";
+    return NextResponse.json(
+      { available: true, stream_url: localUrl, format, source: "configured-authorized-catalog" },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  }
+
+  // Use an ID already verified and stored in the website catalog.
+  const storedImdbId = (local as any)?.imdb_id || (local as any)?.imdbId;
+  if (isImdbId(storedImdbId)) {
+    return embedResponse(storedImdbId, resolvedKind, { title: catalogTitle, source: "website-catalog" });
+  }
+
+  // IMDb ID discovery runs in the MAIN WEBSITE server route; no API key is required
+  // for the scraper package. Only exact title matches are accepted.
+  if (catalogTitle.length >= 2) {
+    try {
+      const match = await lookupImdbId(catalogTitle, catalogYear, resolvedKind);
+      if (match) {
+        return embedResponse(match.imdbId, resolvedKind, {
+          title: match.title,
+          year: match.year,
+          poster: match.poster,
+          source: "website-imdb-scraper",
+        });
       }
-    }catch(error){console.error("Python authorized playback lookup unavailable",error);}
+    } catch (error) {
+      console.error("Streamivio website IMDb ID lookup failed:", error);
+    }
   }
 
-  const resolverBase=(process.env.STREAMIVIO_RESOLVER_URL||"").replace(/\/$/,"");
-  if(resolverBase&&/^tt\d+$/i.test(imdbId)){
-    try{
-      const response=await fetch(resolverBase+"/stream/"+encodeURIComponent(imdbId),{cache:"no-store",signal:AbortSignal.timeout(4500)});
-      const data=await response.json();
-      if(response.ok&&data.available&&typeof data.stream_url==="string"&&isSafeHttps(data.stream_url)){
-        return NextResponse.json({...data,source:"streamivio-authorized-resolver"},{headers:{"Cache-Control":"no-store"}});
-      }
-    }catch(error){console.error("Streamivio resolver unavailable",error);}
-  }
+  // Optional fallback to the Streamivio metadata service for exact title/year matching.
+  const metadataBase = (
+    process.env.PYMOVIEDB_SERVICE_URL
+    || process.env.PYMOVIEDB_API_URL
+    || ""
+  ).replace(/\/+$/, "");
 
-  // Use VidSrc's documented iframe when an IMDb or TMDB ID is already known.
-  // This embeds the player; it does not extract or proxy third-party media URLs.
-  const explicitContentId=/^tt\d+$/i.test(imdbId)?imdbId:(/^\d+$/.test(tmdbId)?tmdbId:"");
-  if(explicitContentId){
-    const embedUrl=kind==="tv"
-      ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(explicitContentId)
-      :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(explicitContentId);
-    return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,content_id:explicitContentId,source:"vidsrc-embed"});
-  }
+  if (metadataBase && catalogTitle.length >= 2) {
+    try {
+      const resolveUrl = new URL("/resolve", metadataBase);
+      resolveUrl.searchParams.set("title", catalogTitle);
+      if (catalogYear) resolveUrl.searchParams.set("year", catalogYear);
+      resolveUrl.searchParams.set("type", resolvedKind);
 
-  // Resolve titles with the server-side IMDb scraper first. It returns IMDb IDs and
-  // metadata only; VidSrc remains an iframe embed and no media URLs are extracted.
-  const searchTitle=title||(local as any)?.title||"";
-  if(searchTitle.length>=2){
-    try{
-      const {Client}=await import("@myno_21/imdb-scraper");
-      const imdbClient=new Client();
-      const scraperLookup=kind==="tv"
-        ? imdbClient.getShowViaName(encodeURIComponent(searchTitle))
-        : imdbClient.getMovieViaName(encodeURIComponent(searchTitle));
-      const scraperResults=await Promise.race([
-        scraperLookup,
-        new Promise<never>((_,reject)=>setTimeout(()=>reject(new Error("IMDb lookup timed out")),5000))
-      ]);
-      const normTitle=normalize(searchTitle);
-      const exact=scraperResults.find((item:any)=>normalize(String(item.title||""))===normTitle);
-      const match=exact||null;
-      const foundId=String(match?.id||"");
-      if(/^tt\d{1,12}$/i.test(foundId)){
-        const embedUrl=kind==="tv"
-          ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(foundId)
-          :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(foundId);
-        return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,content_id:foundId,imdb_id:foundId,title:match?.title||searchTitle,poster:match?.poster||null,source:"imdb-scraper+vidsrc-embed"},{headers:{"Cache-Control":"no-store"}});
-      }
-    }catch(error){console.error("IMDb scraper lookup unavailable",error);}
-  }
+      const response = await fetch(resolveUrl.toString(), {
+        cache: "no-store",
+        signal: AbortSignal.timeout(5500),
+      });
 
-
-  // Resolve the exact catalog title and release year through the standalone API.
-  // Catalog entries no longer need manually maintained IMDb/TMDB IDs.
-  const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\\/+$/, "");
-  if(metadataBase&&searchTitle.length>=2){
-    try{
-      const resolveUrl=new URL("/resolve",metadataBase);
-      resolveUrl.searchParams.set("title",searchTitle);
-      if((local as any)?.year)resolveUrl.searchParams.set("year",String((local as any).year));
-      resolveUrl.searchParams.set("type",kind);
-      const response=await fetch(resolveUrl.toString(),{cache:"no-store",signal:AbortSignal.timeout(5500)});
-      if(response.ok){
-        const resolved=await response.json();
-        const foundId=String(resolved.imdb_id||"");
-        if(/^tt\\d{5,12}$/i.test(foundId)){
-          const embedUrl=kind==="tv"
-            ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(foundId)
-            :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(foundId);
-          return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,content_id:foundId,imdb_id:foundId,title:resolved.title||searchTitle,poster:resolved.poster_url||null,source:"streamivio-api-id-resolution"},{headers:{"Cache-Control":"no-store"}});
+      if (response.ok) {
+        const data = await response.json();
+        if (isImdbId(data?.imdb_id)) {
+          return embedResponse(data.imdb_id, resolvedKind, {
+            title: data.title || catalogTitle,
+            poster: data.poster_url || null,
+            source: "streamivio-metadata-resolver",
+          });
         }
       }
-    }catch(error){console.error("Streamivio API title ID resolution unavailable",error);}
+    } catch (error) {
+      console.error("Streamivio metadata resolver unavailable:", error);
+    }
   }
 
-  // Fallback to Streamivio's configured Python metadata API if IMDb scraping fails.
-  // This creates an embedded-player URL only; it never extracts or proxies media streams.
-  const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/$/,"");
-  if(metadataSearchBase&&searchTitle.length>=2){
-    try{
-      const searchUrl=new URL("/search",metadataSearchBase);
-      searchUrl.searchParams.set("q",searchTitle);
-      searchUrl.searchParams.set("type",kind);
-      const response=await fetch(searchUrl.toString(),{cache:"no-store",signal:AbortSignal.timeout(5000)});
-      if(response.ok){
-        const payload=await response.json();
-        const candidates=Array.isArray(payload.results)?payload.results:[];
-        const normTitle=normalize(searchTitle);
-        const exact=candidates.find((item:any)=>normalize(String(item.title||item.Title||item.name||item.Name||item.titleText||""))===normTitle);
-        const found=exact||null;
-        const foundImdbId=String(found?.imdbID||found?.imdb_id||found?.imdbId||found?.id||"");
-        const foundTmdbId=String(found?.tmdb_id||found?.tmdbId||found?.tmdbID||"");
-        const foundId=/^tt\d{1,12}$/i.test(foundImdbId)?foundImdbId:(/^\d{1,12}$/.test(foundTmdbId)?foundTmdbId:(/^\d{1,12}$/.test(foundImdbId)?foundImdbId:""));
-        if(foundId){
-          const embedUrl=kind==="tv"
-            ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(foundId)
-            :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(foundId);
-          return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,content_id:foundId,imdb_id:/^tt\d+$/i.test(foundId)?foundId:null,tmdb_id:/^\d+$/.test(foundId)?foundId:null,source:"vidsrc-embed"});
-        }
-      }
-    }catch(error){console.error("IMDb metadata lookup unavailable",error);}
-  }
-  return NextResponse.json({
-    available:false,
-    message:"We couldn't match this title to a supported player. Add a valid IMDb/TMDB ID, or configure an authorized HTTPS video_url for media you have rights to distribute.",
-  },{status:404,headers:{"Cache-Control":"no-store"}});
+  return NextResponse.json(
+    {
+      available: false,
+      message: "We couldn't find a verified IMDb ID for this title. Check its title and release year, or add a verified imdb_id to the website catalog.",
+    },
+    { status: 404, headers: { "Cache-Control": "no-store" } },
+  );
 }
