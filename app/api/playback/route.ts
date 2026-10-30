@@ -41,42 +41,50 @@ function embedResponse(imdbId: string, kind: "movie" | "tv", extra: Record<strin
 }
 
 async function lookupImdbId(title: string, year: string | null, kind: "movie" | "tv") {
-  // The package queries IMDb title suggestions and returns metadata/IDs only.
-  // It does not download, extract, or proxy video streams.
+  // This package is an unofficial metadata scraper. It returns title metadata only.
   const { Client } = await import("@myno_21/imdb-scraper");
   const client = new Client();
   const lookup = kind === "tv"
-    ? client.getShowViaName(encodeURIComponent(title))
-    : client.getMovieViaName(encodeURIComponent(title));
+    ? client.getShowViaName(title)
+    : client.getMovieViaName(title);
 
-  const results = await Promise.race([
-    lookup,
-    new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("IMDb lookup timed out")), 5000),
-    ),
-  ]);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const raw = await Promise.race([
+    Promise.resolve(lookup),
+    new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error("IMDb lookup timed out")), 7000);
+    }),
+  ]).finally(() => { if (timer) clearTimeout(timer); });
 
-  if (!Array.isArray(results)) return null;
+  // Package releases have returned arrays and wrapped/single-result objects.
+  const payload: any = raw as any;
+  const candidates: any[] = Array.isArray(payload) ? payload
+    : Array.isArray(payload?.results) ? payload.results
+    : Array.isArray(payload?.data) ? payload.data
+    : Array.isArray(payload?.searchResults) ? payload.searchResults
+    : payload && typeof payload === "object" ? [payload] : [];
 
   const wanted = normalizeTitle(title);
-  const matches: any[] = (results as any[]).filter((item: any) => {
-    const candidateTitle = String(item?.title || item?.name || "");
-    if (normalizeTitle(candidateTitle) !== wanted || !isImdbId(item?.id)) return false;
-
+  const match = candidates.find((item: any) => {
+    const candidateTitle = String(item?.title || item?.name || item?.titleText || item?.originalTitle || "");
+    const candidateId = item?.id || item?.imdbID || item?.imdb_id || item?.imdbId;
+    if (normalizeTitle(candidateTitle) !== wanted || !isImdbId(candidateId)) return false;
     if (year) {
-      const candidateYear = String(item?.year || item?.releaseYear || "").slice(0, 4);
+      const candidateYear = String(item?.year || item?.releaseYear || item?.release_date || "").match(/\d{4}/)?.[0];
       if (candidateYear && candidateYear !== year.slice(0, 4)) return false;
     }
     return true;
   });
 
-  const match = matches[0];
-  return match ? {
-    imdbId: String(match.id),
-    title: String(match.title || match.name || title),
-    poster: typeof match.poster === "string" ? match.poster : null,
-    year: match.year || year,
-  } : null;
+  if (!match) return null;
+  const imdbId = match.id || match.imdbID || match.imdb_id || match.imdbId;
+  return {
+    imdbId: String(imdbId),
+    title: String(match.title || match.name || match.titleText || title),
+    poster: typeof (match.poster || match.image || match.imageUrl) === "string"
+      ? String(match.poster || match.image || match.imageUrl) : null,
+    year: match.year || match.releaseYear || year,
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -84,6 +92,8 @@ export async function GET(request: NextRequest) {
   const id = (params.get("id") || "").trim();
   const title = (params.get("title") || "").trim();
   const requestedType = (params.get("type") || "movie").trim().toLowerCase();
+  const suppliedImdbId = (params.get("imdb_id") || params.get("imdbId") || "").trim();
+  const suppliedTmdbId = (params.get("tmdb_id") || params.get("tmdbId") || "").trim();
   const kind: "movie" | "tv" = isTvType(requestedType) ? "tv" : "movie";
 
   if (!id && !title) {
@@ -117,10 +127,21 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  // Use an ID already verified and stored in the website catalog.
-  const storedImdbId = (local as any)?.imdb_id || (local as any)?.imdbId;
+  // Prefer IDs supplied by title metadata, then IDs stored in the website catalog.
+  const storedImdbId = suppliedImdbId || (local as any)?.imdb_id || (local as any)?.imdbId;
   if (isImdbId(storedImdbId)) {
-    return embedResponse(storedImdbId, resolvedKind, { title: catalogTitle, source: "website-catalog" });
+    return embedResponse(storedImdbId, resolvedKind, { title: catalogTitle, source: suppliedImdbId ? "title-metadata" : "website-catalog" });
+  }
+  if (/^\d{1,12}$/.test(suppliedTmdbId)) {
+    return NextResponse.json({
+      available: true,
+      format: "iframe",
+      embed_url: `https://vidsrc.sh/embed/${resolvedKind}/${encodeURIComponent(suppliedTmdbId)}`,
+      content_id: suppliedTmdbId,
+      tmdb_id: suppliedTmdbId,
+      title: catalogTitle,
+      source: "title-metadata",
+    }, { headers: { "Cache-Control": "no-store" } });
   }
 
   // IMDb ID discovery runs in the MAIN WEBSITE server route; no API key is required
@@ -178,7 +199,8 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(
     {
       available: false,
-      message: "We couldn't find a verified IMDb ID for this title. Check its title and release year, or add a verified imdb_id to the website catalog.",
+      message: "The website IMDb lookup did not return an exact title match. Check the title/year, or add a verified imdb_id or tmdb_id to the catalog.",
+      debug: process.env.NODE_ENV === "development" ? "IMDb scraper returned no exact match." : undefined,
     },
     { status: 404, headers: { "Cache-Control": "no-store" } },
   );
