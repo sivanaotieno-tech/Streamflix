@@ -83,6 +83,30 @@ export async function GET(request:NextRequest){
     }catch(error){console.error("IMDb scraper lookup unavailable",error);}
   }
 
+
+  // Resolve the exact catalog title and release year through the standalone API.
+  // Catalog entries no longer need manually maintained IMDb/TMDB IDs.
+  const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\\/+$/, "");
+  if(metadataBase&&searchTitle.length>=2){
+    try{
+      const resolveUrl=new URL("/resolve",metadataBase);
+      resolveUrl.searchParams.set("title",searchTitle);
+      if((local as any)?.year)resolveUrl.searchParams.set("year",String((local as any).year));
+      resolveUrl.searchParams.set("type",kind);
+      const response=await fetch(resolveUrl.toString(),{cache:"no-store",signal:AbortSignal.timeout(5500)});
+      if(response.ok){
+        const resolved=await response.json();
+        const foundId=String(resolved.imdb_id||"");
+        if(/^tt\\d{5,12}$/i.test(foundId)){
+          const embedUrl=kind==="tv"
+            ?"https://vidsrc.sh/embed/tv/"+encodeURIComponent(foundId)
+            :"https://vidsrc.sh/embed/movie/"+encodeURIComponent(foundId);
+          return NextResponse.json({available:true,format:"iframe",embed_url:embedUrl,content_id:foundId,imdb_id:foundId,title:resolved.title||searchTitle,poster:resolved.poster_url||null,source:"streamivio-api-id-resolution"},{headers:{"Cache-Control":"no-store"}});
+        }
+      }
+    }catch(error){console.error("Streamivio API title ID resolution unavailable",error);}
+  }
+
   // Fallback to Streamivio's configured Python metadata API if IMDb scraping fails.
   // This creates an embedded-player URL only; it never extracts or proxies media streams.
   const metadataBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/$/,"");
