@@ -11,7 +11,8 @@ export async function GET(request:NextRequest){
   const requestedType=(params.get("type")||"movie").trim().toLowerCase();
   const kind=(requestedType==="tv"||requestedType==="anime"||requestedType==="documentary"||requestedType==="kids"||requestedType==="reality")?"tv":"movie";
   if(!id&&!title)return NextResponse.json({available:false,error:"Choose a title from the catalog or provide its title text."},{status:400,headers:{"Cache-Control":"no-store"}});
-  const normalizeTitle=(value:string)=>value.replace(/\\s*\\(\\d{4}\\)\\s*$/,"").normalize("NFKD").toLocaleLowerCase().replace(/[^a-z0-9]/g,"");\n  const local=catalog.find((item:any)=>String(item.id)===id) || (title ? catalog.find((item:any)=>normalizeTitle(String(item.title||""))===normalizeTitle(title) && (kind==="tv" ? ["tv","anime","documentary","kids","reality"].includes(String(item.type)) : item.type==="movie")) : undefined);\n  const catalogId=String((local as any)?.id||id);
+  const local=catalog.find((item:any)=>String(item.id)===id) || (title ? catalog.find((item:any)=>normalize(String(item.title||""))===normalize(title) && (kind==="tv" ? ["tv","anime","documentary","kids","reality"].includes(String(item.type)) : item.type==="movie")) : undefined);
+  const catalogId=String((local as any)?.id||id);
   const localUrl=typeof (local as any)?.video_url==="string"?(local as any).video_url:"";
   if(localUrl&&isSafeHttps(localUrl)){
     const path=new URL(localUrl).pathname.toLowerCase();
