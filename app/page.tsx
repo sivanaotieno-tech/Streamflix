@@ -245,7 +245,7 @@ export default function Home(){
       return;
     }
     setPlaybackLoading(true);setPlaybackError("");setPlaybackUrl("");
-    setVidSrcInfo(null);setVidSrcInfoError("");
+    setVidSrcInfoError("");
     const kind:"movie"|"tv"=isTvItem(selected)?"tv":"movie";
     const resolvedImdbId=String(selected.imdbId||selected.imdb_id||selected.imdbID||titleDetails?.imdbId||titleDetails?.imdb_id||titleDetails?.imdbID||"");
     const resolvedTmdbId=String(selected.tmdbId||selected.tmdb_id||titleDetails?.tmdbId||titleDetails?.tmdb_id||"");
@@ -274,6 +274,7 @@ export default function Home(){
         if(!contentId)throw new Error("The player URL did not include a valid IMDb or TMDB ID.");
         setPlayerContentId(contentId);
         if(Array.isArray(data.seasons))setVidSrcInfo(data);
+        if(kind==="tv"&&!season.trim()&&!episode.trim()&&Array.isArray(data.seasons)&&data.seasons.length>0){setPlaybackFormat("iframe");return;}
         setPlaybackUrl(buildVidSrcUrl(data.embed_url,contentId,kind,resumeOverride));
         setPlaybackFormat("iframe");return;
       }
@@ -304,7 +305,7 @@ export default function Home(){
       .then(async response=>{
         const payload=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(payload.message||"VidSrc reports no information for this title.");
-        setVidSrcInfo(payload);
+        setVidSrcInfo(current=>({...payload,seasons:Array.isArray(payload.seasons)?payload.seasons:current?.seasons}));
       })
       .catch(error=>{
         if(error instanceof Error&&error.name==="AbortError")return;
