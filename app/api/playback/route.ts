@@ -188,6 +188,7 @@ export async function GET(request: NextRequest) {
   const title = (params.get("title") || "").trim();
   const requestedType = (params.get("type") || "movie").trim().toLowerCase();
   const suppliedImdbId = (params.get("imdb_id") || params.get("imdbId") || "").trim();
+  const kind: "movie" | "tv" = isTvType(requestedType) ? "tv" : "movie";
   const season = positiveInteger(params.get("season"));
   const episode = positiveInteger(params.get("episode"));
   const startAtRaw = params.get("startAt");
@@ -210,7 +211,6 @@ export async function GET(request: NextRequest) {
       { status: 400, headers: { "Cache-Control": "no-store" } },
     );
   }
-  const kind: "movie" | "tv" = isTvType(requestedType) ? "tv" : "movie";
 
   if (!id && !title) {
     return NextResponse.json(
