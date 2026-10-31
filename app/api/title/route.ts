@@ -149,6 +149,8 @@ export async function GET(request: NextRequest) {
     platforms: game.platforms,
     developer: game.developer,
     publisher: game.publisher,
+    officialUrl: game.officialUrl ?? null,
+    gameUrl: game.officialUrl ?? null,
     contentRating: game.ageRating,
     ageRating: game.ageRating,
     poster: null,
