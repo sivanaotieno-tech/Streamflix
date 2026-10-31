@@ -87,6 +87,45 @@ async function lookupImdbId(title: string, year: string | null, kind: "movie" | 
   };
 }
 
+
+async function lookupTmdb(title: string, year: string | null, kind: "movie" | "tv") {
+  const token = process.env.TMDB_API_READ_ACCESS_TOKEN || "";
+  const apiKey = process.env.TMDB_API_KEY || "";
+  if (!token && !apiKey) return null;
+  const base = "https://api.themoviedb.org/3";
+  const searchUrl = new URL(base + "/search/" + kind);
+  searchUrl.searchParams.set("query", title);
+  searchUrl.searchParams.set("include_adult", "false");
+  if (year) searchUrl.searchParams.set(kind === "movie" ? "year" : "first_air_date_year", year.slice(0, 4));
+  if (apiKey) searchUrl.searchParams.set("api_key", apiKey);
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (token) headers.Authorization = "Bearer " + token;
+  const response = await fetch(searchUrl, { headers, cache: "no-store", signal: AbortSignal.timeout(6500) });
+  if (!response.ok) return null;
+  const payload: any = await response.json();
+  const results: any[] = Array.isArray(payload?.results) ? payload.results : [];
+  const wanted = normalizeTitle(title);
+  const match = results.find((item: any) => {
+    const candidate = String(kind === "movie" ? item?.title : item?.name || "");
+    if (normalizeTitle(candidate) !== wanted || !/^\\d+$/.test(String(item?.id))) return false;
+    const date = String(kind === "movie" ? item?.release_date : item?.first_air_date || "");
+    return !year || !date || date.slice(0, 4) === year.slice(0, 4);
+  });
+  if (!match) return null;
+  let imdbId = "";
+  try {
+    const extUrl = new URL(base + "/" + kind + "/" + match.id + "/external_ids");
+    if (apiKey) extUrl.searchParams.set("api_key", apiKey);
+    const extResponse = await fetch(extUrl, { headers, cache: "no-store", signal: AbortSignal.timeout(4500) });
+    if (extResponse.ok) {
+      const ext = await extResponse.json();
+      if (isImdbId(ext?.imdb_id)) imdbId = ext.imdb_id;
+    }
+  } catch {}
+  const date = String(kind === "movie" ? match.release_date : match.first_air_date || "");
+  return { tmdbId: String(match.id), imdbId, title: String(kind === "movie" ? match.title : match.name || title), year: date.slice(0, 4) || year || null, poster: match.poster_path ? "https://image.tmdb.org/t/p/w500" + match.poster_path : null };
+}
+
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const id = (params.get("id") || "").trim();
@@ -144,26 +183,50 @@ export async function GET(request: NextRequest) {
     }, { headers: { "Cache-Control": "no-store" } });
   }
 
-  // IMDb's public suggestion endpoint is the primary ID discovery fallback.
-  // It returns IMDb title IDs without requiring a private API key.
+
+  // Try the global TMDB catalog when a server-side TMDB key/token is configured.
   if (catalogTitle.length >= 2) {
     try {
-      const query = catalogTitle.replace(/[\\/]/g, " ").trim();
-      const first = Array.from(query)[0]?.toLowerCase() || "";
-      const suggestionUrl = `https://v2.sg.media-imdb.com/suggestion/${encodeURIComponent(first)}/${encodeURIComponent(query)}.json`;
-      const response = await fetch(suggestionUrl, {
-        cache: "no-store",
-        headers: { "Accept": "application/json", "User-Agent": "Mozilla/5.0 Streamivio/1.0" },
-        signal: AbortSignal.timeout(6500),
-      });
-      if (response.ok) {
+      const tmdb = await lookupTmdb(catalogTitle, catalogYear, resolvedKind);
+      if (tmdb?.imdbId) {
+        return embedResponse(tmdb.imdbId, resolvedKind, { title: tmdb.title, year: tmdb.year, poster: tmdb.poster, tmdb_id: tmdb.tmdbId, source: "tmdb-external-ids" });
+      }
+      if (tmdb?.tmdbId) {
+        return NextResponse.json({
+          available: true, format: "iframe",
+          embed_url: "https://vidsrc.sh/embed/" + resolvedKind + "/" + encodeURIComponent(tmdb.tmdbId),
+          content_id: tmdb.tmdbId, tmdb_id: tmdb.tmdbId, title: tmdb.title,
+          year: tmdb.year, poster: tmdb.poster, source: "tmdb-search",
+        }, { headers: { "Cache-Control": "no-store" } });
+      }
+    } catch (error) {
+      console.error("Streamivio TMDB lookup failed:", error);
+    }
+  }
+
+  // IMDb's public suggestions endpoint is queried with punctuation variants.
+  if (catalogTitle.length >= 2) {
+    const queries = Array.from(new Set([
+      catalogTitle,
+      catalogTitle.replace(/[:：]/g, " ").replace(/[’']/g, ""),
+      catalogTitle.replace(/\\s*[-–—:]\\s*/g, " ").trim(),
+    ])).filter((query) => query.length >= 2);
+    for (const query of queries) {
+      try {
+        const first = Array.from(query)[0]?.toLowerCase() || "";
+        const suggestionUrl = "https://v2.sg.media-imdb.com/suggestion/" + encodeURIComponent(first) + "/" + encodeURIComponent(query) + ".json";
+        const response = await fetch(suggestionUrl, {
+          cache: "no-store",
+          headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0 Streamivio/1.0" },
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!response.ok) continue;
         const payload: any = await response.json();
         const results: any[] = Array.isArray(payload?.d) ? payload.d : [];
         const wanted = normalizeTitle(catalogTitle);
         const match = results.find((item: any) => {
           const candidateTitle = String(item?.l || item?.title || "");
-          const candidateId = item?.id;
-          if (!isImdbId(candidateId) || normalizeTitle(candidateTitle) !== wanted) return false;
+          if (!isImdbId(item?.id) || normalizeTitle(candidateTitle) !== wanted) return false;
           const candidateYear = item?.y ? String(item.y) : "";
           if (catalogYear && candidateYear && candidateYear !== catalogYear.slice(0, 4)) return false;
           const qid = String(item?.qid || "").toLowerCase();
@@ -171,17 +234,14 @@ export async function GET(request: NextRequest) {
           if (resolvedKind === "tv" && qid && !["tvseries", "tvminiseries", "tvepisode"].includes(qid)) return false;
           return true;
         });
-        if (match) {
-          return embedResponse(String(match.id), resolvedKind, {
-            title: String(match.l || catalogTitle),
-            year: match.y || catalogYear,
-            poster: typeof match.i?.imageUrl === "string" ? match.i.imageUrl : null,
-            source: "imdb-public-suggestions",
-          });
-        }
+        if (match) return embedResponse(String(match.id), resolvedKind, {
+          title: String(match.l || catalogTitle), year: match.y || catalogYear,
+          poster: typeof match.i?.imageUrl === "string" ? match.i.imageUrl : null,
+          source: "imdb-public-suggestions",
+        });
+      } catch (error) {
+        console.error("Streamivio public IMDb suggestions lookup failed:", error);
       }
-    } catch (error) {
-      console.error("Streamivio public IMDb suggestions lookup failed:", error);
     }
   }
 
