@@ -91,6 +91,7 @@ export default function Home(){
   const[searchSources,setSearchSources]=useState<string[]>([]);
   const[searchLoading,setSearchLoading]=useState(false);
   const[searchUnavailable,setSearchUnavailable]=useState<string[]>([]);
+  const[searchFiltersOpen,setSearchFiltersOpen]=useState(false);
   const[searchError,setSearchError]=useState("");
   const[movieGenre,setMovieGenre]=useState("");
   const[movieShelfLoading,setMovieShelfLoading]=useState(false);
@@ -250,7 +251,13 @@ export default function Home(){
     const resolvedTmdbId=String(selected.tmdbId||selected.tmdb_id||titleDetails?.tmdbId||titleDetails?.tmdb_id||"");
     try{
       // Prefer authorized catalog URLs; otherwise ask the server to resolve a known title ID.
-      const response=await fetch("/api/playback?id="+encodeURIComponent(String(selected.id))+"&title="+encodeURIComponent(selected.title||selected.name||"")+"&type="+encodeURIComponent(selected.type||selected.media_type||(isGameItem(selected)?"game":"movie"))+"&imdb_id="+encodeURIComponent(resolvedImdbId)+"&tmdb_id="+encodeURIComponent(resolvedTmdbId),{cache:"no-store"});
+      const playbackParams=new URLSearchParams({id:String(selected.id),title:String(selected.title||selected.name||""),type:String(selected.type||selected.media_type||(isGameItem(selected)?"game":"movie")),imdb_id:resolvedImdbId,tmdb_id:resolvedTmdbId});
+      if(kind==="tv"&&season.trim()&&episode.trim()){playbackParams.set("season",season);playbackParams.set("episode",episode);}
+      if(autoplay)playbackParams.set("autoplay","1");
+      if(kind==="tv"&&autoNext)playbackParams.set("autonext","1");
+      if(subtitleLanguage.trim())playbackParams.set("ds_lang",subtitleLanguage.trim());
+      if(startAt.trim())playbackParams.set("startAt",startAt.trim());
+      const response=await fetch("/api/playback?"+playbackParams.toString(),{cache:"no-store"});
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data.available&&typeof data.stream_url==="string"){
         const directProgressId=String(resolvedImdbId||resolvedTmdbId||selected.id);
@@ -266,6 +273,7 @@ export default function Home(){
         const contentId=String(data.content_id||data.imdb_id||data.tmdb_id||resolvedImdbId||resolvedTmdbId||getIdFromEmbedUrl(data.embed_url)||"");
         if(!contentId)throw new Error("The player URL did not include a valid IMDb or TMDB ID.");
         setPlayerContentId(contentId);
+        if(Array.isArray(data.seasons))setVidSrcInfo(data);
         setPlaybackUrl(buildVidSrcUrl(data.embed_url,contentId,kind,resumeOverride));
         setPlaybackFormat("iframe");return;
       }
@@ -486,8 +494,9 @@ export default function Home(){
           <h2 className="text-xl font-bold sm:text-2xl">Search</h2>
           <p className="mt-1 text-sm text-zinc-400">Searching {SEARCH_CATEGORIES.find(([,value])=>value===searchCategory)?.[0]||"all categories"} for “{q.trim()}”</p>
         </div>
-        {searchLoading&&<span role="status" className="flex items-center gap-2 text-sm text-zinc-400"><LoaderCircle className="h-4 w-4 animate-spin"/>Searching...</span>}
+        <div className="flex items-center gap-3">{searchLoading&&<span role="status" className="flex items-center gap-2 text-sm text-zinc-400"><LoaderCircle className="h-4 w-4 animate-spin"/>Searching...</span>}<button type="button" onClick={()=>setSearchFiltersOpen(open=>!open)} className="rounded-full border border-white/20 px-3 py-1.5 text-xs font-semibold text-zinc-200 hover:bg-white/10">{searchFiltersOpen?"Hide filters":"Filters"}</button></div>
       </div>
+      {searchFiltersOpen&&<>
       <div className="mb-5 flex flex-wrap gap-2" aria-label="Search categories">
         {SEARCH_CATEGORIES.map(([label,value])=><button
           key={value}
@@ -515,6 +524,7 @@ export default function Home(){
           </select>
         </label>
       </div>
+      </>}
       {searchUnavailable.length>0&&<p role="status" className="mb-4 text-sm text-amber-300">Some search sources are unavailable: {searchUnavailable.join(", ")}. Showing results from the sources that responded.</p>}
       {searchError&&<p role="alert" className="mb-4 text-sm text-amber-300">{searchError}</p>}
       {!searchLoading&&results.length>0&&<p className="mb-3 text-xs text-zinc-500">{searchTotal} result{searchTotal===1?"":"s"} · Searched {searchSources.join(" and ")||"the available catalog"}.</p>}
@@ -580,7 +590,18 @@ export default function Home(){
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
     </div>}
 
-    {selected&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5" onClick={()=>setSelected(null)}><div className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-lg bg-[#181818] p-6" onClick={e=>e.stopPropagation()}>
+
+    {selected&&playbackUrl&&<div className="fixed inset-0 z-[70] flex flex-col bg-black" role="dialog" aria-modal="true" aria-label="Streamivio video player">
+      <div className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#111] px-4 sm:px-6">
+        <div className="min-w-0 truncate text-sm font-semibold">{selected.title||selected.name||"Now playing"} <span className="ml-2 text-xs font-normal text-zinc-500">STREAMIVIO</span></div>
+        <button type="button" onClick={()=>{setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");}} className="ml-4 flex shrink-0 items-center gap-2 rounded bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"><X className="h-4 w-4"/>Back to details</button>
+      </div>
+      <div className="flex min-h-0 flex-1 items-center justify-center bg-black">
+        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="h-full w-full object-contain" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0)video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>}
+      </div>
+      <div className="shrink-0 border-t border-white/10 bg-[#111] px-4 py-2 text-center text-[11px] text-zinc-500">Playback is provided by the selected video source; availability can vary by title and region.</div>
+    </div>}
+    {selected&&!playbackUrl&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5" onClick={()=>setSelected(null)}><div className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-lg bg-[#181818] p-6" onClick={e=>e.stopPropagation()}>
       <div className="text-xs font-bold uppercase tracking-wider text-red-400">{detailTitle?.source||selected.source}</div>
       <h2 className="mt-2 text-2xl font-bold">{detailTitle?.title||detailTitle?.name||selected.title||selected.name}</h2>
       {(detailTitle?.year||detailTitle?.rating||detailTitle?.contentRating||detailTitle?.ageRating||detailTitle?.runtime)&&<div className="mt-3 flex flex-wrap gap-3 text-sm text-zinc-400">
@@ -643,6 +664,7 @@ export default function Home(){
         <span>Saved playback position: {formatSeconds(resumeSeconds)}</span>
         <button type="button" onClick={()=>void startPlayback(resumeSeconds)} disabled={playbackLoading} className="rounded bg-zinc-700 px-3 py-1.5 font-semibold disabled:opacity-50">Resume</button>
       </div>}
+      {isTvItem(selected)&&playbackFormat==="iframe"&&Array.isArray(vidsrcInfo?.seasons)&&<div className="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:grid-cols-2"><label className="grid gap-1 text-xs text-zinc-300">Season<select value={season} onChange={e=>{setSeason(e.target.value);setEpisode("");}} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"><option value="">Choose a season</option>{vidsrcInfo.seasons.map((entry:any)=><option key={entry.season} value={String(entry.season)}>Season {entry.season}</option>)}</select></label><label className="grid gap-1 text-xs text-zinc-300">Episode<input type="number" min="1" inputMode="numeric" disabled={!season} value={episode} onChange={e=>setEpisode(e.target.value)} placeholder="Episode number" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm disabled:opacity-50"/></label><p className="text-[11px] text-zinc-500 sm:col-span-2">Choose a season and episode, then select Play to load that episode in the player.</p></div>}
       {vidsrcInfoLoading&&<p role="status" className="mt-3 text-xs text-zinc-400">Checking VidSrc availability and quality…</p>}
       {vidsrcInfo&&<div className="mt-3 rounded border border-white/10 px-3 py-2 text-xs text-zinc-300">
         <div className="flex flex-wrap gap-3"><span className="font-semibold text-emerald-300">VidSrc reports this title as available</span>{vidsrcInfo.quality&&<span>Best reported quality: {vidsrcInfo.quality}</span>}{vidsrcInfo.year&&<span>{vidsrcInfo.year}</span>}</div>
