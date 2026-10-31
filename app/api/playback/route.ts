@@ -26,18 +26,113 @@ const isImdbId = (value: unknown): value is string =>
 const isTvType = (value: string) =>
   ["tv", "anime", "documentary", "kids", "reality"].includes(value);
 
-function embedResponse(imdbId: string, kind: "movie" | "tv", extra: Record<string, unknown> = {}) {
-  return NextResponse.json(
-    {
-      available: true,
-      format: "iframe",
-      embed_url: `https://vidsrc.sh/embed/${kind}/${encodeURIComponent(imdbId)}`,
-      content_id: imdbId,
-      imdb_id: imdbId,
-      ...extra,
-    },
-    { headers: { "Cache-Control": "no-store" } },
-  );
+function positiveInteger(value: string | null): number | null {
+  if (!value || !/^\\d+$/.test(value)) return null;
+  const parsed = Number(value);
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
+}
+
+function embedUrl(
+  imdbId: string,
+  kind: "movie" | "tv",
+  options: { season?: number | null; episode?: number | null; autoplay?: boolean; autonext?: boolean; startAt?: number | null; dsLang?: string | null } = {},
+) {
+  const encodedId = encodeURIComponent(imdbId);
+  const path = kind === "movie"
+    ? `/embed/movie/${encodedId}`
+    : options.season && options.episode
+      ? `/embed/tv/${encodedId}/${options.season}/${options.episode}`
+      : `/embed/tv/${encodedId}`;
+  const url = new URL(path, "https://vidsrc.sh");
+  if (options.autoplay) url.searchParams.set("autoplay", "1");
+  if (kind === "tv" && options.autonext) url.searchParams.set("autonext", "1");
+  if (options.startAt !== undefined && options.startAt !== null && options.startAt >= 0) {
+    url.searchParams.set("startAt", String(options.startAt));
+  }
+  if (options.dsLang && /^[a-z]{2,3}(,[a-z]{2,3}){0,2}$/i.test(options.dsLang)) {
+    url.searchParams.set("ds_lang", options.dsLang);
+  }
+  return url.toString();
+}
+
+async function embedResponse(
+  imdbId: string,
+  kind: "movie" | "tv",
+  extra: Record<string, unknown> = {},
+  episode?: { season: number; episode: number },
+  options: { autoplay?: boolean; autonext?: boolean; startAt?: number | null; dsLang?: string | null } = {},
+) {
+  const infoPath = kind === "movie"
+    ? `/info/movie/${encodeURIComponent(imdbId)}.json`
+    : episode
+      ? `/info/tv/${encodeURIComponent(imdbId)}/${episode.season}/${episode.episode}.json`
+      : `/info/tv/${encodeURIComponent(imdbId)}.json`;
+
+  try {
+    const infoResponse = await fetch(new URL(infoPath, "https://vidsrc.sh"), {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(6500),
+    });
+
+    if (infoResponse.status === 404) {
+      return NextResponse.json(
+        { available: false, provider: "vidsrc", provider_available: false, error: "VidSrc does not list this title or episode." },
+        { status: 404, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    if (!infoResponse.ok) {
+      return NextResponse.json(
+        { available: false, provider: "vidsrc", provider_available: false, error: "VidSrc availability could not be verified.", provider_status: infoResponse.status },
+        { status: 503, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const info: any = await infoResponse.json();
+    const reportedId = String(info?.imdb_id || "");
+    if (reportedId && reportedId.toLowerCase() !== imdbId.toLowerCase()) {
+      return NextResponse.json(
+        { available: false, provider: "vidsrc", error: "VidSrc returned a different IMDb title identifier." },
+        { status: 502, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+
+    const playerUrl = embedUrl(imdbId, kind, {
+      ...episode,
+      ...options,
+    });
+    return NextResponse.json(
+      {
+        available: true,
+        provider_available: true,
+        playback_verified: false,
+        provider: "vidsrc",
+        format: "iframe",
+        embed_url: playerUrl,
+        content_id: imdbId,
+        imdb_id: imdbId,
+        media_type: kind,
+        quality: typeof info?.quality === "string" ? info.quality : null,
+        seasons: kind === "tv" && Array.isArray(info?.seasons) ? info.seasons : undefined,
+        total_episodes: typeof info?.total_episodes === "number" ? info.total_episodes : undefined,
+        season: episode?.season ?? (typeof info?.season === "number" ? info.season : undefined),
+        episode: episode?.episode ?? (typeof info?.episode === "number" ? info.episode : undefined),
+        provider_info: {
+          title: typeof info?.title === "string" ? info.title : undefined,
+          year: info?.year ?? undefined,
+          time_added: info?.time_added ?? undefined,
+        },
+        ...extra,
+      },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch (error) {
+    console.error("Streamivio VidSrc availability check failed:", error);
+    return NextResponse.json(
+      { available: false, provider: "vidsrc", provider_available: false, error: "VidSrc could not be reached, so playback availability remains unconfirmed." },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
+  }
 }
 
 async function lookupImdbId(title: string, year: string | null, kind: "movie" | "tv") {
@@ -93,6 +188,28 @@ export async function GET(request: NextRequest) {
   const title = (params.get("title") || "").trim();
   const requestedType = (params.get("type") || "movie").trim().toLowerCase();
   const suppliedImdbId = (params.get("imdb_id") || params.get("imdbId") || "").trim();
+  const season = positiveInteger(params.get("season"));
+  const episode = positiveInteger(params.get("episode"));
+  const startAtRaw = params.get("startAt");
+  const startAt = startAtRaw !== null && /^\\d+(\\.\\d+)?$/.test(startAtRaw) ? Number(startAtRaw) : null;
+  const playerOptions = {
+    autoplay: params.get("autoplay") === "1",
+    autonext: params.get("autonext") === "1",
+    startAt: Number.isFinite(startAt) ? startAt : null,
+    dsLang: params.get("ds_lang"),
+  };
+  if ((season && !episode) || (!season && episode)) {
+    return NextResponse.json(
+      { available: false, error: "Provide both season and episode for a specific TV episode." },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
+  if ((season || episode) && kind !== "tv") {
+    return NextResponse.json(
+      { available: false, error: "Season and episode are only valid for TV titles." },
+      { status: 400, headers: { "Cache-Control": "no-store" } },
+    );
+  }
   const kind: "movie" | "tv" = isTvType(requestedType) ? "tv" : "movie";
 
   if (!id && !title) {
@@ -129,7 +246,7 @@ export async function GET(request: NextRequest) {
   // Prefer IDs supplied by title metadata, then IDs stored in the website catalog.
   const storedImdbId = suppliedImdbId || (local as any)?.imdb_id || (local as any)?.imdbId;
   if (isImdbId(storedImdbId)) {
-    return embedResponse(storedImdbId, resolvedKind, { title: catalogTitle, source: suppliedImdbId ? "title-metadata" : "website-catalog" });
+    return embedResponse(storedImdbId, resolvedKind, { title: catalogTitle, source: suppliedImdbId ? "title-metadata" : "website-catalog" }, season && episode ? { season, episode } : undefined, playerOptions);
   }
 
 
@@ -167,7 +284,7 @@ export async function GET(request: NextRequest) {
           title: String(match.l || catalogTitle), year: match.y || catalogYear,
           poster: typeof match.i?.imageUrl === "string" ? match.i.imageUrl : null,
           source: "imdb-public-suggestions",
-        });
+        }, season && episode ? { season, episode } : undefined, playerOptions);
       } catch (error) {
         console.error("Streamivio public IMDb suggestions lookup failed:", error);
       }
@@ -185,7 +302,7 @@ export async function GET(request: NextRequest) {
           year: match.year,
           poster: match.poster,
           source: "website-imdb-scraper",
-        });
+        }, season && episode ? { season, episode } : undefined, playerOptions);
       }
     } catch (error) {
       console.error("Streamivio website IMDb ID lookup failed:", error);
@@ -218,7 +335,7 @@ export async function GET(request: NextRequest) {
             title: data.title || catalogTitle,
             poster: data.poster_url || null,
             source: "streamivio-metadata-resolver",
-          });
+          }, season && episode ? { season, episode } : undefined, playerOptions);
         }
       }
     } catch (error) {
