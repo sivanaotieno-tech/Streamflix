@@ -27,7 +27,7 @@ const isTvType = (value: string) =>
   ["tv", "anime", "documentary", "kids", "reality"].includes(value);
 
 function positiveInteger(value: string | null): number | null {
-  if (!value || !/^\\d+$/.test(value)) return null;
+  if (!value || !/^\d+$/.test(value)) return null;
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : null;
 }
@@ -192,7 +192,7 @@ export async function GET(request: NextRequest) {
   const season = positiveInteger(params.get("season"));
   const episode = positiveInteger(params.get("episode"));
   const startAtRaw = params.get("startAt");
-  const startAt = startAtRaw !== null && /^\\d+(\\.\\d+)?$/.test(startAtRaw) ? Number(startAtRaw) : null;
+  const startAt = startAtRaw !== null && /^\d+(\.\d+)?$/.test(startAtRaw) ? Number(startAtRaw) : null;
   const playerOptions = {
     autoplay: params.get("autoplay") === "1",
     autonext: params.get("autonext") === "1",
