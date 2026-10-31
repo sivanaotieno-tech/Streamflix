@@ -24,7 +24,7 @@ const isImdbId = (value: unknown): value is string =>
   typeof value === "string" && /^tt\d{5,12}$/i.test(value);
 
 const isTvType = (value: string) =>
-  ["tv", "anime", "documentary", "kids", "reality"].includes(value);
+  ["tv", "tvshow", "tv show", "series", "tvseries", "tvminiseries", "anime", "documentary", "documentaries", "kids", "reality"].includes(value.replace(/\\s+/g, " ").trim());
 
 function positiveInteger(value: string | null): number | null {
   if (!value || !/^\d+$/.test(value)) return null;
