@@ -2,6 +2,7 @@
 
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import {Search,Play,Plus,Film,X,LoaderCircle} from "lucide-react";
+import {StreamivioLogo} from "@/components/streamivio-logo";
 
 type Item={
   id:string|number;
@@ -464,7 +465,7 @@ export default function Home(){
 
   return <main className="min-h-screen bg-[#141414] pb-12">
     <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-16 items-center gap-5 px-4 md:gap-8 md:px-12">
-      <button onClick={()=>setBrowse("Home")} className="shrink-0 text-xl font-black tracking-[-.06em] text-[#e50914] sm:text-2xl">STREAMIVIO</button>
+      <button onClick={()=>setBrowse("Home")} aria-label="Streamivio home" className="shrink-0"><StreamivioLogo className="text-[19px] sm:text-[23px]"/></button>
       <div className="hidden items-center gap-5 text-sm md:flex">
         {["Home","Movies","TV Shows","Documentaries","Kids & Family","Reality","Anime","Games","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
       </div>
@@ -561,7 +562,7 @@ export default function Home(){
       </div>
     </header>}
 
-    {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 text-3xl font-black text-[#e50914]">STREAMIVIO</div><div>Loading your entertainment...</div></div></div>}
+    {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 flex justify-center"><StreamivioLogo className="text-3xl"/></div><div>Loading your entertainment...</div></div></div>}
 
     {!q.trim()&&<div className="relative z-10 mx-auto max-w-[1700px] pt-5">
       {browse==="Games"&&gamesLoading&&<div className="mb-4 flex items-center gap-2 px-4 text-sm text-zinc-400 md:px-12"><LoaderCircle className="h-4 w-4 animate-spin"/>Loading games from the local catalog…</div>}
