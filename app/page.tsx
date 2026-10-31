@@ -306,7 +306,7 @@ export default function Home(){
       .then(async response=>{
         const payload=await response.json().catch(()=>({}));
         if(!response.ok)throw new Error(payload.message||"VidSrc reports no information for this title.");
-        setVidSrcInfo(current=>({...payload,seasons:Array.isArray(payload.seasons)?payload.seasons:current?.seasons}));
+        setVidSrcInfo((current:any)=>({...payload,seasons:Array.isArray(payload.seasons)?payload.seasons:current?.seasons}));
       })
       .catch(error=>{
         if(error instanceof Error&&error.name==="AbortError")return;
