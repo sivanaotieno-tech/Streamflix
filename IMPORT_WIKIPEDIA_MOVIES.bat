@@ -41,12 +41,20 @@ if not "%SCRAPE_RESULT%"=="0" (
   exit /b %SCRAPE_RESULT%
 )
 
-echo [4/4] Merging the export into Streamivio...
+echo [4/4] Previewing the catalogue import...
 python "%ROOT%scripts\import_wikipedia_catalog.py" --input "%EXPORT%" --dry-run || exit /b 1
 echo.
-echo Preview complete. The live catalogue has NOT been changed yet.
-echo To apply this import, run:
-echo python scripts\import_wikipedia_catalog.py --input "%EXPORT%"
-echo Then review git diff, run npm run build, and commit/push when ready.
+set /p "CONFIRM=Apply these additions to Streamivio catalog.json now? (Y/N): "
+if /i not "%CONFIRM%"=="Y" (
+  echo Cancelled. Your catalogue was not changed.
+  pause
+  exit /b 0
+)
+
+python "%ROOT%scripts\import_wikipedia_catalog.py" --input "%EXPORT%" || exit /b 1
+echo.
+echo Import complete. Review the changes with:
+echo git diff -- pymoviedb-service\data\catalog.json
+echo Then run npm run build, commit and push to deploy.
 echo.
 pause
