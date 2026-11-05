@@ -510,7 +510,7 @@ export default function Home(){
         {label:"My List",icon:Bookmark},
         {label:"Plans",icon:CreditCard}
       ].map(({label,icon:Icon})=><button key={label} onClick={()=>{if(label==="Plans"){window.location.href="/subscribe";return;}setBrowse(label);setQ("");}} className={`flex flex-col items-center gap-1 py-1 text-[10px] ${browse===label?"text-white":"text-zinc-500"}`}><Icon className="h-5 w-5"/><span>{label}</span></button>)}
-    </nav>nav>
+    </nav>
 
     {q.trim()&&<section className="relative mx-4 mt-16 min-h-[55vh] rounded-xl bg-[#181818] p-5 sm:mx-6 md:mx-9 md:p-8">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
