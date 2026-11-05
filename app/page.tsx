@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect,useRef,useState,type FormEvent} from "react";
-import {Search,Play,Plus,Film,X,LoaderCircle,Home,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard, Users, Trophy, FileVideo} from "lucide-react";
+import {Search,Play,Plus,Film,X,LoaderCircle,Home as HomeIcon,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard, Users, Trophy, FileVideo} from "lucide-react";
 import {StreamivioLogo} from "@/components/streamivio-logo";
 
 type Item={
@@ -469,7 +469,7 @@ export default function Home(){
       <button onClick={()=>{setBrowse("Home");setQ("");}} aria-label="Streamivio home" className="mb-10 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-lg font-black text-white">S</button>
       <div className="flex flex-1 flex-col items-center gap-3">
         {[
-          {label:"Home",icon:Home},
+          {label:"Home",icon:HomeIcon},
           {label:"Movies",icon:Clapperboard},
           {label:"TV Shows",icon:Tv},
           {label:"Anime",icon:Compass},
