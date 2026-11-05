@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect,useRef,useState,type FormEvent} from "react";
-import {Search,Play,Plus,Film,X,LoaderCircle} from "lucide-react";
+import {Search,Play,Plus,Film,X,LoaderCircle,Home,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard} from "lucide-react";
 import {StreamivioLogo} from "@/components/streamivio-logo";
 
 type Item={
@@ -10,6 +10,7 @@ type Item={
   name?:string;
   overview?:string;
   poster?:string|null;
+  backdrop?:string|null;
   rating?:number;
   year?:string;
   source:string;
@@ -463,32 +464,50 @@ export default function Home(){
   const add=(m:Item)=>{if(!list.some(x=>x.id===m.id))setList(list.concat(m))};
   const detailTitle=titleDetails||selected;
 
-  return <main className="min-h-screen bg-[#141414] pb-12">
-    <nav className="site-nav fixed left-0 right-0 top-0 z-40 flex h-16 items-center gap-5 px-4 md:gap-8 md:px-12">
-      <button onClick={()=>setBrowse("Home")} aria-label="Streamivio home" className="shrink-0"><StreamivioLogo className="text-[19px] sm:text-[23px]"/></button>
-      <div className="hidden items-center gap-5 text-sm md:flex">
-        {["Home","Movies","TV Shows","Documentaries","Kids & Family","Reality","Anime","Games","My List"].map(x=><button key={x} onClick={()=>{setBrowse(x);setQ("")}} className={browse===x?"font-bold text-white":"text-zinc-300 hover:text-white"}>{x}</button>)}
+  return <main className="min-h-screen bg-[#090b10] pb-24 lg:ml-20 lg:pb-12">
+    <aside className="site-sidebar fixed left-0 top-0 z-50 hidden h-screen w-20 flex-col items-center border-r border-white/10 py-5 lg:flex">
+      <button onClick={()=>{setBrowse("Home");setQ("");}} aria-label="Streamivio home" className="mb-10 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-lg font-black text-white">S</button>
+      <div className="flex flex-1 flex-col items-center gap-3">
+        {[
+          {label:"Home",icon:Home},
+          {label:"Movies",icon:Clapperboard},
+          {label:"TV Shows",icon:Tv},
+          {label:"Anime",icon:Compass},
+          {label:"Games",icon:Gamepad2},
+          {label:"My List",icon:Bookmark}
+        ].map(({label,icon:Icon})=><button key={label} onClick={()=>{setBrowse(label);setQ("");}} title={label} aria-label={label} className={`sidebar-link flex h-11 w-11 items-center justify-center rounded-xl transition ${browse===label||(browse==="Home"&&label==="Home")?"active":"text-zinc-500 hover:bg-white/10 hover:text-white"}`}><Icon className="h-5 w-5"/></button>)}
+      </div>
+      <a href="/subscribe" title="Subscription" aria-label="Subscription" className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/10 hover:text-white"><CreditCard className="h-5 w-5"/></a>
+      <a href="/sign-in" title="Account" aria-label="Account" className="flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/10 hover:text-white"><UserRound className="h-5 w-5"/></a>
+    </aside>
+
+    <header className="site-topbar fixed left-0 right-0 top-0 z-40 flex h-16 items-center gap-4 px-4 lg:left-20 lg:px-8">
+      <button onClick={()=>{setBrowse("Home");setQ("");}} aria-label="Streamivio home" className="shrink-0 lg:hidden"><StreamivioLogo className="text-[19px]"/></button>
+      <div className="hidden lg:block"><StreamivioLogo className="text-[20px]"/></div>
+      <div className="hidden items-center gap-4 text-xs text-zinc-400 xl:flex">
+        <span className="text-zinc-600">/</span><span className="font-medium text-zinc-300">{browse}</span>
       </div>
       <div className="ml-auto flex items-center gap-3">
         <form onSubmit={submitSearch} role="search" className="relative flex items-center">
-          <Search className="pointer-events-none absolute left-2 h-3.5 w-3.5 text-zinc-300"/>
-          <input
-            value={q}
-            onChange={e=>setQ(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Escape")setQ("")}}
-            placeholder="Search movies, shows, anime, games..."
-            aria-label="Search movies, TV, documentaries, kids shows, reality, anime and games"
-            autoComplete="off"
-            maxLength={100}
-            className="w-36 border border-white/20 bg-black/40 py-2 pl-7 pr-8 text-xs outline-none transition placeholder:text-zinc-400 focus:w-56 focus:border-white sm:w-48"
-          />
-          {q&&<button type="button" onClick={()=>setQ("")} aria-label="Clear search" className="absolute right-2 text-zinc-400 hover:text-white"><X className="h-3.5 w-3.5"/></button>}
+          <Search className="pointer-events-none absolute left-3 h-4 w-4 text-zinc-400"/>
+          <input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")setQ("");}} placeholder="Search movies, shows, anime..." aria-label="Search movies, TV, documentaries, kids shows, reality, anime and games" autoComplete="off" maxLength={100} className="w-36 rounded-full border border-white/10 bg-white/[0.06] py-2 pl-9 pr-8 text-xs outline-none transition placeholder:text-zinc-500 focus:w-52 focus:border-white/30 sm:w-48"/>
+          {q&&<button type="button" onClick={()=>setQ("")} aria-label="Clear search" className="absolute right-3 text-zinc-400 hover:text-white"><X className="h-3.5 w-3.5"/></button>}
         </form>
-        <button onClick={()=>{setBrowse("My List");setQ("")}} className="hidden text-xs font-semibold sm:block">My List</button>
-        {authUser ? <><span title={authUser.email} className="hidden max-w-28 truncate text-xs text-zinc-300 lg:block">{authUser.email}</span><button onClick={()=>void signOut()} className="text-xs font-semibold text-zinc-300 hover:text-white">Sign out</button></> : <a href="/sign-in" className="whitespace-nowrap text-xs font-semibold text-zinc-200 hover:text-white">{authStatusLoading?"Checking…":"Sign in"}</a>}
-        <a href="/subscribe" aria-label="Open Streamivio subscription plans" className="rounded bg-[#e50914] px-4 py-2 text-xs font-bold text-white transition hover:bg-red-700 sm:text-sm">Subscribe</a>
+        <button onClick={()=>{setBrowse("My List");setQ("");}} className="hidden text-xs font-semibold text-zinc-300 hover:text-white sm:block">My List</button>
+        {authUser?<><span title={authUser.email} className="hidden max-w-28 truncate text-xs text-zinc-300 lg:block">{authUser.email}</span><button onClick={()=>void signOut()} className="text-xs font-semibold text-zinc-300 hover:text-white">Sign out</button></>:<a href="/sign-in" className="whitespace-nowrap text-xs font-semibold text-zinc-200 hover:text-white">{authStatusLoading?"Checking…":"Sign in"}</a>}
+        <a href="/subscribe" aria-label="Open Streamivio subscription plans" className="rounded-full bg-red-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-500 sm:text-sm">Subscribe</a>
       </div>
-    </nav>
+    </header>
+
+    <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-white/10 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 lg:hidden">
+      {[
+        {label:"Home",icon:Home},
+        {label:"Movies",icon:Clapperboard},
+        {label:"TV Shows",icon:Tv},
+        {label:"My List",icon:Bookmark},
+        {label:"Plans",icon:CreditCard}
+      ].map(({label,icon:Icon})=><button key={label} onClick={()=>{if(label==="Plans"){window.location.href="/subscribe";return;}setBrowse(label);setQ("");}} className={`flex flex-col items-center gap-1 py-1 text-[10px] ${browse===label?"text-white":"text-zinc-500"}`}><Icon className="h-5 w-5"/><span>{label}</span></button>)}
+    </nav>nav>
 
     {q.trim()&&<section className="relative mx-4 mt-16 min-h-[55vh] rounded-xl bg-[#181818] p-5 sm:mx-6 md:mx-9 md:p-8">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
@@ -550,15 +569,15 @@ export default function Home(){
     </section>}
 
     {!q.trim()&&hero&&<header className="hero-shell relative mt-16 overflow-hidden">
-      <div className="hero-art absolute inset-0">{hero.poster&&<img src={hero.poster} alt="" className="h-full w-full object-cover"/>}</div>
+      <div className="hero-art absolute inset-0">{(hero.backdrop||hero.poster)&&<img src={hero.backdrop||hero.poster||""} alt="" className="h-full w-full object-cover"/>}</div>
       <div className="hero-shade absolute inset-0"/>
       <div className="hero-content relative z-10 flex h-full max-w-2xl flex-col justify-end px-5 pb-10 pt-40 sm:px-8 sm:pb-12 md:px-12 md:pb-14">
-        <div className="mb-2 text-[10px] font-bold uppercase tracking-[.3em] text-red-300">Featured title</div>
-        <div className="mb-1 text-[10px] font-bold uppercase tracking-[.35em] text-zinc-200">Streamivio selection</div>
+        <div className="mb-2 text-[10px] font-bold uppercase tracking-[.3em] text-sky-300">Featured premiere</div>
+        <div className="mb-1 text-[10px] font-bold uppercase tracking-[.35em] text-zinc-200">Only on Streamivio</div>
         <h1 className="max-w-xl text-4xl font-black leading-[.95] tracking-tight text-white drop-shadow-2xl sm:text-5xl md:text-6xl">{hero.title||hero.name}</h1>
         <div className="mt-3 flex items-center gap-2 text-[11px] text-zinc-200 sm:text-xs"><span>{hero.source}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/><span>{hero.year}</span><span className="h-1 w-1 rounded-full bg-zinc-400"/>HD</div>
         <p className="mt-2 max-w-md line-clamp-3 text-xs leading-5 text-zinc-100 drop-shadow sm:text-sm">{hero.overview||"Discover movies, series and anime."}</p>
-        <div className="mt-5 flex gap-3"><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-xs font-bold text-black hover:bg-zinc-200"><Film className="h-3.5 w-3.5"/>Explore</button><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white/20 px-4 py-2 text-xs font-bold text-white hover:bg-white/30"><Plus className="h-3.5 w-3.5"/>More Info</button></div>
+        <div className="mt-5 flex gap-3"><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-xs font-bold text-black hover:bg-zinc-200"><Film className="h-3.5 w-3.5"/>Explore</button><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full border border-white/30 bg-black/25 px-5 py-2.5 text-xs font-bold text-white backdrop-blur hover:bg-white/15"><Plus className="h-3.5 w-3.5"/>More Info</button></div>
       </div>
     </header>}
 
