@@ -9,7 +9,7 @@ export function StreamivioLogo({className="",style}:StreamivioLogoProps){
       style={style}
       aria-label="Streamivio"
     >
-      <span className="text-[#e50914]">STREAM</span>
+      <span className="text-[#35a8f5]">STREAM</span>
       <span className="text-white">IVIO</span>
     </span>
   );
