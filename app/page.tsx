@@ -67,7 +67,7 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
     </div>
     <div className="scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-5 md:gap-3 md:px-12">
       {items.map(m=><button key={String(m.id)} onClick={()=>onOpen(m)} className="catalog-card group min-w-[31vw] text-left sm:min-w-[19vw] md:min-w-[14vw] lg:min-w-[12vw]">
-        <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">
+        <div className="relative aspect-video overflow-hidden rounded-md bg-zinc-900">
           {m.poster?<img src={m.poster} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" alt={m.title||m.name||""}/>:<div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-black"><Film className="h-12 w-12 text-zinc-700"/></div>}
           <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10"/>
           <span className="absolute bottom-2 left-2 right-2 truncate text-xs font-bold drop-shadow md:bottom-3 md:left-3 md:text-sm">{m.title||m.name}</span>
@@ -466,7 +466,7 @@ export default function Home(){
 
   return <main className="min-h-screen bg-[#090b10] pb-24 lg:ml-20 lg:pb-12">
     <aside className="site-sidebar fixed left-0 top-0 z-50 hidden h-screen w-20 flex-col items-center border-r border-white/10 py-5 lg:flex">
-      <button onClick={()=>{setBrowse("Home");setQ("");}} aria-label="Streamivio home" className="mb-10 flex h-10 w-10 items-center justify-center rounded-xl bg-red-600 text-lg font-black text-white">S</button>
+      <button onClick={()=>{setBrowse("Home");setQ("");}} aria-label="Streamivio home" className="mb-10 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-lg font-black text-[#06111d] shadow-lg shadow-sky-500/20">S</button>
       <div className="flex flex-1 flex-col items-center gap-3">
         {[
           {label:"Home",icon:HomeIcon},
@@ -498,13 +498,13 @@ export default function Home(){
         </form>
         <button onClick={()=>{setBrowse("My List");setQ("");}} className="hidden text-xs font-semibold text-zinc-300 hover:text-white sm:block">My List</button>
         {authUser?<><span title={authUser.email} className="hidden max-w-28 truncate text-xs text-zinc-300 lg:block">{authUser.email}</span><button onClick={()=>void signOut()} className="text-xs font-semibold text-zinc-300 hover:text-white">Sign out</button></>:<a href="/sign-in" className="whitespace-nowrap text-xs font-semibold text-zinc-200 hover:text-white">{authStatusLoading?"Checking…":"Sign in"}</a>}
-        <a href="/subscribe" aria-label="Open Streamivio subscription plans" className="rounded-full bg-red-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-red-500 sm:text-sm">Subscribe</a>
+        <a href="/subscribe" aria-label="Open Streamivio subscription plans" className="rounded-full bg-sky-500 px-4 py-2 text-xs font-bold text-[#06111d] transition hover:bg-sky-400 sm:text-sm">Subscribe</a>
       </div>
     </header>
 
     <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-white/10 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 lg:hidden">
       {[
-        {label:"Home",icon:Home},
+        {label:"Home",icon:HomeIcon},
         {label:"Movies",icon:Clapperboard},
         {label:"TV Shows",icon:Tv},
         {label:"My List",icon:Bookmark},
