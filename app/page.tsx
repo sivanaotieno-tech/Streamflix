@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect,useRef,useState,type FormEvent} from "react";
-import {Search,Play,Plus,Film,X,LoaderCircle,Home,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard} from "lucide-react";
+import {Search,Play,Plus,Film,X,LoaderCircle,Home,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard, Users, Trophy, FileVideo} from "lucide-react";
 import {StreamivioLogo} from "@/components/streamivio-logo";
 
 type Item={
@@ -473,6 +473,9 @@ export default function Home(){
           {label:"Movies",icon:Clapperboard},
           {label:"TV Shows",icon:Tv},
           {label:"Anime",icon:Compass},
+          {label:"Documentaries",icon:FileVideo},
+          {label:"Kids & Family",icon:Users},
+          {label:"Reality",icon:Trophy},
           {label:"Games",icon:Gamepad2},
           {label:"My List",icon:Bookmark}
         ].map(({label,icon:Icon})=><button key={label} onClick={()=>{setBrowse(label);setQ("");}} title={label} aria-label={label} className={`sidebar-link flex h-11 w-11 items-center justify-center rounded-xl transition ${browse===label||(browse==="Home"&&label==="Home")?"active":"text-zinc-500 hover:bg-white/10 hover:text-white"}`}><Icon className="h-5 w-5"/></button>)}
