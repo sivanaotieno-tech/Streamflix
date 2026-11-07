@@ -409,7 +409,7 @@ export default function Home(){
         const data=await response.json();
         if(!response.ok)throw new Error(data.error||"Local movie catalog unavailable");
         const movies=Array.isArray(data.results)?data.results as Item[]:[];
-        setRows(current=>({...current,"Popular Movies":movies}));
+        setRows(current=>({...current,"Movies to Explore":movies}));
         setHero(current=>current||movies[0]||null);
       })
       .catch(error=>console.error("Local movie catalog could not be loaded",error))
@@ -425,7 +425,7 @@ export default function Home(){
   },[]);
 
   useEffect(()=>{
-    const shelves=[["tv","Popular TV"],["documentaries","Documentaries"],["kids","Family & Kids"],["reality","Reality & Competition"]];
+    const shelves=[["tv","TV to Explore"],["documentaries","Documentaries"],["kids","Family & Kids"],["reality","Reality & Competition"]];
     Promise.all(shelves.map(async ([scope,title])=>{
       const response=await fetch("/api/search?scope="+scope+"&popular=1");
       if(!response.ok)throw new Error("Local "+scope+" catalog unavailable");
@@ -606,12 +606,12 @@ export default function Home(){
         ? <Row title="My List" items={list} onOpen={play}/>
         : Object.entries(rows)
           .filter(([title])=>browse==="Home"
-            || (browse==="TV Shows"&&title==="Popular TV")
+            || (browse==="TV Shows"&&title==="TV to Explore")
             || (browse==="Documentaries"&&title==="Documentaries")
             || (browse==="Kids & Family"&&title==="Family & Kids")
             || (browse==="Reality"&&title==="Reality & Competition")
             || (browse==="Anime"&&title==="Anime Spotlight")
-            || (browse==="Movies"&&title==="Popular Movies")
+            || (browse==="Movies"&&title==="Movies to Explore")
             || (browse==="Games"&&title==="Games Spotlight")
 )
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
