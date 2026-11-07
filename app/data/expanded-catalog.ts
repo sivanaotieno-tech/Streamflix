@@ -7,6 +7,7 @@ const entry = (
   type: CatalogTitle["type"],
   genres: string[],
   country: string[],
+  imdbId?: string,
 ): CatalogTitle => ({
   id: `extra-${id}`,
   title,
@@ -18,6 +19,7 @@ const entry = (
   country,
   source: "Streamivio Library",
   poster: null,
+  ...(imdbId ? { imdbId } : {}),
 });
 
 // A broad editorial catalogue, deliberately separate from IMDb's Top 250 charts.
@@ -138,7 +140,7 @@ export const expandedCatalog: CatalogTitle[] = [
   entry("anime-bleach","Bleach","2004","anime",["Anime","Action","Adventure","Fantasy"],["Japan"]),
   entry("anime-naruto-shippuden","Naruto: Shippuden","2007","anime",["Anime","Action","Adventure"],["Japan"]),
   entry("anime-my-hero-academia","My Hero Academia","2016","anime",["Anime","Action","Adventure"],["Japan"]),
-  entry("anime-jujutsu-kaisen","Jujutsu Kaisen","2020","anime",["Anime","Action","Fantasy"],["Japan"]),
+  entry("anime-jujutsu-kaisen","Jujutsu Kaisen","2020","anime",["Anime","Action","Fantasy"],["Japan"],"tt12343534"),
   entry("anime-chainsaw-man","Chainsaw Man","2022","anime",["Anime","Action","Horror"],["Japan"]),
   entry("anime-tokyo-revengers","Tokyo Revengers","2021","anime",["Anime","Action","Drama"],["Japan"]),
   entry("anime-blue-lock","Blue Lock","2022","anime",["Anime","Sport","Drama"],["Japan"]),
