@@ -220,6 +220,8 @@ export async function GET(request:NextRequest){
   const sort=allowedSorts.includes(sortParam)?sortParam:(rawQuery&&!popular?"relevance":"rating");
   const requestedLimit=Number(params.get("limit")||60);
   const limit=Number.isFinite(requestedLimit)?Math.min(100,Math.max(1,Math.floor(requestedLimit))):60;
+  const requestedOffset=Number(params.get("offset")||0);
+  const offset=Number.isFinite(requestedOffset)?Math.min(100000,Math.max(0,Math.floor(requestedOffset))):0;
 
   if(!SCOPES.includes(rawScope as Scope))return NextResponse.json({error:"Choose a supported search category."},{status:400});
   if(!popular&&(rawQuery.length<2||rawQuery.length>100))return NextResponse.json({
@@ -372,9 +374,9 @@ export async function GET(request:NextRequest){
   else combined.sort((a,b)=>(numberOrUndefined(b.rating)||0)-(numberOrUndefined(a.rating)||0));
 
   const total=combined.length;
-  const results=combined.slice(0,limit).map((entry: SearchRecord)=>{ const {search_score,...item}=entry; return item; });
+  const results=combined.slice(offset,offset+limit).map((entry: SearchRecord)=>{ const {search_score,...item}=entry; return item; });
   return NextResponse.json({
-    results,total,limit,offset:0,query:rawQuery,scope,
+    results,total,limit,offset,hasMore:offset+results.length<total,query:rawQuery,
     sources:[...new Set(sources)],unavailable:[...new Set(unavailable)],database:catalogDatabase
   },{
     headers:{"Cache-Control":"public, max-age=20, s-maxage=60, stale-while-revalidate=180"}
