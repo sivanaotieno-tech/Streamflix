@@ -1,4 +1,5 @@
 import { imdbCatalog } from "./imdb-catalog";
+import { expandedCatalog } from "./expanded-catalog";
 
 export type CatalogTitle = {
   id: string;
@@ -52,8 +53,13 @@ const handCuratedCatalog: CatalogTitle[] = [
  ];
 
 
-const curatedKeys = new Set(handCuratedCatalog.map((item) => `${item.title.trim().toLowerCase()}::${item.year}`));
+const catalogKey = (item: CatalogTitle) => `${item.title.trim().toLowerCase()}::${item.year}`;
+const curatedCatalog = Array.from(
+  new Map([...handCuratedCatalog, ...expandedCatalog].map((item) => [catalogKey(item), item])).values(),
+);
+const curatedKeys = new Set(curatedCatalog.map(catalogKey));
+
 export const catalog: CatalogTitle[] = [
-  ...handCuratedCatalog,
-  ...imdbCatalog.filter((item) => !curatedKeys.has(`${item.title.trim().toLowerCase()}::${item.year}`)),
+  ...curatedCatalog,
+  ...imdbCatalog.filter((item) => !curatedKeys.has(catalogKey(item))),
 ];
