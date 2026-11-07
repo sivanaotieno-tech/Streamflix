@@ -361,6 +361,14 @@ export async function GET(request:NextRequest){
     else combined.sort((a,b)=>(b.search_score||0)-(a.search_score||0)||(numberOrUndefined(b.rating)||0)-(numberOrUndefined(a.rating)||0));
   }else if(sort==="title")combined.sort((a,b)=>String(a.title||a.name).localeCompare(String(b.title||b.name)));
   else if(sort==="year")combined.sort((a,b)=>Number(b.year||0)-Number(a.year||0));
+  else if(popular)combined.sort((a,b)=>{
+    // Put Streamivio's wider editorial library ahead of chart-only fallback data.
+    // This keeps discovery shelves varied instead of showing only highly rated chart entries.
+    const rank=(item:SearchRecord)=>item.source==="Streamivio Library"?0:
+      String(item.source||"").toLowerCase().includes("popular")?1:
+      String(item.source||"").toLowerCase().includes("imdb")?2:3;
+    return rank(a)-rank(b)||(numberOrUndefined(b.rating)||0)-(numberOrUndefined(a.rating)||0);
+  });
   else combined.sort((a,b)=>(numberOrUndefined(b.rating)||0)-(numberOrUndefined(a.rating)||0));
 
   const total=combined.length;
