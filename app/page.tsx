@@ -725,7 +725,7 @@ export default function Home(){
             || (browse==="Games"&&title==="Games Spotlight")
 )
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
-      {!q.trim()&&browse==="Movies"&&(rows["Movies to Explore"]?.length||0)<movieTotal&&<div className="flex justify-center py-6"><button type="button" onClick={()=>void loadMoreMovies()} disabled={movieLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{movieLoadingMore?"Loading movies…":"Load more movies"}</button></div>}
+      {!q.trim()&&((browse==="Home"&&movieTotal>0)||(browse==="Movies"&&(rows["Movies to Explore"]?.length||0)<movieTotal))&&<div className="flex justify-center py-6"><button type="button" onClick={()=>browse==="Home"?setBrowse("Movies"):void loadMoreMovies()} disabled={browse==="Movies"&&movieLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{browse==="Home"?`Browse all ${movieTotal} movies`:movieLoadingMore?"Loading movies…":"Load more movies"}</button></div>}
     </div>}
 
 
@@ -779,6 +779,7 @@ export default function Home(){
             <label className="grid gap-1 text-xs text-zinc-300">Episode
               <input inputMode="numeric" type="number" min="1" disabled={!season} value={episode} onChange={e=>setEpisode(e.target.value)} placeholder="Episode number" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm disabled:opacity-50"/>
             </label>
+            {isJujutsuKaisen&&<p className="text-[11px] text-zinc-500 sm:col-span-2">Season selection includes the series' three seasons. Individual episode playback still depends on the configured playback source.</p>}
           </>}
           <label className="flex items-center gap-2 text-sm text-zinc-300"><input type="checkbox" checked={autoplay} onChange={e=>setAutoplay(e.target.checked)}/> Request autoplay after the provider's play gate</label>
           {isTvItem(selected)&&<label className="flex items-center gap-2 text-sm text-zinc-300"><input type="checkbox" checked={autoNext} onChange={e=>setAutoNext(e.target.checked)}/> Automatically play the next episode</label>}
