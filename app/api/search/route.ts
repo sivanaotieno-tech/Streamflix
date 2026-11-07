@@ -192,6 +192,20 @@ async function fetchExternal(base:string,query:string,kind:"movie"|"tv"){
     .filter((row:SearchRecord|null):row is SearchRecord=>Boolean(row));
 }
 
+async function fetchPopular(base:string,kind:"movie"|"tv"){
+  const target=new URL("/popular",base);
+  target.searchParams.set("type",kind);
+  const response=await fetch(target.toString(),{
+    headers:{Accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(6500)
+  });
+  if(!response.ok)throw new Error("IMDb popular titles returned HTTP "+response.status);
+  const payload=await response.json();
+  return (Array.isArray(payload.results)?payload.results:[])
+    .filter((row:unknown)=>Boolean(row)&&typeof row==="object"&&!Array.isArray(row))
+    .map((row:SearchRecord)=>normalizeExternal(row,kind))
+    .filter((row:SearchRecord|null):row is SearchRecord=>Boolean(row));
+}
+
 export async function GET(request:NextRequest){
   const params=request.nextUrl.searchParams;
   const rawQuery=(params.get("q")||"").trim().replace(/\s+/g," ");
@@ -219,6 +233,7 @@ export async function GET(request:NextRequest){
   let mediaResults:SearchRecord[]=[];
   let catalogDatabase="bundled-json-fallback";
   const unavailable:string[]=[];
+  const sources:string[]=[];
 
   if(scope!=="games"){
     mediaResults=catalog.filter(item=>matchesScope(item.type,scope)).map(item=>({
@@ -260,6 +275,28 @@ export async function GET(request:NextRequest){
     }
   }
 
+  // Enrich discovery shelves with IMDb's current popular lists, not just the small bundled starter catalog.
+  if(popular&&apiBase&&(scope==="all"||scope==="movies"||scope==="tv")){
+    const types:("movie"|"tv")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:["movie","tv"];
+    const remotePopular=await Promise.all(types.map(async kind=>{
+      try{return {kind,results:await fetchPopular(apiBase,kind),failed:false};}
+      catch(error){console.error("IMDb popular catalog failed",kind,error);return {kind,results:[],failed:true};}
+    }));
+    const externalPopular=remotePopular.flatMap(entry=>{
+      if(entry.failed){unavailable.push(entry.kind==="movie"?"IMDb popular movies":"IMDb popular TV");return [];}
+      return entry.results.filter((item:SearchRecord)=>{
+        if(genre&&!textList(item.genres).some(value=>compact(value)===genre))return false;
+        if(country&&!countryMatches(item,country))return false;
+        if(year&&String(item.year||"")!==year)return false;
+        if(ageRating&&String(item.ageRating||"").toLocaleLowerCase()!==ageRating)return false;
+        return true;
+      });
+    });
+    mediaResults=mergeUnique(mediaResults,externalPopular);
+    sources.push("IMDb popular titles");
+    catalogDatabase=apiBase?"python-json+IMDb-popular":"bundled-json-fallback";
+  }
+
   let gameResults:SearchRecord[]=[];
   if(scope==="all"||scope==="games"){
     gameResults=gamesCatalog.map(game=>({
@@ -294,7 +331,6 @@ export async function GET(request:NextRequest){
 
   const externalEligible=!popular&&Boolean(apiBase)&&rawQuery.length>=2&&
     (scope==="all"||scope==="movies"||scope==="tv");
-  const sources:string[]=[];
   if(scope!=="games")sources.push("Streamivio Library");
   if(scope==="all"||scope==="games")sources.push("Games catalog");
   if(externalEligible&&apiBase){

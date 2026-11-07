@@ -50,6 +50,28 @@ The Next.js app also exposes `GET /api/title` for the selected title. For exampl
 
 The response returns a `title` object with a consistent shape for the detail dialog: synopsis, release year, genres, poster, rating, age rating, runtime, cast/directors when available, and any resolved IMDb/TMDB identifiers. It prefers the bundled catalog, enriches an exact title match with server-side IMDb metadata when the Python metadata service is configured, and safely falls back to the catalog when enrichment is unavailable. `metadata_available` makes that distinction explicit. Game records use the same detail API but remain discovery listings; they are not presented as playable video streams.
 
+## Expanded IMDb catalogue
+
+Streamivio now merges its hand-curated titles with a generated IMDb chart catalogue. The importer uses the MIT-licensed [hooshid/imdb-scraper](https://github.com/hooshid/imdb-scraper) PHP library and imports IMDb's Top 250 Movies and Top 250 TV charts (up to 500 chart entries before duplicate removal). The original hand-curated records take precedence when a title/year already exists.
+
+- Generated data: `app/data/imdb-catalog.ts`
+- Importer: `catalog-importer/import.php`
+- Dependency: `hooshid/imdb-scraper` via Composer
+- Refresh: GitHub Actions → **Refresh IMDb catalogue** → **Run workflow**, or the scheduled weekly run
+- The importer stores IMDb IDs and poster URLs from chart metadata; it does not download poster files or video files.
+- IMDb charts are a curated subset, **not the entire IMDb database**. Search can continue using the configured metadata service for titles outside the local charts.
+
+To run the importer locally (PHP 8+, Composer, cURL):
+
+```powershell
+cd catalog-importer
+composer install
+cd ..
+php catalog-importer/import.php
+```
+
+The main website already has a VidSrc embed adapter in `app/api/playback/route.ts`. It uses a resolved IMDb title ID and distinguishes provider availability from verified playback. VidSrc is an external third-party provider; Streamivio does not claim its streams are licensed or guaranteed. Only enable playback for titles you are authorized to access and distribute. IMDb metadata and poster availability do not grant streaming rights. For production, prefer licensed MP4/HLS URLs or an authorized provider.
+
 ## Search
 
 The website's `GET /api/search` endpoint supports `scope=all|movies|tv|anime|documentaries|kids|reality|games`, optional country/year/age-rating/genre filters, and sorting by best match, rating, newest year, or title. Search is case-, accent-, and punctuation-insensitive and ranks title matches above plot matches; the Python catalog also tolerates small spelling mistakes and searches overview text, genres, alternate titles, keywords, cast, and directors when those fields are present.

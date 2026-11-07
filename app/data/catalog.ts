@@ -1,3 +1,5 @@
+import { imdbCatalog } from "./imdb-catalog";
+
 export type CatalogTitle = {
   id: string;
   title: string;
@@ -10,9 +12,10 @@ export type CatalogTitle = {
   ageRating?: string;
   source: string;
   poster: string | null;
+  imdbId?: string;
 };
 
-export const catalog: CatalogTitle[] = [
+const handCuratedCatalog: CatalogTitle[] = [
   {id:"m-matrix",title:"The Matrix",overview:"A computer hacker learns that reality may be a simulation and joins a rebellion against its controllers.",year:"1999",rating:8.7,type:"movie",genres:["Action","Sci-Fi"],country:["United States"],ageRating:"R",source:"Streamivio Library",poster:null},
   {id:"m-inception",title:"Inception",overview:"A skilled thief who steals secrets through dreams is offered a chance to erase his past by planting an idea.",year:"2010",rating:8.8,type:"movie",genres:["Action","Sci-Fi","Thriller"],country:["United States","United Kingdom"],ageRating:"PG-13",source:"Streamivio Library",poster:null},
   {id:"m-interstellar",title:"Interstellar",overview:"Explorers travel beyond this galaxy to discover whether humankind can find a future among the stars.",year:"2014",rating:8.7,type:"movie",genres:["Adventure","Drama","Sci-Fi"],country:["United States","United Kingdom"],ageRating:"PG-13",source:"Streamivio Library",poster:null},
@@ -46,4 +49,11 @@ export const catalog: CatalogTitle[] = [
   {id:"a-haikyuu",title:"Haikyu!!",overview:"A short but determined volleyball player works to become a great athlete with his high-school team.",year:"2014",rating:8.7,type:"anime",genres:["Anime","Sport","Comedy"],country:["Japan"],ageRating:"TV-14",source:"Streamivio Library",poster:null},
   {id:"a-spyfamily",title:"Spy x Family",overview:"A spy, an assassin and a telepath form a pretend family while hiding their secrets from one another.",year:"2022",rating:8.3,type:"anime",genres:["Anime","Comedy","Action","Family"],country:["Japan"],ageRating:"TV-14",source:"Streamivio Library",poster:null},
   {id:"a-demon",title:"Demon Slayer",overview:"A young swordsman joins a dangerous fight against demons while seeking a cure for his sister.",year:"2019",rating:8.6,type:"anime",genres:["Anime","Action","Fantasy"],country:["Japan"],ageRating:"TV-14",source:"Streamivio Library",poster:null}
+ ];
+
+
+const curatedKeys = new Set(handCuratedCatalog.map((item) => `${item.title.trim().toLowerCase()}::${item.year}`));
+export const catalog: CatalogTitle[] = [
+  ...handCuratedCatalog,
+  ...imdbCatalog.filter((item) => !curatedKeys.has(`${item.title.trim().toLowerCase()}::${item.year}`)),
 ];
