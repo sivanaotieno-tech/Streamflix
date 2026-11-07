@@ -1,14 +1,9 @@
 "use client";
 
-import { useState } from "react";
 import { ArrowRight, Play } from "lucide-react";
 import { StreamivioLogo } from "@/components/streamivio-logo";
 
-export function OpeningScreen() {
-  const [open, setOpen] = useState(true);
-
-  if (!open) return null;
-
+export function OpeningScreen({ onEnter }: { onEnter: () => void }) {
   return (
     <section className="streamivio-opening fixed inset-0 z-[100] flex min-h-screen items-center justify-center overflow-hidden bg-[#050b14] px-5 text-white" aria-label="Welcome to Streamivio">
       <div className="opening-glow opening-glow-one" aria-hidden="true" />
@@ -24,7 +19,7 @@ export function OpeningScreen() {
         </p>
         <button
           type="button"
-          onClick={() => setOpen(false)}
+          onClick={onEnter}
           className="group mt-10 inline-flex min-h-14 items-center justify-center gap-3 rounded-full bg-sky-400 px-8 py-4 text-sm font-black tracking-wide text-[#04111d] shadow-[0_12px_40px_rgba(53,168,245,.24)] transition duration-200 hover:-translate-y-1 hover:bg-sky-300 hover:shadow-[0_16px_50px_rgba(53,168,245,.34)] focus-visible:outline focus-visible:outline-4 focus-visible:outline-offset-4 focus-visible:outline-sky-200"
         >
           Enter Streamivio
