@@ -131,6 +131,7 @@ export default function Home(){
   const playerIframeRef=useRef<HTMLIFrameElement|null>(null);
   const[list,setList]=useState<Item[]>([]);
   const [browse,setBrowse]=useState("Home");
+  const [welcomeDismissed,setWelcomeDismissed]=useState(false);
   const [loading,setLoading]=useState(true);
   const [authUser,setAuthUser]=useState<{email:string}|null>(null);
   const [authStatusLoading,setAuthStatusLoading]=useState(true);
@@ -466,7 +467,7 @@ export default function Home(){
   const detailTitle=titleDetails||selected;
 
   return <main className="min-h-screen bg-[#090b10] pb-24 lg:ml-20 lg:pb-12">
-    <OpeningScreen />
+    {!welcomeDismissed&&<OpeningScreen onEnter={()=>{setBrowse("Home");setQ("");setSelected(null);setWelcomeDismissed(true);}} />}
     <aside className="site-sidebar fixed left-0 top-0 z-50 hidden h-screen w-20 flex-col items-center border-r border-white/10 py-5 lg:flex">
       <button onClick={()=>{setBrowse("Home");setQ("");}} aria-label="Streamivio home" className="mb-10 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-lg font-black text-[#06111d] shadow-lg shadow-sky-500/20">S</button>
       <div className="flex flex-1 flex-col items-center gap-3">
