@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const normalizeTitle = (value: unknown) =>
   String(value ?? "")
-    .replace(/\\s*\\(\\d{4}\\)\\s*$/, "")
+    .replace(/\s*\(\d{4}\)\s*$/, "")
     .normalize("NFKD")
     .toLocaleLowerCase()
     .replace(/[^a-z0-9]/g, "");
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       const qid = String(item?.qid || "").toLowerCase();
       if (tv && qid && !["tvseries", "tvminiseries"].includes(qid)) return false;
       if (!tv && qid && !["movie", "tvmovie", "short"].includes(qid)) return false;
-      const candidateYear = item?.y ? String(item.y).match(/\\d{4}/)?.[0] : "";
+      const candidateYear = item?.y ? String(item.y).match(/\d{4}/)?.[0] : "";
       if (year && candidateYear && candidateYear !== year) return false;
       return true;
     });
