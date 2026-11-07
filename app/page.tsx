@@ -685,7 +685,7 @@ export default function Home(){
     </section>}
 
     {!q.trim()&&hero&&<header className="hero-shell relative mt-16 overflow-hidden">
-      <div className="hero-art absolute inset-0">{(hero.backdrop||hero.poster)&&<img src={hero.backdrop||hero.poster||""} alt="" className="h-full w-full object-cover"/>}</div>
+      <div className="hero-art absolute inset-0">{hero.backdrop||hero.poster?<img src={hero.backdrop||hero.poster||""} alt="" className="h-full w-full object-cover"/>:<CatalogPoster item={hero} className="h-full w-full opacity-40" imageClassName="h-full w-full object-cover"/>}</div>
       <div className="hero-shade absolute inset-0"/>
       <div className="hero-content relative z-10 flex h-full max-w-2xl flex-col justify-end px-5 pb-10 pt-40 sm:px-8 sm:pb-12 md:px-12 md:pb-14">
         <div className="mb-2 text-[10px] font-bold uppercase tracking-[.3em] text-sky-300">Featured premiere</div>
