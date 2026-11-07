@@ -233,6 +233,7 @@ export async function GET(request:NextRequest){
   let mediaResults:SearchRecord[]=[];
   let catalogDatabase="bundled-json-fallback";
   const unavailable:string[]=[];
+  const sources:string[]=[];
 
   if(scope!=="games"){
     mediaResults=catalog.filter(item=>matchesScope(item.type,scope)).map(item=>({
@@ -330,7 +331,6 @@ export async function GET(request:NextRequest){
 
   const externalEligible=!popular&&Boolean(apiBase)&&rawQuery.length>=2&&
     (scope==="all"||scope==="movies"||scope==="tv");
-  const sources:string[]=[];
   if(scope!=="games")sources.push("Streamivio Library");
   if(scope==="all"||scope==="games")sources.push("Games catalog");
   if(externalEligible&&apiBase){
