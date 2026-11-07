@@ -1,3 +1,5 @@
+import { imdbCatalog } from "./imdb-catalog";
+
 export type CatalogTitle = {
   id: string;
   title: string;
@@ -49,7 +51,6 @@ const handCuratedCatalog: CatalogTitle[] = [
   {id:"a-demon",title:"Demon Slayer",overview:"A young swordsman joins a dangerous fight against demons while seeking a cure for his sister.",year:"2019",rating:8.6,type:"anime",genres:["Anime","Action","Fantasy"],country:["Japan"],ageRating:"TV-14",source:"Streamivio Library",poster:null}
  ];
 
-import { imdbCatalog } from "./imdb-catalog";
 
 const curatedKeys = new Set(handCuratedCatalog.map((item) => `${item.title.trim().toLowerCase()}::${item.year}`));
 export const catalog: CatalogTitle[] = [
