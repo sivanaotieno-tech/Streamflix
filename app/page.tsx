@@ -138,6 +138,7 @@ export default function Home(){
   const[searchAgeRating,setSearchAgeRating]=useState("");
   const[searchSort,setSearchSort]=useState("relevance");
   const[searchTotal,setSearchTotal]=useState(0);
+  const[searchOffset,setSearchOffset]=useState(0);
   const[searchSources,setSearchSources]=useState<string[]>([]);
   const[searchLoading,setSearchLoading]=useState(false);
   const[searchLoadingMore,setSearchLoadingMore]=useState(false);
@@ -428,6 +429,7 @@ export default function Home(){
       const found=Array.isArray(data.results)?data.results:[];
       setResults(found);
       setSearchTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):found.length);
+      setSearchOffset(found.length);
       setSearchSources(Array.isArray(data.sources)?data.sources.filter((source:any)=>typeof source==="string"):[]);
       setSearchUnavailable(Array.isArray(data.unavailable)?data.unavailable:[]);
     }catch(error){
@@ -445,11 +447,11 @@ export default function Home(){
   };
 
   const loadMoreSearch=async()=>{
-    if(searchLoadingMore||searchLoading||results.length>=searchTotal||q.trim().length<2)return;
+    if(searchLoadingMore||searchLoading||searchOffset>=searchTotal||q.trim().length<2)return;
     setSearchLoadingMore(true);
     setSearchError("");
     try{
-      const params=new URLSearchParams({q:q.trim(),scope:searchCategory,limit:"60",offset:String(results.length)});
+      const params=new URLSearchParams({q:q.trim(),scope:searchCategory,limit:"60",offset:String(searchOffset)});
       if(searchCountry.trim())params.set("country",searchCountry.trim());
       if(searchYear.trim())params.set("year",searchYear.trim());
       if(searchAgeRating)params.set("age_rating",searchAgeRating);
@@ -460,6 +462,7 @@ export default function Home(){
       const found=Array.isArray(data.results)?data.results: [];
       setResults(current=>[...current,...found.filter((item:any)=>!current.some(existing=>String(existing.id)===String(item.id)))]);
       setSearchTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):searchTotal);
+      setSearchOffset(searchOffset+found.length);
       setSearchSources(Array.isArray(data.sources)?data.sources.filter((source:any)=>typeof source==="string"):[]);
       setSearchUnavailable(Array.isArray(data.unavailable)?data.unavailable:[]);
     }catch(error){
@@ -678,7 +681,7 @@ export default function Home(){
             : searchUnavailable.length>0
               ? <p className="text-sm text-zinc-500">No matches were returned because one or more selected sources are unavailable. Try again later.</p>
               : <p className="text-sm text-zinc-500">No matches for “{q.trim()}”. Try fewer words, check the spelling, choose All, or remove a filter.</p>}
-      {results.length>0&&results.length<searchTotal&&<div className="mt-6 flex justify-center"><button type="button" onClick={()=>void loadMoreSearch()} disabled={searchLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{searchLoadingMore?"Loading…":"Load more results"}</button></div>}
+      {results.length>0&&searchOffset<searchTotal&&<div className="mt-6 flex justify-center"><button type="button" onClick={()=>void loadMoreSearch()} disabled={searchLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{searchLoadingMore?"Loading…":"Load more results"}</button></div>}
     </section>}
 
     {!q.trim()&&hero&&<header className="hero-shell relative mt-16 overflow-hidden">
