@@ -3,7 +3,7 @@ declare(strict_types=1);
 
 require __DIR__ . '/vendor/autoload.php';
 
-use Hooshid\\ImdbScraper\\Chart;
+use Hooshid\ImdbScraper\Chart;
 
 $root = dirname(__DIR__);
 $output = $root . '/app/data/imdb-catalog.ts';
