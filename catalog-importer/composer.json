@@ -1,0 +1,20 @@
+{
+  "name": "streamivio/imdb-catalog-importer",
+  "description": "Build-time IMDb chart metadata importer for Streamivio",
+  "type": "project",
+  "license": "MIT",
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/hooshid/imdb-scraper"
+    }
+  ],
+  "require": {
+    "php": ">=8.0",
+    "ext-curl": "*",
+    "ext-json": "*",
+    "hooshid/imdb-scraper": "dev-master"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true
+}
