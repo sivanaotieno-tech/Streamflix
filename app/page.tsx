@@ -59,6 +59,53 @@ const formatSeconds=(value:number)=>{
 };
 
 const MOVIE_GENRES=[["All",""],["Action","action"],["Comedy","comedy"],["Drama","drama"],["Horror","horror"],["Romance","romance"],["Sci-Fi","sci_fi"],["Thriller","thriller"]] as const;
+function CatalogPoster({item,className,imageClassName}:{item:Item;className:string;imageClassName:string}){
+  const[poster,setPoster]=useState<string|null>(item.poster||null);
+  const[requested,setRequested]=useState(Boolean(item.poster));
+  const[fromLookup,setFromLookup]=useState(false);
+  const node=useRef<HTMLDivElement|null>(null);
+
+  useEffect(()=>{
+    setPoster(item.poster||null);
+    setRequested(Boolean(item.poster));
+    setFromLookup(false);
+  },[item.id,item.poster]);
+
+  useEffect(()=>{
+    if(poster||requested||isGameItem(item))return;
+    const target=node.current;
+    if(!target||typeof IntersectionObserver==="undefined")return;
+    let cancelled=false;
+    const observer=new IntersectionObserver(entries=>{
+      if(!entries.some(entry=>entry.isIntersecting))return;
+      observer.disconnect();
+      setRequested(true);
+      const params=new URLSearchParams({
+        title:String(item.title||item.name||""),
+        year:String(item.year||""),
+        type:String(item.type||item.media_type||"movie")
+      });
+      fetch("/api/poster?"+params.toString(),{cache:"force-cache"})
+        .then(async response=>response.ok?response.json():{poster:null})
+        .then(payload=>{
+          if(!cancelled&&typeof payload.poster==="string"&&payload.poster.startsWith("https://")){
+            setPoster(payload.poster);
+            setFromLookup(true);
+          }
+        })
+        .catch(()=>{});
+    },{rootMargin:"240px"});
+    observer.observe(target);
+    return()=>{cancelled=true;observer.disconnect();};
+  },[poster,requested,item.id,item.title,item.name,item.year,item.type,item.media_type]);
+
+  return <div ref={node} className={className}>
+    {poster
+      ? <img src={poster} alt={String(item.title||item.name||"")} className={imageClassName} loading="lazy" onError={()=>{setPoster(null);if(!fromLookup)setRequested(false);}}/>
+      : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-black"><Film className="h-10 w-10 text-zinc-700"/></div>}
+  </div>;
+}
+
 function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>void}){
   if(items.length===0)return null;
   return <section className="mb-7">
@@ -68,8 +115,8 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
     </div>
     <div className="scrollbar-hide flex gap-2 overflow-x-auto px-4 pb-5 md:gap-3 md:px-12">
       {items.map(m=><button key={String(m.id)} onClick={()=>onOpen(m)} className="catalog-card group min-w-[31vw] text-left sm:min-w-[19vw] md:min-w-[14vw] lg:min-w-[12vw]">
-        <div className="relative aspect-video overflow-hidden rounded-md bg-zinc-900">
-          {m.poster?<img src={m.poster} className="h-full w-full object-cover transition duration-500 group-hover:scale-105" alt={m.title||m.name||""}/>:<div className="flex h-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-black"><Film className="h-12 w-12 text-zinc-700"/></div>}
+        <div className="relative aspect-[2/3] overflow-hidden rounded-md bg-zinc-900">
+          <CatalogPoster item={m} className="h-full w-full" imageClassName="h-full w-full object-cover transition duration-500 group-hover:scale-105"/>
           <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10"/>
           <span className="absolute bottom-2 left-2 right-2 truncate text-xs font-bold drop-shadow md:bottom-3 md:left-3 md:text-sm">{m.title||m.name}</span>
           <span className="poster-play absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100"><span className="rounded-full border border-white/80 bg-black/60 p-2"><Play className="h-4 w-4 fill-white"/></span></span>
@@ -93,11 +140,14 @@ export default function Home(){
   const[searchTotal,setSearchTotal]=useState(0);
   const[searchSources,setSearchSources]=useState<string[]>([]);
   const[searchLoading,setSearchLoading]=useState(false);
+  const[searchLoadingMore,setSearchLoadingMore]=useState(false);
   const[searchUnavailable,setSearchUnavailable]=useState<string[]>([]);
   const[searchFiltersOpen,setSearchFiltersOpen]=useState(false);
   const[searchError,setSearchError]=useState("");
   const[movieGenre,setMovieGenre]=useState("");
   const[movieShelfLoading,setMovieShelfLoading]=useState(false);
+  const[movieTotal,setMovieTotal]=useState(0);
+  const[movieLoadingMore,setMovieLoadingMore]=useState(false);
   const[gamesLoading,setGamesLoading]=useState(true);
   const searchAbort=useRef<AbortController|null>(null);
   const searchTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -153,6 +203,12 @@ export default function Home(){
     setAuthUser(null);
   };
 
+  const providerSeasons=Array.isArray(vidsrcInfo?.seasons)?vidsrcInfo.seasons:[];
+  const isJujutsuKaisen=/jujutsu kaisen/i.test(String(selected?.title||selected?.name||""));
+  const seasonNumbers=new Set<number>(providerSeasons.map((entry:any)=>Number(entry?.season??entry)).filter((value:number)=>Number.isInteger(value)&&value>0));
+  if(isJujutsuKaisen){seasonNumbers.add(1);seasonNumbers.add(2);seasonNumbers.add(3);}
+  const seasonOptions=Array.from(seasonNumbers).sort((a,b)=>a-b).map(season=>({season}));
+
   const get=async(s:string,p:string)=>{
     const r=await fetch("/api/catalog?source="+s+"&path="+encodeURIComponent(p));
     if(!r.ok)throw Error();
@@ -160,7 +216,7 @@ export default function Home(){
   };
 
   const play=(m:Item)=>{
-    setSelected(m);setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");
+    setSelected(m);setSeason("");setEpisode("");setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");
     setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(0);setPendingDirectResume(0);setStartAt("");
   };
 
@@ -361,7 +417,7 @@ export default function Home(){
     setSearchLoading(true);
     setSearchError("");
     try{
-      const params=new URLSearchParams({q:query.trim(),scope:category});
+      const params=new URLSearchParams({q:query.trim(),scope:category,limit:"60",offset:"0"});
       if(country.trim())params.set("country",country.trim());
       if(year.trim())params.set("year",year.trim());
       if(ageRating)params.set("age_rating",ageRating);
@@ -388,6 +444,55 @@ export default function Home(){
     }
   };
 
+  const loadMoreSearch=async()=>{
+    if(searchLoadingMore||searchLoading||results.length>=searchTotal||q.trim().length<2)return;
+    setSearchLoadingMore(true);
+    setSearchError("");
+    try{
+      const params=new URLSearchParams({q:q.trim(),scope:searchCategory,limit:"60",offset:String(results.length)});
+      if(searchCountry.trim())params.set("country",searchCountry.trim());
+      if(searchYear.trim())params.set("year",searchYear.trim());
+      if(searchAgeRating)params.set("age_rating",searchAgeRating);
+      if(searchSort)params.set("sort",searchSort);
+      const response=await fetch("/api/search?"+params.toString(),{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"More results could not be loaded");
+      const found=Array.isArray(data.results)?data.results: [];
+      setResults(current=>[...current,...found.filter((item:any)=>!current.some(existing=>String(existing.id)===String(item.id)))]);
+      setSearchTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):searchTotal);
+      setSearchSources(Array.isArray(data.sources)?data.sources.filter((source:any)=>typeof source==="string"):[]);
+      setSearchUnavailable(Array.isArray(data.unavailable)?data.unavailable:[]);
+    }catch(error){
+      setSearchError(error instanceof Error?error.message:"More results could not be loaded.");
+    }finally{
+      setSearchLoadingMore(false);
+    }
+  };
+
+  const loadMoreMovies=async()=>{
+    if(movieLoadingMore)return;
+    const current=rows["Movies to Explore"]||[];
+    setMovieLoadingMore(true);
+    try{
+      const params=new URLSearchParams({scope:"movies",popular:"1",limit:"60",offset:String(current.length)});
+      if(movieGenre)params.set("genre",movieGenre);
+      const response=await fetch("/api/search?"+params.toString(),{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"More movies could not be loaded");
+      const next=Array.isArray(data.results)?data.results as Item[]:[];
+      setRows(previous=>{
+        const existing=previous["Movies to Explore"]||[];
+        const ids=new Set(existing.map(item=>String(item.id)));
+        return {...previous,"Movies to Explore":[...existing,...next.filter(item=>!ids.has(String(item.id)))]};
+      });
+      setMovieTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):current.length+next.length);
+    }catch(error){
+      console.error("More Streamivio movies could not be loaded",error);
+    }finally{
+      setMovieLoadingMore(false);
+    }
+  };
+
   useEffect(()=>{
     fetch("/api/search?scope=anime&popular=1")
       .then(async response=>{
@@ -401,7 +506,7 @@ export default function Home(){
   },[]);
 
   useEffect(()=>{
-    const params=new URLSearchParams({scope:"movies",popular:"1"});
+    const params=new URLSearchParams({scope:"movies",popular:"1",limit:"60",offset:"0"});
     if(movieGenre)params.set("genre",movieGenre);
     setMovieShelfLoading(true);
     fetch("/api/search?"+params.toString())
@@ -410,6 +515,7 @@ export default function Home(){
         if(!response.ok)throw new Error(data.error||"Local movie catalog unavailable");
         const movies=Array.isArray(data.results)?data.results as Item[]:[];
         setRows(current=>({...current,"Movies to Explore":movies}));
+        setMovieTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):movies.length);
         setHero(current=>current||movies[0]||null);
       })
       .catch(error=>console.error("Local movie catalog could not be loaded",error))
@@ -562,7 +668,7 @@ export default function Home(){
           : results.length>0
             ? <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6">{results.map(m=><button onClick={()=>void play(m)} key={String(m.id)} className="group min-w-0 text-left">
                 <div className="relative aspect-[2/3] overflow-hidden rounded bg-zinc-900">
-                  {m.poster?<img src={m.poster} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" alt={m.title||m.name||""}/>:<div className="flex h-full items-center justify-center"><Film className="h-10 w-10 text-zinc-700"/></div>}
+                  <CatalogPoster item={m} className="h-full w-full" imageClassName="h-full w-full object-cover transition duration-300 group-hover:scale-105"/>
                   <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"/>
                   <span className="absolute bottom-2 left-2 right-2 truncate text-xs font-bold">{m.title||m.name}</span>
                 </div>
@@ -572,6 +678,7 @@ export default function Home(){
             : searchUnavailable.length>0
               ? <p className="text-sm text-zinc-500">No matches were returned because one or more selected sources are unavailable. Try again later.</p>
               : <p className="text-sm text-zinc-500">No matches for “{q.trim()}”. Try fewer words, check the spelling, choose All, or remove a filter.</p>}
+      {results.length>0&&results.length<searchTotal&&<div className="mt-6 flex justify-center"><button type="button" onClick={()=>void loadMoreSearch()} disabled={searchLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{searchLoadingMore?"Loading…":"Load more results"}</button></div>}
     </section>}
 
     {!q.trim()&&hero&&<header className="hero-shell relative mt-16 overflow-hidden">
@@ -615,6 +722,7 @@ export default function Home(){
             || (browse==="Games"&&title==="Games Spotlight")
 )
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
+      {!q.trim()&&browse==="Movies"&&(rows["Movies to Explore"]?.length||0)<movieTotal&&<div className="flex justify-center py-6"><button type="button" onClick={()=>void loadMoreMovies()} disabled={movieLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{movieLoadingMore?"Loading movies…":"Load more movies"}</button></div>}
     </div>}
 
 
@@ -662,7 +770,7 @@ export default function Home(){
             <label className="grid gap-1 text-xs text-zinc-300">Season
               <select value={season} onChange={e=>{setSeason(e.target.value);setEpisode("");}} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm">
                 <option value="">Show season/episode picker</option>
-                {(Array.isArray(vidsrcInfo?.seasons)?vidsrcInfo.seasons:[]).map((entry:any)=><option key={entry.season} value={String(entry.season)}>Season {entry.season}</option>)}
+                {seasonOptions.map((entry:any)=><option key={entry.season} value={String(entry.season)}>Season {entry.season}</option>)}
               </select>
             </label>
             <label className="grid gap-1 text-xs text-zinc-300">Episode
@@ -691,7 +799,7 @@ export default function Home(){
         <span>Saved playback position: {formatSeconds(resumeSeconds)}</span>
         <button type="button" onClick={()=>void startPlayback(resumeSeconds)} disabled={playbackLoading} className="rounded bg-zinc-700 px-3 py-1.5 font-semibold disabled:opacity-50">Resume</button>
       </div>}
-      {isTvItem(selected)&&Array.isArray(vidsrcInfo?.seasons)&&<div className="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:grid-cols-2"><label className="grid gap-1 text-xs text-zinc-300">Season<select value={season} onChange={e=>{setSeason(e.target.value);setEpisode("");}} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"><option value="">Choose a season</option>{vidsrcInfo.seasons.map((entry:any)=><option key={entry.season} value={String(entry.season)}>Season {entry.season}</option>)}</select></label><label className="grid gap-1 text-xs text-zinc-300">Episode<input type="number" min="1" inputMode="numeric" disabled={!season} value={episode} onChange={e=>setEpisode(e.target.value)} placeholder="Episode number" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm disabled:opacity-50"/></label><p className="text-[11px] text-zinc-500 sm:col-span-2">Choose a season and episode, then select Play to load that episode in the player.</p></div>}
+      {isTvItem(selected)&&seasonOptions.length>0&&<div className="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:grid-cols-2"><label className="grid gap-1 text-xs text-zinc-300">Season<select value={season} onChange={e=>{setSeason(e.target.value);setEpisode("");}} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"><option value="">Choose a season</option>{seasonOptions.map((entry:any)=><option key={entry.season} value={String(entry.season)}>Season {entry.season}</option>)}</select></label><label className="grid gap-1 text-xs text-zinc-300">Episode<input type="number" min="1" inputMode="numeric" disabled={!season} value={episode} onChange={e=>setEpisode(e.target.value)} placeholder="Episode number" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm disabled:opacity-50"/></label><p className="text-[11px] text-zinc-500 sm:col-span-2">Choose a season and episode, then select Play to load that episode in the player.</p></div>}
       {vidsrcInfoLoading&&<p role="status" className="mt-3 text-xs text-zinc-400">Checking VidSrc availability and quality…</p>}
       {vidsrcInfo&&<div className="mt-3 rounded border border-white/10 px-3 py-2 text-xs text-zinc-300">
         <div className="flex flex-wrap gap-3"><span className="font-semibold text-emerald-300">VidSrc reports this title as available</span>{vidsrcInfo.quality&&<span>Best reported quality: {vidsrcInfo.quality}</span>}{vidsrcInfo.year&&<span>{vidsrcInfo.year}</span>}</div>
