@@ -760,7 +760,7 @@ export default function Home(){
       {detailError&&<p role="status" className="mt-4 text-sm text-amber-300">{detailError}</p>}
       <div className="mt-4 rounded-lg border border-white/10 bg-black/20">
         <button type="button" onClick={()=>setVidSrcOptionsOpen(open=>!open)} aria-expanded={vidsrcOptionsOpen} className="flex w-full items-center justify-between gap-4 px-4 py-3 text-left text-sm font-semibold">
-          <span>VidSrc player settings</span><span className="text-xs text-zinc-400">{vidsrcOptionsOpen?"Hide options":"Subtitles, resume, episodes"}</span>
+          <span>Playback settings</span><span className="text-xs text-zinc-400">{vidsrcOptionsOpen?"Hide options":"Subtitles, resume, episodes"}</span>
         </button>
         {vidsrcOptionsOpen&&<div className="grid gap-4 border-t border-white/10 p-4 sm:grid-cols-2">
           <label className="grid gap-1 text-xs text-zinc-300">Subtitle language or priority list
@@ -813,11 +813,12 @@ export default function Home(){
       {vidsrcInfoError&&<p role="status" className="mt-3 text-xs text-amber-300">{vidsrcInfoError}</p>}
       {playbackUrl&&<div className="mt-5 overflow-hidden rounded-lg bg-black">
         {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0){video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
-        <p className="px-3 py-2 text-xs text-zinc-400">VidSrc quality controls and built-in subtitles are provided by the embedded player. Availability and playback can vary by title and region.</p>
+        <p className="px-3 py-2 text-xs text-zinc-400">Playback controls and available subtitle options are provided by the video player. Availability can vary by title and region.</p>
       </div>}
       {playbackError&&<p role="status" className="mt-4 text-sm text-amber-300">{playbackError}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
         
+        {/one piece/i.test(String(selected.title||selected.name||""))&&<a href="/anime/one-piece" className="flex items-center gap-2 rounded border border-amber-400/50 px-5 py-2 font-bold text-amber-200 hover:bg-amber-400/10">One Pace Edition</a>}
         {!isGameItem(selected)&&<button onClick={()=>void startPlayback()} disabled={playbackLoading} className="flex items-center gap-2 rounded bg-[#e50914] px-5 py-2 font-bold disabled:opacity-60"><Play className="h-4 w-4 fill-current"/>{playbackLoading?"Checking source…":playbackUrl?"Reload player":"Play"}</button>}
         {isGameItem(selected)&&<p className="self-center text-xs text-zinc-400">Game discovery only — Streamivio does not stream playable game builds.</p>}
         <button onClick={()=>setSelected(null)} className="rounded bg-zinc-700 px-5 py-2 font-bold">Close</button>
