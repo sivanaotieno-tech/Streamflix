@@ -6,7 +6,7 @@ const ONE_PACE_WATCH_URL = "https://onepace.net/en/watch";
 const ONE_PACE_RELEASES_URL = "https://onepace.net/en/releases";
 const ONE_PACE_RSS_URL = "https://onepace.net/en/releases/rss.xml";
 
-const ARCS = [
+const FALLBACK_ARCS = [
   "Romance Dawn", "Orange Town", "Syrup Village", "Gaimon", "Baratie",
   "Arlong Park", "The Adventures of Buggy's Crew", "Loguetown",
   "Reverse Mountain", "Whisky Peak", "The Trials of Koby-Meppo",
@@ -18,9 +18,11 @@ const ARCS = [
   "Zou", "Whole Cake Island", "Reverie", "Wano", "Egghead",
 ];
 
+type StreamLink = { label: string; url: string };
+type Arc = { title: string; streams: StreamLink[] };
 type Release = { title: string; date: string; url: string };
 
-function decodeXml(value: string) {
+function decodeHtml(value: string) {
   return value
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/&amp;/g, "&")
@@ -28,12 +30,48 @@ function decodeXml(value: string) {
     .replace(/&#39;|&apos;/g, "'")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
-    .trim();
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) => String.fromCodePoint(parseInt(hex, 16)))
+    .replace(/&#(\d+);/g, (_, num) => String.fromCodePoint(Number(num)));
+}
+
+function plainText(value: string) {
+  return decodeHtml(value.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")).trim();
+}
+
+async function getOfficialArcs(): Promise<Arc[]> {
+  try {
+    const response = await fetch(ONE_PACE_WATCH_URL, {
+      headers: { Accept: "text/html" },
+      next: { revalidate: 1800 },
+      signal: AbortSignal.timeout(6500),
+    });
+    if (!response.ok) return [];
+    const html = await response.text();
+    const sections = [...html.matchAll(/<h2\b[^>]*>([\s\S]*?)<\/h2>([\s\S]*?)(?=<h2\b|$)/gi)];
+    return sections.flatMap((section) => {
+      const title = plainText(section[1]);
+      if (!title || /^watch$/i.test(title)) return [];
+      const body = section[2];
+      const streams = [...body.matchAll(/<a\b[^>]*href=["'](https?:\/\/(?:www\.)?pixeldrain\.(?:net|com)\/l\/[^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi)]
+        .flatMap((match) => {
+          try {
+            const url = new URL(decodeHtml(match[1]));
+            if (url.protocol !== "https:" || !/(^|\.)pixeldrain\.(net|com)$/i.test(url.hostname) || !url.pathname.startsWith("/l/")) return [];
+            return [{ label: plainText(match[2]) || "Watch stream", url: url.toString() }];
+          } catch {
+            return [];
+          }
+        });
+      return [{ title, streams }];
+    });
+  } catch {
+    return [];
+  }
 }
 
 function readTag(block: string, tag: string) {
   const match = block.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "i"));
-  return match ? decodeXml(match[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")) : "";
+  return match ? plainText(match[1]) : "";
 }
 
 async function getLatestReleases(): Promise<Release[]> {
@@ -55,8 +93,7 @@ async function getLatestReleases(): Promise<Release[]> {
       const rawUrl = atomLink || linkText || ONE_PACE_RELEASES_URL;
       try {
         const parsed = new URL(rawUrl, ONE_PACE_RELEASES_URL);
-        if (parsed.protocol !== "https:" || parsed.hostname !== "onepace.net") return [];
-        if (!title) return [];
+        if (parsed.protocol !== "https:" || parsed.hostname !== "onepace.net" || !title) return [];
         return [{ title, date, url: parsed.toString() }];
       } catch {
         return [];
@@ -79,7 +116,9 @@ function getLocalHubUrl() {
 }
 
 export default async function OnePiecePage() {
-  const [releases, localHubUrl] = await Promise.all([getLatestReleases(), Promise.resolve(getLocalHubUrl())]);
+  const [officialArcs, releases] = await Promise.all([getOfficialArcs(), getLatestReleases()]);
+  const localHubUrl = getLocalHubUrl();
+  const arcs = officialArcs.length ? officialArcs : FALLBACK_ARCS.map((title) => ({ title, streams: [] }));
 
   return (
     <main className="min-h-screen bg-[#101014] px-4 py-6 text-white sm:px-8 md:px-12">
@@ -94,15 +133,15 @@ export default async function OnePiecePage() {
           <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-6xl">ONE PACE</h1>
           <p className="mt-4 max-w-2xl text-sm leading-7 text-zinc-300 sm:text-base">
             Follow the Straw Hats in the fan-edited version that trims anime-only padding and follows the manga more closely.
-            Streamivio links to the project's own releases instead of copying or re-hosting its video files.
+            This page reads the arc and stream links from the One Pace project's own Watch page, so new availability can appear without copying its video files.
           </p>
           <div className="mt-7 flex flex-wrap gap-3">
-            <a href={ONE_PACE_WATCH_URL} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-[#e50914] px-5 py-3 text-sm font-bold hover:bg-red-700">Watch One Pace</a>
+            <a href={ONE_PACE_WATCH_URL} target="_blank" rel="noopener noreferrer" className="rounded-lg bg-[#e50914] px-5 py-3 text-sm font-bold hover:bg-red-700">Official One Pace Watch page</a>
             <a href={ONE_PACE_RELEASES_URL} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-white/20 px-5 py-3 text-sm font-bold hover:bg-white/10">All releases</a>
             {localHubUrl && <a href={localHubUrl} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-amber-300/40 px-5 py-3 text-sm font-bold text-amber-200 hover:bg-amber-300/10">Open my One Pace library</a>}
           </div>
           <p className="mt-4 text-xs leading-5 text-zinc-500">
-            The official Watch page provides the project's own Pixeldrain options for available arcs, including subtitle and dub choices where released.
+            Stream buttons open the project's own Pixeldrain links. Language, dub, and quality options vary by arc.
           </p>
         </div>
 
@@ -111,17 +150,25 @@ export default async function OnePiecePage() {
             <div className="mb-4 flex items-end justify-between gap-4">
               <div>
                 <p className="text-xs font-bold uppercase tracking-[.2em] text-amber-300">Grand Line route</p>
-                <h2 className="mt-1 text-2xl font-bold">Arc guide</h2>
+                <h2 className="mt-1 text-2xl font-bold">Watch by arc</h2>
               </div>
-              <span className="text-xs text-zinc-500">{ARCS.length} arcs listed</span>
+              <span className="text-xs text-zinc-500">{arcs.length} arcs</span>
             </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {ARCS.map((arc, index) => (
-                <a key={arc} href={ONE_PACE_WATCH_URL} target="_blank" rel="noopener noreferrer" className="group flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.035] px-4 py-3 transition hover:border-amber-300/40 hover:bg-white/[.07]">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-amber-200">{String(index + 1).padStart(2, "0")}</span>
-                  <span className="min-w-0 flex-1 text-sm font-semibold">{arc}</span>
-                  <span className="text-xs text-zinc-500 group-hover:text-amber-200">Official list ↗</span>
-                </a>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {arcs.map((arc, index) => (
+                <article key={arc.title} className="rounded-xl border border-white/10 bg-white/[.035] p-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 text-xs font-bold text-amber-200">{String(index + 1).padStart(2, "0")}</span>
+                    <h3 className="min-w-0 flex-1 text-sm font-semibold">{arc.title}</h3>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {arc.streams.length ? arc.streams.map((stream) => (
+                      <a key={stream.url} href={stream.url} target="_blank" rel="noopener noreferrer" className="rounded-md border border-amber-300/30 px-2.5 py-1.5 text-xs font-semibold text-amber-200 hover:bg-amber-300/10">{stream.label}</a>
+                    )) : (
+                      <a href={ONE_PACE_WATCH_URL} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-amber-200 hover:text-white">Open official arc streams ↗</a>
+                    )}
+                  </div>
+                </article>
               ))}
             </div>
           </section>
@@ -149,7 +196,7 @@ export default async function OnePiecePage() {
               <p className="text-xs font-bold uppercase tracking-[.2em] text-amber-300">Storage-friendly setup</p>
               <h2 className="mt-1 text-xl font-bold">No giant download required</h2>
               <p className="mt-3 text-sm leading-6 text-zinc-400">
-                Use the official hosted streams for now. For a private in-site player later, connect a separate One Pace Hub on your Windows PC and keep only the episodes you choose locally; Vercel should host the catalogue and interface, not the video files.
+                Use the project's hosted streams now. For a private in-site player later, connect a separate One Pace Hub on your Windows PC and keep only the episodes you choose locally; Vercel should host the catalogue and interface, not the video files.
               </p>
               {!localHubUrl && <p className="mt-3 text-xs text-zinc-500">A private library connection can be added with the NEXT_PUBLIC_ONE_PACE_HUB_URL environment variable once that server is running.</p>}
             </div>
