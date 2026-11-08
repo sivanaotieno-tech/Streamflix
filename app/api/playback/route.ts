@@ -21,8 +21,9 @@ const normalizeTitle = (value: string) =>
     .replace(/[^a-z0-9]/g, "");
 
 const isImdbId = (value: unknown): value is string =>
+  typeof value === "string" && /^tt\d{5,12}$/i.test(value);
 
-async function resolveConfiguredSbr(imdbId: string) {
+async function resolveConfiguredSource(imdbId: string) {
   const base = (process.env.STREAMIVIO_RESOLVER_URL || "").replace(/\\/+$/, "");
   if (!base) return null;
   try {
@@ -48,7 +49,6 @@ async function resolveConfiguredSbr(imdbId: string) {
     return null;
   }
 }
-  typeof value === "string" && /^tt\d{5,12}$/i.test(value);
 
 const isTvType = (value: string) =>
   ["tv", "tvshow", "tv show", "series", "tvseries", "tvminiseries", "anime", "documentary", "documentaries", "kids", "reality"].includes(value.replaceAll(" ", "").trim());
@@ -273,9 +273,9 @@ export async function GET(request: NextRequest) {
   // Prefer IDs supplied by title metadata, then IDs stored in the website catalog.
   const storedImdbId = suppliedImdbId || (local as any)?.imdb_id || (local as any)?.imdbId;
   if (isImdbId(storedImdbId)) {
-    // SBR is tried before the external iframe. It only returns URLs explicitly
+    // The configured source is tried before the external iframe. It only returns URLs explicitly
     // configured in the authorized catalog; it does not extract third-party streams.
-    const resolved = await resolveConfiguredSbr(storedImdbId);
+    const resolved = await resolveConfiguredSource(storedImdbId);
     if (resolved) {
       return NextResponse.json({
         available: true,
