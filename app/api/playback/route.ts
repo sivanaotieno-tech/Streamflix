@@ -21,6 +21,33 @@ const normalizeTitle = (value: string) =>
     .replace(/[^a-z0-9]/g, "");
 
 const isImdbId = (value: unknown): value is string =>
+
+async function resolveConfiguredSbr(imdbId: string) {
+  const base = (process.env.STREAMIVIO_RESOLVER_URL || "").replace(/\\/+$/, "");
+  if (!base) return null;
+  try {
+    const endpoint = new URL("/stream/" + encodeURIComponent(imdbId), base);
+    const response = await fetch(endpoint, {
+      cache: "no-store",
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!response.ok) return null;
+    const payload: any = await response.json();
+    if (payload?.available !== true || !isSafeHttps(String(payload?.stream_url || ""))) return null;
+    const streamUrl = String(payload.stream_url);
+    const path = new URL(streamUrl).pathname.toLowerCase();
+    const format = payload.format === "hls" || path.endsWith(".m3u8")
+      ? "hls"
+      : payload.format === "mp4" || path.endsWith(".mp4")
+        ? "mp4"
+        : "external";
+    return { stream_url: streamUrl, format };
+  } catch (error) {
+    console.error("Streamivio configured resolver request failed:", error);
+    return null;
+  }
+}
   typeof value === "string" && /^tt\d{5,12}$/i.test(value);
 
 const isTvType = (value: string) =>
@@ -77,13 +104,13 @@ async function embedResponse(
 
     if (infoResponse.status === 404) {
       return NextResponse.json(
-        { available: false, provider: "vidsrc", provider_available: false, error: "VidSrc does not list this title or episode." },
+        { available: false, provider_available: false, error: "This title or episode is not currently available." },
         { status: 404, headers: { "Cache-Control": "no-store" } },
       );
     }
     if (!infoResponse.ok) {
       return NextResponse.json(
-        { available: false, provider: "vidsrc", provider_available: false, error: "VidSrc availability could not be verified.", provider_status: infoResponse.status },
+        { available: false, provider_available: false, error: "Playback availability could not be verified.", provider_status: infoResponse.status },
         { status: 503, headers: { "Cache-Control": "no-store" } },
       );
     }
@@ -92,7 +119,7 @@ async function embedResponse(
     const reportedId = String(info?.imdb_id || "");
     if (reportedId && reportedId.toLowerCase() !== imdbId.toLowerCase()) {
       return NextResponse.json(
-        { available: false, provider: "vidsrc", error: "VidSrc returned a different IMDb title identifier." },
+        { available: false, error: "The playback service returned a mismatched title identifier." },
         { status: 502, headers: { "Cache-Control": "no-store" } },
       );
     }
@@ -106,7 +133,7 @@ async function embedResponse(
         available: true,
         provider_available: true,
         playback_verified: false,
-        provider: "vidsrc",
+        
         format: "iframe",
         embed_url: playerUrl,
         content_id: imdbId,
@@ -127,9 +154,9 @@ async function embedResponse(
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {
-    console.error("Streamivio VidSrc availability check failed:", error);
+    console.error("Streamivio playback availability check failed:", error);
     return NextResponse.json(
-      { available: false, provider: "vidsrc", provider_available: false, error: "VidSrc could not be reached, so playback availability remains unconfirmed." },
+      { available: false, provider_available: false, error: "Playback service is temporarily unavailable; availability could not be confirmed." },
       { status: 503, headers: { "Cache-Control": "no-store" } },
     );
   }
@@ -246,6 +273,19 @@ export async function GET(request: NextRequest) {
   // Prefer IDs supplied by title metadata, then IDs stored in the website catalog.
   const storedImdbId = suppliedImdbId || (local as any)?.imdb_id || (local as any)?.imdbId;
   if (isImdbId(storedImdbId)) {
+    // SBR is tried before the external iframe. It only returns URLs explicitly
+    // configured in the authorized catalog; it does not extract third-party streams.
+    const resolved = await resolveConfiguredSbr(storedImdbId);
+    if (resolved) {
+      return NextResponse.json({
+        available: true,
+        playback_verified: false,
+        stream_url: resolved.stream_url,
+        format: resolved.format,
+        content_id: storedImdbId,
+        title: catalogTitle,
+      }, { headers: { "Cache-Control": "no-store" } });
+    }
     return embedResponse(storedImdbId, resolvedKind, { title: catalogTitle, source: suppliedImdbId ? "title-metadata" : "website-catalog" }, season && episode ? { season, episode } : undefined, playerOptions);
   }
 
