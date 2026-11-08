@@ -20,7 +20,8 @@ from fastapi.middleware.cors import CORSMiddleware
 
 APP_DIR = Path(__file__).resolve().parent
 CATALOG_PATH = Path(os.getenv("STREAMIVIO_CATALOG_PATH", str(APP_DIR.parent / "pymoviedb-service" / "data" / "catalog.json")))
-CACHE_PATH = Path(os.getenv("STREAMIVIO_STREAM_CACHE", str(APP_DIR / "stream_cache.sqlite3")))
+CACHE_DEFAULT = "/tmp/streamivio_stream_cache.sqlite3" if os.getenv("VERCEL") else str(APP_DIR / "stream_cache.sqlite3")
+CACHE_PATH = Path(os.getenv("STREAMIVIO_STREAM_CACHE", CACHE_DEFAULT))
 CACHE_TTL_SECONDS = max(30, int(os.getenv("STREAMIVIO_CACHE_TTL", "300")))
 IMDB_RE = re.compile(r"^tt[0-9]+$", re.I)
 
