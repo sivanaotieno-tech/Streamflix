@@ -24,7 +24,7 @@ const isImdbId = (value: unknown): value is string =>
   typeof value === "string" && /^tt\d{5,12}$/i.test(value);
 
 async function resolveConfiguredSource(imdbId: string) {
-  const base = (process.env.STREAMIVIO_RESOLVER_URL || "").replace(/\\/+$/, "");
+  const base = (process.env.STREAMIVIO_RESOLVER_URL || "").replace(/\/+$/, "");
   if (!base) return null;
   try {
     const endpoint = new URL("/stream/" + encodeURIComponent(imdbId), base);
