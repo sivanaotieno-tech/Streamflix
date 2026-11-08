@@ -366,12 +366,12 @@ export default function Home(){
     fetch("/api/playback/info?"+params.toString(),{signal:controller.signal,cache:"no-store"})
       .then(async response=>{
         const payload=await response.json().catch(()=>({}));
-        if(!response.ok)throw new Error(payload.message||"VidSrc reports no information for this title.");
+        if(!response.ok)throw new Error(payload.message||"No playback information is available for this title.");
         setVidSrcInfo((current:any)=>({...payload,seasons:Array.isArray(payload.seasons)?payload.seasons:current?.seasons}));
       })
       .catch(error=>{
         if(error instanceof Error&&error.name==="AbortError")return;
-        setVidSrcInfo(null);setVidSrcInfoError(error instanceof Error?error.message:"VidSrc information is unavailable.");
+        setVidSrcInfo(null);setVidSrcInfoError(error instanceof Error?error.message:"Playback information is unavailable.");
       })
       .finally(()=>setVidSrcInfoLoading(false));
     return()=>controller.abort();
@@ -805,10 +805,10 @@ export default function Home(){
         <button type="button" onClick={()=>void startPlayback(resumeSeconds)} disabled={playbackLoading} className="rounded bg-zinc-700 px-3 py-1.5 font-semibold disabled:opacity-50">Resume</button>
       </div>}
       {isTvItem(selected)&&seasonOptions.length>0&&<div className="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:grid-cols-2"><label className="grid gap-1 text-xs text-zinc-300">Season<select value={season} onChange={e=>{setSeason(e.target.value);setEpisode("");}} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"><option value="">Choose a season</option>{seasonOptions.map((entry:any)=><option key={entry.season} value={String(entry.season)}>Season {entry.season}</option>)}</select></label><label className="grid gap-1 text-xs text-zinc-300">Episode<input type="number" min="1" inputMode="numeric" disabled={!season} value={episode} onChange={e=>setEpisode(e.target.value)} placeholder="Episode number" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm disabled:opacity-50"/></label><p className="text-[11px] text-zinc-500 sm:col-span-2">Choose a season and episode, then select Play to load that episode in the player.</p></div>}
-      {vidsrcInfoLoading&&<p role="status" className="mt-3 text-xs text-zinc-400">Checking VidSrc availability and quality…</p>}
+      {vidsrcInfoLoading&&<p role="status" className="mt-3 text-xs text-zinc-400">Checking playback availability and quality…</p>}
       {vidsrcInfo&&<div className="mt-3 rounded border border-white/10 px-3 py-2 text-xs text-zinc-300">
-        <div className="flex flex-wrap gap-3"><span className="font-semibold text-emerald-300">VidSrc reports this title as available</span>{vidsrcInfo.quality&&<span>Best reported quality: {vidsrcInfo.quality}</span>}{vidsrcInfo.year&&<span>{vidsrcInfo.year}</span>}</div>
-        {Array.isArray(vidsrcInfo.seasons)&&<p className="mt-1 text-zinc-400">{vidsrcInfo.seasons.length} season{vidsrcInfo.seasons.length===1?"":"s"} listed by the provider.</p>}
+        <div className="flex flex-wrap gap-3"><span className="font-semibold text-emerald-300">This title is listed as available</span>{vidsrcInfo.quality&&<span>Best reported quality: {vidsrcInfo.quality}</span>}{vidsrcInfo.year&&<span>{vidsrcInfo.year}</span>}</div>
+        {Array.isArray(vidsrcInfo.seasons)&&<p className="mt-1 text-zinc-400">{vidsrcInfo.seasons.length} season{vidsrcInfo.seasons.length===1?"":"s"} found.</p>}
       </div>}
       {vidsrcInfoError&&<p role="status" className="mt-3 text-xs text-amber-300">{vidsrcInfoError}</p>}
       {playbackUrl&&<div className="mt-5 overflow-hidden rounded-lg bg-black">
