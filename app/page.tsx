@@ -83,7 +83,8 @@ function CatalogPoster({item,className,imageClassName}:{item:Item;className:stri
       const params=new URLSearchParams({
         title:String(item.title||item.name||""),
         year:String(item.year||""),
-        type:String(item.type||item.media_type||"movie")
+        type:String(item.type||item.media_type||"movie"),
+        imdb_id:String(item.imdbId||item.imdb_id||item.imdbID||"")
       });
       fetch("/api/poster?"+params.toString(),{cache:"force-cache"})
         .then(async response=>response.ok?response.json():{poster:null})
