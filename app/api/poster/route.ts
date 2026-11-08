@@ -15,6 +15,7 @@ export async function GET(request: NextRequest) {
   const title = (params.get("title") || "").trim().slice(0, 100);
   const year = (params.get("year") || "").trim().slice(0, 4);
   const type = (params.get("type") || "movie").trim().toLowerCase();
+  const requestedImdbId = (params.get("imdb_id") || "").trim();
 
   if (title.length < 2 || !["movie", "tv", "anime", "documentary", "kids", "reality"].includes(type)) {
     return NextResponse.json({ poster: null }, { status: 400, headers: { "Cache-Control": "public, max-age=300" } });
@@ -38,6 +39,7 @@ export async function GET(request: NextRequest) {
     const wanted = normalizeTitle(title);
     const tv = isTvType(type);
     const match = results.find((item: any) => {
+      if (requestedImdbId && String(item?.id || "").toLowerCase() === requestedImdbId.toLowerCase()) return true;
       if (normalizeTitle(item?.l || item?.title) !== wanted) return false;
       const qid = String(item?.qid || "").toLowerCase();
       if (tv && qid && !["tvseries", "tvminiseries"].includes(qid)) return false;
