@@ -25,6 +25,12 @@ const entry = (
 // A broad editorial catalogue, deliberately separate from IMDb's Top 250 charts.
 // Metadata can be enriched by the title-details endpoint when a viewer opens a title.
 export const expandedCatalog: CatalogTitle[] = [
+  // Sonic films and series: stable IMDb IDs let poster lookup select the exact artwork result.
+  entry("sonic-movie-2020","Sonic the Hedgehog","2020","movie",["Action","Adventure","Comedy","Family"],["United States","Japan"],"tt3794354"),
+  entry("sonic-movie-2-2022","Sonic the Hedgehog 2","2022","movie",["Action","Adventure","Comedy","Family"],["United States","Japan"],"tt12412888"),
+  entry("sonic-movie-3-2024","Sonic the Hedgehog 3","2024","movie",["Action","Adventure","Comedy","Family"],["United States","Japan"],"tt18259086"),
+  entry("sonic-prime","Sonic Prime","2022","tv",["Animation","Action","Adventure","Family"],["United States","Canada","Japan"],"tt13961348"),
+  entry("sonic-knuckles","Knuckles","2024","tv",["Action","Adventure","Comedy","Family"],["United States"],"tt18291136"),
   entry("movie-devil-wears-prada","The Devil Wears Prada","2006","movie",["Comedy","Drama"],["United States"]),
   entry("movie-intern","The Intern","2015","movie",["Comedy","Drama"],["United States"]),
   entry("movie-crazy-rich-asians","Crazy Rich Asians","2018","movie",["Comedy","Romance"],["United States"]),
