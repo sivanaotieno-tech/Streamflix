@@ -38,12 +38,12 @@ export async function GET(request:NextRequest){
       return NextResponse.json({
         available:false,
         status_code:upstream.status,
-        message:typeof payload.message==="string"?payload.message:(upstream.status===404?"This title or episode is not available according to VidSrc.":"VidSrc information lookup failed.")
+        message:typeof payload.message==="string"?payload.message:(upstream.status===404?"This title or episode is not currently available.":"Playback information lookup failed.")
       },{status:upstream.status===404?404:502,headers:jsonHeaders});
     }
     return NextResponse.json({available:true,...payload},{status:200,headers:jsonHeaders});
   }catch(error){
-    console.error("VidSrc information lookup unavailable",error);
-    return NextResponse.json({available:false,message:"VidSrc information is temporarily unavailable."},{status:502,headers:{"Cache-Control":"no-store"}});
+    console.error("Streamivio playback information lookup unavailable",error);
+    return NextResponse.json({available:false,message:"Playback information is temporarily unavailable."},{status:502,headers:{"Cache-Control":"no-store"}});
   }
 }
