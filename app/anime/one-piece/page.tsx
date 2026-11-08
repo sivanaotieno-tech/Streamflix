@@ -22,7 +22,7 @@ type Release = { title: string; date: string; url: string };
 
 function decodeXml(value: string) {
   return value
-    .replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
     .replace(/&#39;|&apos;/g, "'")
@@ -33,7 +33,7 @@ function decodeXml(value: string) {
 
 function readTag(block: string, tag: string) {
   const match = block.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + ">", "i"));
-  return match ? decodeXml(match[1].replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ")) : "";
+  return match ? decodeXml(match[1].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ")) : "";
 }
 
 async function getLatestReleases(): Promise<Release[]> {
@@ -45,8 +45,8 @@ async function getLatestReleases(): Promise<Release[]> {
     });
     if (!response.ok) return [];
     const xml = await response.text();
-    const blocks = [...xml.matchAll(/<item\\b[\\s\\S]*?<\\/item>/gi)].map((match) => match[0]);
-    const atomBlocks = blocks.length ? blocks : [...xml.matchAll(/<entry\\b[\\s\\S]*?<\\/entry>/gi)].map((match) => match[0]);
+    const blocks = [...xml.matchAll(/<item\b[\s\S]*?<\/item>/gi)].map((match) => match[0]);
+    const atomBlocks = blocks.length ? blocks : [...xml.matchAll(/<entry\b[\s\S]*?<\/entry>/gi)].map((match) => match[0]);
     return atomBlocks.slice(0, 8).flatMap((block) => {
       const title = readTag(block, "title");
       const date = readTag(block, "pubDate") || readTag(block, "updated") || readTag(block, "published");
