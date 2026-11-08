@@ -1,0 +1,19 @@
+{
+  "name": "Streamivio",
+  "short_name": "Streamivio",
+  "description": "Your entertainment library, online and offline.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070d17",
+  "theme_color": "#070d17",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/streamivio-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
