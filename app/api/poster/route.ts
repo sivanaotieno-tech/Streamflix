@@ -17,7 +17,8 @@ export async function GET(request: NextRequest) {
   const type = (params.get("type") || "movie").trim().toLowerCase();
   const requestedImdbId = (params.get("imdb_id") || "").trim();
 
-  if (title.length < 2 || !["movie", "tv", "anime", "documentary", "kids", "reality"].includes(type)) {
+  const acceptedTypes = ["movie", "tv", "tvshow", "tv show", "tvseries", "series", "anime", "documentary", "documentaries", "kids", "reality"];
+  if (title.length < 2 || !acceptedTypes.includes(type)) {
     return NextResponse.json({ poster: null }, { status: 400, headers: { "Cache-Control": "public, max-age=300" } });
   }
 
