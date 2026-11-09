@@ -1,6 +1,4 @@
-import type { CatalogTitle } from './catalog';
-
-export const imdbCatalog: CatalogTitle[] = [
+import type { CatalogTitle } from './catalog';\n\nexport const imdbCatalog: CatalogTitle[] = [
     {
         "id": "imdb-tt0903747",
         "imdbId": "tt0903747",
@@ -2342,6 +2340,19 @@ export const imdbCatalog: CatalogTitle[] = [
         "poster": "https://m.media-amazon.com/images/M/MV5BOTFhMGE2OWEtY2JiYS00MmUwLWIwMzMtYWZmZjdlZWI3MDI2XkEyXkFqcGc@._V1_.jpg"
     },
     {
+        "id": "imdb-tt1983079",
+        "imdbId": "tt1983079",
+        "title": "Call the Midwife",
+        "overview": "",
+        "year": "2012",
+        "rating": 8.6,
+        "type": "tv",
+        "genres": [],
+        "country": [],
+        "source": "IMDb Top Charts",
+        "poster": "https://m.media-amazon.com/images/M/MV5BMTAzMjAwNzc1MzVeQTJeQWpwZ15BbWU4MDQzODgzMjEx._V1_.jpg"
+    },
+    {
         "id": "imdb-tt0317248",
         "imdbId": "tt0317248",
         "title": "City of God",
@@ -2574,19 +2585,6 @@ export const imdbCatalog: CatalogTitle[] = [
         "country": [],
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BZjEyNDIzNmEtMjdkYS00ZDAwLTljOWYtNDRhYTVhYTlmOTk1XkEyXkFqcGc@._V1_.jpg"
-    },
-    {
-        "id": "imdb-tt2359704",
-        "imdbId": "tt2359704",
-        "title": "JoJo's Bizarre Adventure",
-        "overview": "",
-        "year": "2012",
-        "rating": 8.6,
-        "type": "tv",
-        "genres": [],
-        "country": [],
-        "source": "IMDb Top Charts",
-        "poster": "https://m.media-amazon.com/images/M/MV5BMzIyNzY4NTMtNmVhYS00OWFhLTkwMWMtOGFkNTdmNWU2ZDdiXkEyXkFqcGc@._V1_.jpg"
     },
     {
         "id": "imdb-tt1489428",
@@ -3366,7 +3364,7 @@ export const imdbCatalog: CatalogTitle[] = [
         "genres": [],
         "country": [],
         "source": "IMDb Top Charts",
-        "poster": "https://m.media-amazon.com/images/M/MV5BMDAyMDExNGMtZDMxNS00YzBiLWEzZmMtYjQ0YTBmN2I2NGNmXkEyXkFqcGc@._V1_.jpg"
+        "poster": "https://m.media-amazon.com/images/M/MV5BMGQ0ZWE4NDYtYWY0Mi00MjE0LWI1MzctZDA1NGExYzE3N2FiXkEyXkFqcGc@._V1_.jpg"
     },
     {
         "id": "imdb-tt0280249",
@@ -6501,4 +6499,4 @@ export const imdbCatalog: CatalogTitle[] = [
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BMTY5OTU0OTc2NV5BMl5BanBnXkFtZTcwMzU4MDcyMQ@@._V1_.jpg"
     }
-];
+];\n
