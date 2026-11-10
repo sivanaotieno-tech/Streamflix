@@ -204,4 +204,17 @@ export const expandedCatalog: CatalogTitle[] = [
   entry("kids-peppa-pig","Peppa Pig","2004","kids",["Animation","Comedy","Family"],["United Kingdom"]),
   entry("kids-arthur","Arthur","1996","kids",["Animation","Comedy","Family"],["United States"]),
   entry("kids-curious-george","Curious George","2006","kids",["Animation","Adventure","Family"],["United States"]),
+
+  // Additional family, animation and current-series discovery titles.
+  entry("inside-out-two","Inside Out 2","2024","movie",["Animation","Adventure","Comedy"],["United States"],"tt22022452"),
+  entry("mitchells-machines","The Mitchells vs. the Machines","2021","movie",["Animation","Adventure","Comedy"],["United States"],"tt7979580"),
+  entry("puss-boots-last-wish","Puss in Boots: The Last Wish","2022","movie",["Animation","Adventure","Comedy"],["United States"],"tt3915174"),
+  entry("the-bear","The Bear","2022","tv",["Comedy","Drama"],["United States"],"tt14452776"),
+  entry("wednesday","Wednesday","2022","tv",["Comedy","Fantasy","Mystery"],["United States"],"tt13443470"),
+  entry("fallout","Fallout","2024","tv",["Action","Adventure","Drama"],["United States"],"tt12637874"),
+  entry("the-last-of-us","The Last of Us","2023","tv",["Drama","Horror","Sci-Fi"],["United States"],"tt3581920"),
+  entry("one-piece-live-action","One Piece","2023","tv",["Action","Adventure","Comedy"],["United States","Japan"],"tt11737520"),
+  entry("loki","Loki","2021","tv",["Action","Adventure","Fantasy"],["United States"],"tt9140554"),
+  entry("spy-family","SPY x FAMILY","2022","anime",["Animation","Action","Comedy"],["Japan"],"tt13706018"),
+  entry("chainsaw-man","Chainsaw Man","2022","anime",["Animation","Action","Horror"],["Japan"],"tt13616990"),
 ];
