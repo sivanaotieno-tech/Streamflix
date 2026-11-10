@@ -4,15 +4,16 @@ import { AUTH_COOKIE_NAME, firebaseAuthReady, getAuthenticatedUser } from "@/lib
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  if (!firebaseAuthReady()) {
-    return NextResponse.json({ authenticated: false, configured: false }, { status: 503, headers: { "Cache-Control": "no-store" } });
-  }
   try {
-    const user = await getAuthenticatedUser(request.cookies.get(AUTH_COOKIE_NAME)?.value);
+    const token = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const user = await getAuthenticatedUser(token);
+    if (!user && !firebaseAuthReady()) {
+      return NextResponse.json({ authenticated: false, configured: false }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    }
     return NextResponse.json({
       authenticated: Boolean(user),
       configured: true,
-      user: user ? { email: user.email, createdAt: user.createdAt, lastLoginAt: user.lastLoginAt } : null,
+      user: user ? { email: user.email, createdAt: user.createdAt, lastLoginAt: user.lastLoginAt, isDemo: user.isDemo === true, readOnly: user.isDemo === true } : null,
     }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
     console.error("Streamivio session lookup failed", error instanceof Error ? error.message : "unknown error");
