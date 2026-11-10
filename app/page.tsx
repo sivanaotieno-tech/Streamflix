@@ -1,6 +1,8 @@
 "use client";
 
 import {useEffect,useRef,useState,type FormEvent} from "react";
+import { onAuthStateChanged, signOut as firebaseSignOut } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase-client";
 import {Search,Play,Plus,Film,X,LoaderCircle,Home as HomeIcon,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard, Users, Trophy, FileVideo} from "lucide-react";
 import {StreamivioLogo} from "@/components/streamivio-logo";
 import {OpeningScreen} from "@/components/opening-screen";
@@ -190,17 +192,22 @@ export default function Home(){
 
   useEffect(()=>{
     let cancelled=false;
-    fetch("/api/auth/me",{cache:"no-store"})
-      .then(async response=>{
-        const data=await response.json().catch(()=>({}));
-        if(!cancelled&&response.ok&&data.authenticated&&data.user?.email)setAuthUser({email:String(data.user.email)});
-      })
-      .catch(()=>{})
-      .finally(()=>{if(!cancelled)setAuthStatusLoading(false);});
-    return()=>{cancelled=true;};
+    let unsubscribe=()=>{};
+    try {
+      unsubscribe=onAuthStateChanged(getFirebaseAuth(),user=>{
+        if(cancelled)return;
+        setAuthUser(user?.email && user.emailVerified ? {email:user.email} : null);
+        setAuthStatusLoading(false);
+      });
+    } catch {
+      setAuthUser(null);
+      setAuthStatusLoading(false);
+    }
+    return()=>{cancelled=true;unsubscribe();};
   },[]);
 
   const signOut=async()=>{
+    try{await firebaseSignOut(getFirebaseAuth());}catch{}
     try{await fetch("/api/auth/signout",{method:"POST",cache:"no-store"});}catch{}
     setAuthUser(null);
   };
