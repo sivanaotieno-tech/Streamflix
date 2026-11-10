@@ -199,7 +199,7 @@ export default function SignInPage() {
           {demoBusy ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <MonitorPlay className="h-5 w-5" />}
           {demoBusy ? "Opening demo…" : "Explore with demo account"}
         </button>
-        <p className="mt-2 text-center text-xs leading-5 text-zinc-500">No password needed · Read-only demo · No real payments</p>
+        <p className="mt-2 text-center text-xs leading-5 text-zinc-500">Demo profile: demo@streamivio.com · No password needed · Read-only · No real payments</p>
 
         <div className="mt-6 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[.2em] text-zinc-600">
           <span className="h-px flex-1 bg-white/10" /> or use email <span className="h-px flex-1 bg-white/10" />
