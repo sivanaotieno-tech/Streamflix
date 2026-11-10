@@ -323,7 +323,7 @@ export async function GET(request:NextRequest){
         if (genre && !textList(item.genres).some(value => compact(value) === genre)) return false;
         if (country && !countryMatches(item, country)) return false;
         if (year && String(item.year || "") !== year) return false;
-        if (ageRating && String(item.ageRating || item.contentRating || "").toLocaleLowerCase() !== ageRating) return false;
+        if (ageRating && (item.ageRating || item.contentRating) && String(item.ageRating || item.contentRating).toLocaleLowerCase() !== ageRating) return false;
         return true;
       });
 
