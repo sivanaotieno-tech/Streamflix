@@ -1,4 +1,6 @@
-import type { CatalogTitle } from './catalog';\n\nexport const imdbCatalog: CatalogTitle[] = [
+import type { CatalogTitle } from './catalog';
+
+export const imdbCatalog: CatalogTitle[] = [
     {
         "id": "imdb-tt0903747",
         "imdbId": "tt0903747",
@@ -6499,4 +6501,4 @@ import type { CatalogTitle } from './catalog';\n\nexport const imdbCatalog: Cata
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BMTY5OTU0OTc2NV5BMl5BanBnXkFtZTcwMzU4MDcyMQ@@._V1_.jpg"
     }
-];\n
+];
