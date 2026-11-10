@@ -9,6 +9,7 @@ export type AuthUser = {
   email: string;
   createdAt: string;
   lastLoginAt: string;
+  isDemo?: boolean;
 };
 
 export type AuthCodeRecord = {
@@ -117,6 +118,34 @@ export function createAuthSessionToken() {
   return randomBytes(32).toString("base64url");
 }
 
+export function demoAuthReady() {
+  return Boolean(process.env.STREAMIVIO_DEMO_SECRET && process.env.STREAMIVIO_DEMO_SECRET.length >= 32);
+}
+
+function demoSignature(expiresAt: string) {
+  const secret = process.env.STREAMIVIO_DEMO_SECRET;
+  if (!secret || secret.length < 32) throw new Error("Demo sign-in is not configured.");
+  return createHmac("sha256", secret).update(`streamivio-demo:${expiresAt}`).digest("hex");
+}
+
+export function createDemoSessionToken() {
+  const expiresAt = String(Math.floor(Date.now() / 1000) + 12 * 60 * 60);
+  return `demo.${expiresAt}.${demoSignature(expiresAt)}`;
+}
+
+function getDemoAuthenticatedUser(token: string): AuthUser | null {
+  const match = token.match(/^demo\.(\d{10})\.([a-f0-9]{64})$/);
+  if (!match || !demoAuthReady()) return null;
+  const expiresAt = Number(match[1]);
+  const now = Math.floor(Date.now() / 1000);
+  if (!Number.isSafeInteger(expiresAt) || expiresAt <= now || expiresAt > now + 12 * 60 * 60 + 60) return null;
+  const expected = Buffer.from(demoSignature(match[1]), "hex");
+  const supplied = Buffer.from(match[2], "hex");
+  if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return null;
+  const createdAt = new Date().toISOString();
+  return { email: "demo@streamivio.com", createdAt, lastLoginAt: createdAt, isDemo: true };
+}
+
 export function firebaseAuthReady() {
   return Boolean(
     process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
@@ -164,6 +193,7 @@ async function getFirebaseAuthenticatedUser(idToken: string): Promise<AuthUser |
 
 export async function getAuthenticatedUser(token: string | undefined | null): Promise<AuthUser | null> {
   if (!token) return null;
+  if (token.startsWith("demo.")) return getDemoAuthenticatedUser(token);
   // Firebase ID tokens are JWTs. Verify them with Firebase before trusting the account email.
   if (token.split(".").length === 3) {
     if (!firebaseAuthReady()) return null;
