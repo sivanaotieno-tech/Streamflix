@@ -43,8 +43,52 @@ export async function authRedisCommand<T = unknown>(...args: (string | number)[]
   return payload.result as T;
 }
 
-export function authStorageReady() {
+export function firebaseAuthReady() {
   return Boolean(
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID &&
+    process.env.NEXT_PUBLIC_FIREBASE_APP_ID
+  );
+}
+
+export async function verifyFirebaseIdToken(idToken: string): Promise<AuthUser | null> {
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  if (!apiKey || !idToken || idToken.length > 8192 || idToken.split(".").length !== 3) return null;
+
+  try {
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+    if (!response.ok) return null;
+    const payload = await response.json() as {
+      users?: Array<{ email?: string; emailVerified?: boolean; createdAt?: string; lastLoginAt?: string }>;
+    };
+    const user = payload.users?.[0];
+    if (!user?.email || user.emailVerified !== true) return null;
+    const toIso = (value?: string) => {
+      const date = value ? new Date(Number(value)) : new Date();
+      return Number.isFinite(date.getTime()) ? date.toISOString() : new Date().toISOString();
+    };
+    return {
+      email: normalizeEmail(user.email),
+      createdAt: toIso(user.createdAt),
+      lastLoginAt: toIso(user.lastLoginAt),
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function authStorageReady() {
+  return firebaseAuthReady() || Boolean(
     process.env.UPSTASH_REDIS_REST_URL &&
     process.env.UPSTASH_REDIS_REST_TOKEN &&
     (process.env.STREAMIVIO_AUTH_SECRET?.length ?? 0) >= 32
@@ -118,7 +162,9 @@ export function createAuthSessionToken() {
 }
 
 export async function getAuthenticatedUser(token: string | undefined | null): Promise<AuthUser | null> {
-  if (!token || !/^[A-Za-z0-9_-]{40,50}$/.test(token)) return null;
+  if (!token) return null;
+  if (token.split(".").length === 3) return verifyFirebaseIdToken(token);
+  if (!/^[A-Za-z0-9_-]{40,50}$/.test(token)) return null;
   const email = await authRedisCommand<string | null>("GET", authSessionKey(token));
   if (!email) return null;
   const raw = await authRedisCommand<string | null>("GET", authUserKey(email));
