@@ -1,14 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { onIdTokenChanged } from "firebase/auth";
+import { onIdTokenChanged, type Auth } from "firebase/auth";
 import { getFirebaseAuth } from "@/lib/firebase-client";
 
 export default function FirebaseSessionSync() {
   useEffect(() => {
     let active = true;
     let hadVerifiedUser = false;
-    let auth;
+    let auth: Auth;
     try {
       auth = getFirebaseAuth();
     } catch {
@@ -18,7 +18,7 @@ export default function FirebaseSessionSync() {
     const unsubscribe = onIdTokenChanged(auth, async (user) => {
       if (!active) return;
       if (!user || !user.emailVerified) {
-        if (hadVerifiedUser) {
+        if (hadVerifiedUser || user) {
           hadVerifiedUser = false;
           void fetch("/api/auth/signout", { method: "POST", cache: "no-store" }).catch(() => {});
         }
