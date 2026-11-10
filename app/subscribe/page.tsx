@@ -63,8 +63,7 @@ export default function SubscribePage() {
           setAuthState("signed-in");
           const statusResponse = await fetch("/api/billing/status", { cache: "no-store" });
           const membershipData = await statusResponse.json().catch(() => ({}));
-          if (!statusResponse.ok) throw new Error(membershipData.error || "Membership status is temporarily unavailable.");
-          if (!cancelled) setMembership(membershipData);
+          if (!cancelled) setMembership(statusResponse.ok ? membershipData : { status: "unavailable" });
         } catch (error) {
           if (!cancelled) {
             setAuthState("unavailable");
