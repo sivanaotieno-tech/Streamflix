@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, authStorageReady, getAuthenticatedUser } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, firebaseAuthReady, getAuthenticatedUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 
 export async function GET(request: NextRequest) {
-  if (!authStorageReady()) {
+  if (!firebaseAuthReady()) {
     return NextResponse.json({ authenticated: false, configured: false }, { status: 503, headers: { "Cache-Control": "no-store" } });
   }
   try {
