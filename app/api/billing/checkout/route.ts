@@ -17,6 +17,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Please sign in with your verified email before starting checkout.", signInRequired: true }, { status: 401 });
   }
 
+  if (authUser.isDemo) {
+    return NextResponse.json({ error: "The demo account is read-only. Sign in with your own account to subscribe.", demoReadOnly: true }, { status: 403 });
+  }
+
   if (!envReady()) {
     return NextResponse.json(
       { error: "Subscriptions are not configured yet. The site owner must finish the payment and database setup." },
