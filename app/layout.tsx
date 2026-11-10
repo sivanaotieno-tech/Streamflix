@@ -1,5 +1,6 @@
 import "./globals.css";
 import OfflineSupport from "./OfflineSupport";
+import { FirebaseSessionSync } from "@/components/firebase-session-sync";
 
 export const metadata = {
   title: "Streamivio",
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <body>
+        <FirebaseSessionSync />
         <OfflineSupport />
         {children}
       </body>
