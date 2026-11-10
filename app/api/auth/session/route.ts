@@ -9,7 +9,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: false, error: "Firebase sign-in is not configured." }, { status: 503 });
   }
 
-  const body = await request.json().catch(() => ({})) as { idToken?: unknown; clear?: unknown };
+  const parsed = await request.json().catch(() => ({}));
+  const body = parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? parsed as { idToken?: unknown; clear?: unknown }
+    : {};
   if (body.clear === true) {
     const response = NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
     response.cookies.set(AUTH_COOKIE_NAME, "", {
