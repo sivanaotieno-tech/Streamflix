@@ -192,6 +192,88 @@ async function fetchExternal(base:string,query:string,kind:"movie"|"tv"){
     .filter((row:SearchRecord|null):row is SearchRecord=>Boolean(row));
 }
 
+async function fetchAniList(query: string, page: number, perPage = 50) {
+  const graph = `query ($page: Int, $perPage: Int, $search: String) {
+    Page(page: $page, perPage: $perPage) {
+      pageInfo { total currentPage lastPage hasNextPage }
+      media(type: ANIME, sort: POPULARITY_DESC, search: $search) {
+        id
+        idMal
+        title { romaji english }
+        description(asHtml: false)
+        startDate { year }
+        averageScore
+        genres
+        coverImage { extraLarge large }
+        bannerImage
+        episodes
+        format
+        countryOfOrigin
+        isAdult
+      }
+    }
+  }`;
+  const response = await fetch("https://graphql.anilist.co", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      query: graph,
+      variables: { page, perPage, ...(query ? { search: query } : {}) },
+    }),
+    cache: "force-cache",
+    next: { revalidate: 300 },
+    signal: AbortSignal.timeout(9000),
+  });
+  if (!response.ok) throw new Error("Anime discovery returned HTTP " + response.status);
+  const payload = await response.json();
+  const pageData = payload?.data?.Page;
+  const media = Array.isArray(pageData?.media) ? pageData.media : [];
+  const countryNames: Record<string, string> = {
+    JP: "Japan", KR: "South Korea", CN: "China", US: "United States", TW: "Taiwan",
+  };
+  const results = media
+    // Streamivio's public discovery shelves exclude adult-only titles.
+    .filter((item: SearchRecord) => item && !item.isAdult && item.title)
+    .map((item: SearchRecord): SearchRecord => {
+      const id = String(item.id);
+      const title = String(item.title.english || item.title.romaji || "").trim();
+      const description = String(item.description || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      const countryCode = String(item.countryOfOrigin || "");
+      const cover = item.coverImage?.extraLarge || item.coverImage?.large || null;
+      return {
+        id: "anilist-" + id,
+        anilistId: id,
+        malId: item.idMal ? String(item.idMal) : undefined,
+        title,
+        name: title,
+        overview: description,
+        description,
+        year: item.startDate?.year ? String(item.startDate.year) : "",
+        rating: typeof item.averageScore === "number" ? Number((item.averageScore / 10).toFixed(1)) : 0,
+        type: "anime",
+        media_type: "anime",
+        genres: Array.isArray(item.genres) ? item.genres : [],
+        country: countryCode ? [countryNames[countryCode] || countryCode] : [],
+        ageRating: null,
+        contentRating: null,
+        poster: cover,
+        poster_url: cover,
+        backdrop: item.bannerImage || null,
+        episodes: item.episodes || null,
+        format: item.format || null,
+        source: "AniList",
+        url: "https://anilist.co/anime/" + encodeURIComponent(id),
+        playback_available: false,
+      };
+    })
+    .filter((item: SearchRecord) => Boolean(item.title));
+  return {
+    results,
+    total: Number(pageData?.pageInfo?.total || results.length),
+    hasNextPage: Boolean(pageData?.pageInfo?.hasNextPage),
+  };
+}
+
 async function fetchPopular(base:string,kind:"movie"|"tv"){
   const target=new URL("/popular",base);
   target.searchParams.set("type",kind);
@@ -231,6 +313,68 @@ export async function GET(request:NextRequest){
   if(year&&(!/^[0-9]{4}$/.test(year)||Number(year)<1888||Number(year)>2200))return NextResponse.json({error:"Enter a valid four-digit release year."},{status:400});
 
   const scope=rawScope as Scope;
+  if (scope === "anime") {
+    const page = Math.floor(offset / 50) + 1;
+    const fallback = catalog
+      .filter(item => matchesScope(item.type, "anime"))
+      .map(item => ({ ...item, name: item.title, poster_url: (item as any).poster || null, source: item.source || "Streamivio Library" }))
+      .filter((item: SearchRecord) => {
+        if (!popular && scoreResult(item, rawQuery) <= 0) return false;
+        if (genre && !textList(item.genres).some(value => compact(value) === genre)) return false;
+        if (country && !countryMatches(item, country)) return false;
+        if (year && String(item.year || "") !== year) return false;
+        if (ageRating && String(item.ageRating || item.contentRating || "").toLocaleLowerCase() !== ageRating) return false;
+        return true;
+      });
+
+    try {
+      const anime = await fetchAniList(popular ? "" : rawQuery, page, 50);
+      const filtered = anime.results.filter((item: SearchRecord) => {
+        if (genre && !textList(item.genres).some(value => compact(value) === genre)) return false;
+        if (country && !countryMatches(item, country)) return false;
+        if (year && String(item.year || "") !== year) return false;
+        if (ageRating && String(item.ageRating || item.contentRating || "").toLocaleLowerCase() !== ageRating) return false;
+        return true;
+      });
+      if (sort === "title") filtered.sort((a: SearchRecord, b: SearchRecord) => String(a.title).localeCompare(String(b.title)));
+      else if (sort === "rating") filtered.sort((a: SearchRecord, b: SearchRecord) => (numberOrUndefined(b.rating) || 0) - (numberOrUndefined(a.rating) || 0));
+      else if (sort === "year") filtered.sort((a: SearchRecord, b: SearchRecord) => Number(b.year || 0) - Number(a.year || 0));
+      const results = filtered.slice(0, limit);
+      const nextOffset = page * 50;
+      return NextResponse.json({
+        results,
+        total: anime.total,
+        limit,
+        offset,
+        nextOffset,
+        hasMore: anime.hasNextPage,
+        query: rawQuery,
+        sources: ["AniList"],
+        unavailable: [],
+        database: "AniList",
+      }, {
+        headers: { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600" },
+      });
+    } catch (error) {
+      console.error("AniList discovery failed; using Streamivio's bundled anime catalog", error);
+      const results = fallback.slice(offset, offset + limit);
+      return NextResponse.json({
+        results,
+        total: fallback.length,
+        limit,
+        offset,
+        nextOffset: offset + results.length,
+        hasMore: offset + results.length < fallback.length,
+        query: rawQuery,
+        sources: ["Streamivio Library"],
+        unavailable: ["AniList"],
+        database: "bundled-json-fallback",
+      }, {
+        headers: { "Cache-Control": "public, max-age=20, s-maxage=60, stale-while-revalidate=180" },
+      });
+    }
+  }
+
   const apiBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/+$/,"");
   let mediaResults:SearchRecord[]=[];
   let catalogDatabase="bundled-json-fallback";
