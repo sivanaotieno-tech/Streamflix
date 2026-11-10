@@ -152,6 +152,9 @@ export default function Home(){
   const[movieShelfLoading,setMovieShelfLoading]=useState(false);
   const[movieTotal,setMovieTotal]=useState(0);
   const[movieLoadingMore,setMovieLoadingMore]=useState(false);
+  const[animeTotal,setAnimeTotal]=useState(0);
+  const[animeOffset,setAnimeOffset]=useState(0);
+  const[animeLoadingMore,setAnimeLoadingMore]=useState(false);
   const[gamesLoading,setGamesLoading]=useState(true);
   const searchAbort=useRef<AbortController|null>(null);
   const searchTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -433,7 +436,7 @@ export default function Home(){
       const found=Array.isArray(data.results)?data.results:[];
       setResults(found);
       setSearchTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):found.length);
-      setSearchOffset(found.length);
+      setSearchOffset(Number.isFinite(Number(data.nextOffset))?Math.max(0,Number(data.nextOffset)):found.length);
       setSearchSources(Array.isArray(data.sources)?data.sources.filter((source:any)=>typeof source==="string"):[]);
       setSearchUnavailable(Array.isArray(data.unavailable)?data.unavailable:[]);
     }catch(error){
@@ -466,7 +469,7 @@ export default function Home(){
       const found=Array.isArray(data.results)?data.results: [];
       setResults(current=>[...current,...found.filter((item:any)=>!current.some(existing=>String(existing.id)===String(item.id)))]);
       setSearchTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):searchTotal);
-      setSearchOffset(searchOffset+found.length);
+      setSearchOffset(Number.isFinite(Number(data.nextOffset))?Math.max(searchOffset,Number(data.nextOffset)):searchOffset+found.length);
       setSearchSources(Array.isArray(data.sources)?data.sources.filter((source:any)=>typeof source==="string"):[]);
       setSearchUnavailable(Array.isArray(data.unavailable)?data.unavailable:[]);
     }catch(error){
@@ -500,13 +503,38 @@ export default function Home(){
     }
   };
 
+  const loadMoreAnime=async()=>{
+    if(animeLoadingMore||animeOffset>=animeTotal)return;
+    setAnimeLoadingMore(true);
+    try{
+      const params=new URLSearchParams({scope:"anime",popular:"1",limit:"50",offset:String(animeOffset)});
+      const response=await fetch("/api/search?"+params.toString(),{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"More anime could not be loaded");
+      const next=Array.isArray(data.results)?data.results as Item[]:[];
+      setRows(previous=>{
+        const existing=previous["Anime Spotlight"]||[];
+        const ids=new Set(existing.map(item=>String(item.id)));
+        return {...previous,"Anime Spotlight":[...existing,...next.filter(item=>!ids.has(String(item.id)))]};
+      });
+      setAnimeTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):animeTotal);
+      setAnimeOffset(Number.isFinite(Number(data.nextOffset))?Math.max(animeOffset,Number(data.nextOffset)):animeOffset+50);
+    }catch(error){
+      console.error("More Streamivio anime could not be loaded",error);
+    }finally{
+      setAnimeLoadingMore(false);
+    }
+  };
+
   useEffect(()=>{
-    fetch("/api/search?scope=anime&popular=1")
+    fetch("/api/search?scope=anime&popular=1&limit=50&offset=0")
       .then(async response=>{
         const data=await response.json();
         if(!response.ok)throw new Error(data.error||"Anime catalog unavailable");
         const anime=(Array.isArray(data.results)?data.results:[]).map((x:any):Item=>({...x,name:x.title,source:x.source||"Anime"}));
         setRows(current=>({...current,"Anime Spotlight":anime}));
+        setAnimeTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):anime.length);
+        setAnimeOffset(Number.isFinite(Number(data.nextOffset))?Math.max(0,Number(data.nextOffset)):anime.length);
       })
       .catch(error=>console.error("Anime catalog could not be loaded",error))
       .finally(()=>setLoading(false));
@@ -730,6 +758,7 @@ export default function Home(){
 )
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
       {!q.trim()&&((browse==="Home"&&movieTotal>0)||(browse==="Movies"&&(rows["Movies to Explore"]?.length||0)<movieTotal))&&<div className="flex justify-center py-6"><button type="button" onClick={()=>browse==="Home"?setBrowse("Movies"):void loadMoreMovies()} disabled={browse==="Movies"&&movieLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{browse==="Home"?`Browse all ${movieTotal} movies`:movieLoadingMore?"Loading movies…":"Load more movies"}</button></div>}
+      {!q.trim()&&browse==="Anime"&&animeOffset<animeTotal&&<div className="flex justify-center py-6"><button type="button" onClick={()=>void loadMoreAnime()} disabled={animeLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{animeLoadingMore?"Loading anime…":"Load more anime"}</button></div>}
     </div>}
 
 
