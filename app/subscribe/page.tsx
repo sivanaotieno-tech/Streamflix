@@ -15,6 +15,7 @@ export default function SubscribePage() {
   const [period, setPeriod] = useState<Period>("monthly");
   const [plan, setPlan] = useState<Plan>("plus");
   const [email, setEmail] = useState("");
+  const [isDemo, setIsDemo] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -54,7 +55,10 @@ export default function SubscribePage() {
           return;
         }
         setEmail(String(auth.user.email));
+        const demoSession = auth.user.isDemo === true;
+        setIsDemo(demoSession);
         setAuthState("signed-in");
+        if (demoSession) return;
         const statusResponse = await fetch("/api/billing/status", { cache: "no-store" });
         const membershipData = await statusResponse.json().catch(() => ({}));
         if (!cancelled) setMembership(membershipData);
@@ -71,6 +75,10 @@ export default function SubscribePage() {
 
   async function startCheckout(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (isDemo) {
+      setError("The demo account is read-only. Log in with your own account to subscribe.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -113,6 +121,7 @@ export default function SubscribePage() {
           {authState === "checking" && <p role="status" className="mt-5 text-sm text-zinc-400">Checking your Streamivio account…</p>}
           {authError && <p role="alert" className="mt-5 rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-200">{authError}</p>}
           {authState === "signed-in" && <p className="mt-4 text-sm text-zinc-400">Signed in as <span className="font-semibold text-white">{email}</span></p>}
+          {isDemo && <p role="status" className="mx-auto mt-5 max-w-2xl rounded-lg border border-sky-800/60 bg-sky-950/30 p-3 text-left text-sm leading-5 text-sky-200">You are exploring Streamivio with the read-only demo account. Plan prices are for display only; demo accounts cannot start checkout or make payments.</p>}
           {paymentGatewayReady === false && <p role="status" className="mx-auto mt-5 max-w-2xl rounded-lg border border-amber-900/60 bg-amber-950/30 p-3 text-left text-sm leading-5 text-amber-200">Secure checkout is not configured on this deployment yet. Streamivio needs its payment-provider credentials and subscription storage before it can accept payments. You will not be charged by this page until checkout is successfully created.</p>}
           {membership?.status === "active" && <div className="mt-6 rounded-xl border border-emerald-700/50 bg-emerald-950/40 p-4 text-sm text-emerald-200">
             Your Streamivio membership is active{membership.expiresAt ? ` until ${new Date(membership.expiresAt).toLocaleDateString()}` : ""}.
@@ -156,7 +165,7 @@ export default function SubscribePage() {
             <label className="grid gap-2 text-sm text-zinc-300 sm:col-span-2">Verified account email <input required readOnly type="email" value={email} maxLength={254} autoComplete="email" className="rounded-lg border border-white/15 bg-black/30 px-3 py-3 text-white outline-none read-only:cursor-not-allowed read-only:opacity-80" placeholder="Sign in to load your email" /><span className="text-xs text-zinc-500">Checkout is tied to the email address you verified when signing in.</span></label>
             <label className="grid gap-2 text-sm text-zinc-300 sm:col-span-2">Phone number (optional) <input type="tel" value={phoneNumber} onChange={(e) => setPhoneNumber(e.target.value)} maxLength={20} autoComplete="tel" className="rounded-lg border border-white/15 bg-black/30 px-3 py-3 text-white outline-none focus:border-red-500" placeholder="+254712345678" /></label>
             {error && <p role="alert" className="sm:col-span-2 rounded-lg border border-red-900 bg-red-950/40 p-3 text-sm text-red-200">{error}</p>}
-            <button disabled={busy || authState !== "signed-in" || paymentGatewayReady !== true} type="submit" className="rounded-lg bg-[#e50914] px-5 py-3 font-bold transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60 sm:col-span-2">{busy ? "Connecting to secure checkout…" : authState === "checking" ? "Checking your account…" : authState !== "signed-in" ? "Sign in to continue" : paymentGatewayReady !== true ? "Checkout is not available yet" : `Continue · KSh ${amount.toLocaleString("en-KE")}`}</button>
+            <button disabled={busy || isDemo || authState !== "signed-in" || paymentGatewayReady !== true} type="submit" className="rounded-lg bg-[#e50914] px-5 py-3 font-bold transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60 sm:col-span-2">{busy ? "Connecting to secure checkout…" : isDemo ? "Demo account · Checkout disabled" : authState === "checking" ? "Checking your account…" : authState !== "signed-in" ? "Sign in to continue" : paymentGatewayReady !== true ? "Checkout is not available yet" : `Continue · KSh ${amount.toLocaleString("en-KE")}`}</button>
           </form>
           <p className="mt-4 text-xs leading-5 text-zinc-500">Payments are handled by the configured payment provider. A return to this site is not proof of payment: Streamivio checks the provider payment record, amount, currency, subscription reference and plan before activating membership. Sandbox transactions are tests, not real payments. Membership is valid for the selected period and must be renewed manually unless automatic renewal is separately enabled.</p>
         </section>
