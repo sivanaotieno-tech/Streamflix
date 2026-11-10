@@ -9,6 +9,7 @@ import {
   LoaderCircle,
   LockKeyhole,
   Mail,
+  MonitorPlay,
   ShieldCheck,
 } from "lucide-react";
 import {
@@ -71,6 +72,7 @@ export default function SignInPage() {
   const [nextPath, setNextPath] = useState("/");
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [demoBusy, setDemoBusy] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -111,6 +113,21 @@ export default function SignInPage() {
     } catch (err) {
       setError(friendlyAuthError(err));
       setGoogleBusy(false);
+    }
+  }
+
+  async function continueAsDemo() {
+    setDemoBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const response = await fetch("/api/auth/demo", { method: "POST", cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) throw new Error(data.error || "Demo sign-in is temporarily unavailable.");
+      window.location.assign(nextPath);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Demo sign-in could not be completed.");
+      setDemoBusy(false);
     }
   }
 
@@ -158,7 +175,7 @@ export default function SignInPage() {
 
         <button
           type="button"
-          disabled={googleBusy || busy}
+          disabled={googleBusy || busy || demoBusy}
           onClick={() => void continueWithGoogle()}
           className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-white/15 bg-white px-5 py-3.5 font-bold text-[#171717] transition hover:bg-zinc-200 disabled:opacity-60"
         >
@@ -172,6 +189,17 @@ export default function SignInPage() {
           )}
           {googleBusy ? "Connecting to Google…" : "Continue with Google"}
         </button>
+
+        <button
+          type="button"
+          disabled={demoBusy || busy || googleBusy}
+          onClick={() => void continueAsDemo()}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/50 bg-red-950/30 px-5 py-3.5 font-bold text-white transition hover:bg-red-950/60 disabled:opacity-60"
+        >
+          {demoBusy ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <MonitorPlay className="h-5 w-5" />}
+          {demoBusy ? "Opening demo…" : "Explore with demo account"}
+        </button>
+        <p className="mt-2 text-center text-xs leading-5 text-zinc-500">No password needed · Read-only demo · No real payments</p>
 
         <div className="mt-6 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[.2em] text-zinc-600">
           <span className="h-px flex-1 bg-white/10" /> or use email <span className="h-px flex-1 bg-white/10" />
@@ -202,7 +230,7 @@ export default function SignInPage() {
           {error && <p role="alert" className="rounded-lg border border-red-900/70 bg-red-950/50 p-3 text-sm text-red-200">{error}</p>}
           {notice && <p role="status" className="rounded-lg border border-emerald-900/70 bg-emerald-950/30 p-3 text-sm text-emerald-200">{notice}</p>}
 
-          <button disabled={busy || googleBusy} type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e50914] px-5 py-3.5 font-extrabold transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60">
+          <button disabled={busy || googleBusy || demoBusy} type="submit" className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#e50914] px-5 py-3.5 font-extrabold transition hover:bg-red-700 disabled:cursor-wait disabled:opacity-60">
             {busy ? <><LoaderCircle className="h-5 w-5 animate-spin" /> Please wait…</> : <><ShieldCheck className="h-5 w-5" /> {mode === "signup" ? "Create free account" : "Log in"}</>}
           </button>
         </form>
