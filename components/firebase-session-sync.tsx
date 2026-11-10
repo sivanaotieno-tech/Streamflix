@@ -9,12 +9,13 @@ export function FirebaseSessionSync() {
     let active = true;
     let lastToken: string | null = null;
     let clearSent = false;
-    let auth;
+    let auth: ReturnType<typeof getFirebaseAuth> | null = null;
     try {
       auth = getFirebaseAuth();
     } catch {
       return;
     }
+    if (!auth) return;
 
     const unsubscribe = onIdTokenChanged(auth, async (user) => {
       if (!active) return;
