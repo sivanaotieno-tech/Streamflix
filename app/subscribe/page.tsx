@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase-client";
 import Link from "next/link";
 
 type Plan = "plus" | "premium";
@@ -38,35 +40,43 @@ export default function SubscribePage() {
 
   useEffect(() => {
     let cancelled = false;
-    async function loadAccountAndMembership() {
-      try {
-        const authResponse = await fetch("/api/auth/me", { cache: "no-store" });
-        const auth = await authResponse.json().catch(() => ({}));
+    let unsubscribe = () => {};
+    try {
+      unsubscribe = onAuthStateChanged(getFirebaseAuth(), async (user) => {
         if (cancelled) return;
-        if (!authResponse.ok && auth.configured === false) {
-          setAuthState("unavailable");
-          setAuthError("Account sign-in is not configured yet. Please try again after the site owner completes setup.");
-          return;
-        }
-        if (!auth.authenticated || !auth.user?.email) {
+        if (!user?.email || !user.emailVerified) {
           setAuthState("required");
           window.location.replace("/sign-in?next=%2Fsubscribe");
           return;
         }
-        setEmail(String(auth.user.email));
-        setAuthState("signed-in");
-        const statusResponse = await fetch("/api/billing/status", { cache: "no-store" });
-        const membershipData = await statusResponse.json().catch(() => ({}));
-        if (!cancelled) setMembership(membershipData);
-      } catch {
-        if (!cancelled) {
-          setAuthState("unavailable");
-          setAuthError("We couldn't verify your sign-in. Check your connection and try again.");
+        try {
+          const idToken = await user.getIdToken();
+          const sessionResponse = await fetch("/api/auth/firebase/session", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idToken }),
+            cache: "no-store",
+          });
+          if (!sessionResponse.ok) throw new Error("Your account session could not be verified. Please log in again.");
+          if (cancelled) return;
+          setEmail(user.email);
+          setAuthState("signed-in");
+          const statusResponse = await fetch("/api/billing/status", { cache: "no-store" });
+          const membershipData = await statusResponse.json().catch(() => ({}));
+          if (!statusResponse.ok) throw new Error(membershipData.error || "Membership status is temporarily unavailable.");
+          if (!cancelled) setMembership(membershipData);
+        } catch (error) {
+          if (!cancelled) {
+            setAuthState("unavailable");
+            setAuthError(error instanceof Error ? error.message : "We couldn't verify your sign-in. Try again.");
+          }
         }
-      }
+      });
+    } catch {
+      setAuthState("unavailable");
+      setAuthError("Firebase sign-in is not configured for this deployment.");
     }
-    void loadAccountAndMembership();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; unsubscribe(); };
   }, []);
 
   async function startCheckout(event: FormEvent<HTMLFormElement>) {
