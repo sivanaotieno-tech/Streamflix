@@ -421,6 +421,19 @@ export async function GET(request:NextRequest){
     }
   }
 
+  // Include anime in the unified All category as well as the dedicated Anime shelf.
+  if (scope === "all") {
+    try {
+      const anime = await fetchAniList(popular ? "" : rawQuery, 1, 50);
+      mediaResults = mergeUnique(mediaResults, anime.results);
+      sources.push("AniList");
+      catalogDatabase += "+AniList";
+    } catch (error) {
+      console.error("AniList unified search is unavailable", error);
+      unavailable.push("AniList");
+    }
+  }
+
   // Enrich discovery shelves with IMDb's current popular lists, not just the small bundled starter catalog.
   if(popular&&apiBase&&(scope==="all"||scope==="movies"||scope==="tv")){
     const types:("movie"|"tv")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:["movie","tv"];
