@@ -2,6 +2,8 @@
 
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import {Search,Play,Plus,Film,X,LoaderCircle,Home as HomeIcon,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard, Users, Trophy, FileVideo} from "lucide-react";
+import { signOut as firebaseSignOut } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase-client";
 import {StreamivioLogo} from "@/components/streamivio-logo";
 import {OpeningScreen} from "@/components/opening-screen";
 
@@ -201,6 +203,7 @@ export default function Home(){
   },[]);
 
   const signOut=async()=>{
+    try{await firebaseSignOut(getFirebaseAuth());}catch{}
     try{await fetch("/api/auth/signout",{method:"POST",cache:"no-store"});}catch{}
     setAuthUser(null);
   };
