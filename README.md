@@ -80,27 +80,11 @@ For the `all`, `movies`, and `tv` scopes, the website can supplement a short loc
 
 Example: `/api/search?q=matrx&scope=all&sort=relevance` can find "The Matrix" despite a small typo; `/api/search?q=space&scope=movies&sort=year` orders matching movies by newest year.
 
-## Email sign-in and account creation
+## Firebase Authentication and account creation
 
-Streamivio uses passwordless email verification. Visit `/sign-in`, choose **Create account** or **Sign in**, and request a six-digit code. The message uses the black-and-red Streamivio design from the email reference image. Codes are generated securely on the server, expire after 10 minutes, allow at most five verification attempts, and have a 60-second resend cooldown. Successful verification creates or signs in the account and sets an HTTP-only, same-site session cookie for up to 30 days.
+Streamivio uses Firebase Authentication for email/password and Google sign-in. New email/password accounts must verify their email before a server session is created. Firebase Admin verifies ID tokens, creates an HTTP-only session cookie, and writes the user profile to Cloud Firestore.
 
-API endpoints:
-
-- `POST /api/auth/request-code` — rate-limited verification-email request.
-- `POST /api/auth/verify-code` — validates the one-time code and creates a session.
-- `GET /api/auth/me` — checks the current signed-in user.
-- `POST /api/auth/signout` — revokes the current session.
-
-### Required account and email configuration
-
-Set the following as **server-side** environment variables in Vercel Project Settings → Environment Variables. Do not put secrets into client-side variables or commit them to GitHub.
-
-- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` — persistent authentication, rate-limit, and payment records.
-- `STREAMIVIO_AUTH_SECRET` — a random secret of at least 32 characters. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`.
-- `RESEND_API_KEY` — transactional-email API key.
-- `STREAMIVIO_EMAIL_FROM` — sender address on a domain verified in Resend, for example `Streamivio <no-reply@yourdomain.com>`.
-
-The sign-in API returns a clear configuration error until these values exist and the sender domain is verified. The email is an automated transactional security message; the code itself is cryptographically generated, not produced by a language model.
+See [Firebase setup](docs/FIREBASE_SETUP.md) for Firebase Console steps, Vercel environment variables, Firestore rules and account testing. The old email-code API routes are retained temporarily for backwards compatibility but are no longer used by the sign-in page.
 
 ## Subscription payments
 
