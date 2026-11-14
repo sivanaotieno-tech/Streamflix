@@ -1,28 +1,23 @@
 import { NextResponse } from "next/server";
-import { authStorageReady, emailDeliveryReady } from "@/lib/auth";
+import { firebaseAuthReady } from "@/lib/firebase-auth";
+import { firebaseClientConfigured } from "@/lib/firebase-client";
 import { envReady as billingEnvironmentReady } from "@/lib/billing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/**
- * Public, secret-free readiness probe for sign-in, email delivery and checkout.
- * It deliberately returns booleans only—never environment values or key names.
- */
+/** Secret-free readiness flags. This checks configuration presence, not successful provider transactions. */
 export async function GET() {
-  const authStorage = authStorageReady();
-  const email = emailDeliveryReady();
+  const firebaseClient = firebaseClientConfigured();
+  const firebaseAdmin = firebaseAuthReady();
   const billing = billingEnvironmentReady();
-
   return NextResponse.json({
-    status: authStorage && email && billing ? "ready" : "needs_configuration",
+    status: firebaseClient && firebaseAdmin && billing ? "ready" : "needs_configuration",
     services: {
-      authentication: { ready: authStorage },
-      verificationEmail: { ready: authStorage && email },
+      authentication: { ready: firebaseClient && firebaseAdmin },
+      firebase: { ready: firebaseClient && firebaseAdmin },
       paymentGateway: { ready: billing },
     },
-    note: "Readiness only. It does not send email or create a payment. Complete a sandbox sign-in and payment to verify live provider connectivity.",
-  }, {
-    headers: { "Cache-Control": "no-store" },
-  });
+    note: "Readiness only. Complete Firebase email verification, a sandbox checkout and a verified payment webhook before relying on production membership.",
+  }, { headers: { "Cache-Control": "no-store" } });
 }
