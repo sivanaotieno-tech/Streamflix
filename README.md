@@ -98,7 +98,7 @@ Configure these server-side variables:
 
 Configure IntaSend's collection-event webhook to point to `https://YOUR-DOMAIN/api/billing/webhook`. The server validates the challenge and verifies the invoice with IntaSend before activating a membership. A redirect alone never counts as proof of payment. The hosted-checkout reference is persisted even when IntaSend returns it as `id` rather than `invoice_id`, so the return page can query payment status.
 
-Payment references: [IntaSend hosted checkout documentation](https://developers.intasend.com/guides/collections/checkout/) and [Resend email API](https://resend.com/docs/api-reference/emails/send-email).
+Payment reference: [IntaSend hosted checkout documentation](https://developers.intasend.com/guides/collections/checkout/).
 
 ## Local Python development
 
@@ -136,13 +136,14 @@ The frontend accepts progress messages only from the exact `https://vidsrc.sh` i
 
 References: [VidSrc home](https://vidsrc.sh/), [embed/API documentation](https://vidsrc.sh/vidsrc/docs/).
 
-## Account sign-in, verification email and payment gateway
+## Account sign-in and payment gateway
 
-Streamivio includes passwordless email sign-in and sign-up with a six-digit code, styled with the black-and-red design in the reference email. Codes are generated cryptographically, expire after 10 minutes, and are stored as HMAC hashes in Upstash Redis. Resend delivers the transactional message.
+Firebase Authentication handles customer sign-in and sign-up. Firebase Admin creates HTTP-only session cookies, and Firestore stores account profiles. See [Firebase setup](docs/FIREBASE_SETUP.md).
 
-The membership checkout uses IntaSend hosted checkout for the payment methods enabled on the merchant account, including M-Pesa and cards when available. Payment status is checked against the provider before membership is activated. The `/api/system/status` endpoint returns secret-free readiness flags.
+The membership checkout remains a separate integration. IntaSend hosted checkout is the default payment adapter; the optional Hyperswitch path is sandbox-only. Upstash Redis currently stores checkout and subscription transaction records. Payment status is checked with the provider before membership is activated.
 
-**Production credentials must be configured before these flows can operate.** Follow [Production Setup: Sign-in Email and Payments](docs/PRODUCTION_SETUP.md) for the exact Vercel, Resend, Upstash and IntaSend settings and sandbox test procedure. Do not commit API keys or tokens.
+**Production credentials must be configured before these flows can operate.** Follow [Production Setup](docs/PRODUCTION_SETUP.md) and [Firebase setup](docs/FIREBASE_SETUP.md). Never commit API keys, service-account private keys or provider tokens.
+
 
 ## Deployment
 
