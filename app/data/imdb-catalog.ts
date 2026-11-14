@@ -6501,4 +6501,4 @@ export const imdbCatalog: CatalogTitle[] = [
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BMTY5OTU0OTc2NV5BMl5BanBnXkFtZTcwMzU4MDcyMQ@@._V1_.jpg"
     }
-];\n
+];
