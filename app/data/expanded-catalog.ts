@@ -141,6 +141,7 @@ export const expandedCatalog: CatalogTitle[] = [
   entry("tv-queen-sono","Queen Sono","2020","tv",["Action","Crime","Drama"],["South Africa"]),
   entry("tv-young-famous-african","Young, Famous & African","2022","reality",["Reality","Lifestyle"],["South Africa"]),
   entry("anime-dragon-ball-z","Dragon Ball Z","1989","anime",["Anime","Action","Adventure"],["Japan"]),
+  entry("anime-jojo-bizarre-adventure","JoJo's Bizarre Adventure","2012","anime",["Anime","Action","Adventure","Fantasy"],["Japan"],"tt2359704"),
   entry("anime-death-note","Death Note","2006","anime",["Anime","Crime","Drama","Thriller"],["Japan"]),
   entry("anime-code-geass","Code Geass","2006","anime",["Anime","Action","Drama","Sci-Fi"],["Japan"]),
   entry("anime-bleach","Bleach","2004","anime",["Anime","Action","Adventure","Fantasy"],["Japan"]),
