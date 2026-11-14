@@ -13,7 +13,7 @@ import {
   updateProfile,
 } from "firebase/auth";
 import { ArrowLeft, Eye, EyeOff, LoaderCircle, Mail, ShieldCheck } from "lucide-react";
-import { firebaseAuth } from "@/lib/firebase-client";
+import { getFirebaseAuth } from "@/lib/firebase-client";
 
 function safeNext(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "/";
@@ -68,20 +68,20 @@ export default function SignInPage() {
     const cleanEmail = email.trim().toLowerCase();
     try {
       if (mode === "signup") {
-        const credential = await createUserWithEmailAndPassword(firebaseAuth, cleanEmail, password);
+        const credential = await createUserWithEmailAndPassword(getFirebaseAuth(), cleanEmail, password);
         if (displayName.trim()) await updateProfile(credential.user, { displayName: displayName.trim().slice(0, 80) });
         await sendEmailVerification(credential.user);
-        await signOut(firebaseAuth);
+        await signOut(getFirebaseAuth());
         setMode("signin");
         setNotice("Your account has been created. Check your inbox (and spam folder) and verify your email before signing in.");
         return;
       }
 
-      const credential = await signInWithEmailAndPassword(firebaseAuth, cleanEmail, password);
+      const credential = await signInWithEmailAndPassword(getFirebaseAuth(), cleanEmail, password);
       await credential.user.reload();
       if (!credential.user.emailVerified) {
         await sendEmailVerification(credential.user);
-        await signOut(firebaseAuth);
+        await signOut(getFirebaseAuth());
         setNotice("Please verify your email first. We sent you a fresh verification link.");
         return;
       }
@@ -100,7 +100,7 @@ export default function SignInPage() {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
-      const credential = await signInWithPopup(firebaseAuth, provider);
+      const credential = await signInWithPopup(getFirebaseAuth(), provider);
       await establishServerSession(credential);
     } catch (err) {
       setError(friendlyError(err));
@@ -119,7 +119,7 @@ export default function SignInPage() {
     setError("");
     setNotice("");
     try {
-      await sendPasswordResetEmail(firebaseAuth, cleanEmail);
+      await sendPasswordResetEmail(getFirebaseAuth(), cleanEmail);
       setNotice("If an account exists for that address, Firebase has sent a password-reset email.");
     } catch (err) {
       setError(friendlyError(err));
