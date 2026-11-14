@@ -101,7 +101,7 @@ function textList(value:unknown):string[]{
   return [];
 }
 
-function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"|"documentary"|"documentary"):SearchRecord|null{
+function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"|"documentary"):SearchRecord|null{
   const titleValue=row.title||row.Title||row.name||row.Name||row.titleText||row.originalTitle||row.original_title;
   const title=typeof titleValue==="string"?titleValue.trim():String(titleValue??"").trim();
   if(!title)return null;
