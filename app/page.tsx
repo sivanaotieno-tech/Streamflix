@@ -37,6 +37,10 @@ type Item={
   directors?:string[];
   runtime?:string|null;
   contentRating?:string|null;
+  watchContentId?:string;
+  watchProgressSeconds?:number;
+  watchDurationSeconds?:number;
+  lastWatchedAt?:number;
 };
 
 const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["TV Shows","tv"],["Anime","anime"],["Documentaries","documentaries"],["Kids & Family","kids"],["Reality","reality"],["Games","games"]] as const;
@@ -55,6 +59,13 @@ const getIdFromEmbedUrl=(value:string)=>{
   }catch{return "";}
 };
 const progressKeyFor=(id:string)=>"streamivio:vidsrc-progress:"+id.toLowerCase();
+const watchItemKeyFor=(id:string)=>"streamivio:watch-item:"+id.toLowerCase();
+const saveWatchProgress=(item:Item,id:string,seconds:number,duration=0)=>{
+  try{
+    localStorage.setItem(progressKeyFor(id),String(seconds));
+    localStorage.setItem(watchItemKeyFor(id),JSON.stringify({...item,watchContentId:id,watchProgressSeconds:seconds,watchDurationSeconds:Number.isFinite(duration)&&duration>0?Math.floor(duration):0,lastWatchedAt:Date.now()}));
+  }catch{}
+};
 const formatSeconds=(value:number)=>{
   const total=Math.max(0,Math.floor(Number.isFinite(value)?value:0));
   return Math.floor(total/60)+":"+String(total%60).padStart(2,"0");
@@ -123,6 +134,7 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
           <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10"/>
           <span className="absolute bottom-2 left-2 right-2 truncate text-xs font-bold drop-shadow md:bottom-3 md:left-3 md:text-sm">{m.title||m.name}</span>
           <span className="poster-play absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100"><span className="rounded-full border border-white/80 bg-black/60 p-2"><Play className="h-4 w-4 fill-white"/></span></span>
+          {(m.watchProgressSeconds||0)>0&&<span className="absolute bottom-0 left-0 right-0 h-1 bg-white/25"><span className="block h-full bg-sky-400" style={{width:m.watchDurationSeconds&&m.watchDurationSeconds>0?Math.min(100,(m.watchProgressSeconds!/m.watchDurationSeconds)*100)+"%":"12%"}}/></span>}
         </div>
         <div className="mt-1 truncate text-[10px] text-zinc-400">{m.year||m.source}{m.rating?" · ★ "+m.rating.toFixed(1):""}</div>
       </button>)}
@@ -132,6 +144,7 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
 
 export default function Home(){
   const[rows,setRows]=useState<Record<string,Item[]>>({});
+  const[continueWatching,setContinueWatching]=useState<Item[]>([]);
   const[hero,setHero]=useState<Item|null>(null);
   const[q,setQ]=useState("");
   const[results,setResults]=useState<Item[]>([]);
@@ -222,8 +235,26 @@ export default function Home(){
 
   const play=(m:Item)=>{
     setSelected(m);setSeason("");setEpisode("");setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");
-    setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(0);setPendingDirectResume(0);setStartAt("");
+    setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(Number(m.watchProgressSeconds)||0);setPendingDirectResume(0);setStartAt("");
   };
+
+  useEffect(()=>{
+    try{
+      const saved:Item[]=[];
+      for(let index=0;index<localStorage.length;index++){
+        const key=localStorage.key(index);
+        if(!key||!key.startsWith("streamivio:vidsrc-progress:"))continue;
+        const contentId=key.slice("streamivio:vidsrc-progress:".length);
+        const seconds=Number(localStorage.getItem(key)||0);
+        if(!Number.isFinite(seconds)||seconds<=0)continue;
+        const raw=localStorage.getItem(watchItemKeyFor(contentId));
+        if(!raw)continue;
+        try{const item=JSON.parse(raw) as Item;if(item&&(item.title||item.name))saved.push({...item,watchContentId:contentId,watchProgressSeconds:seconds});}catch{}
+      }
+      saved.sort((a,b)=>(b.lastWatchedAt||0)-(a.lastWatchedAt||0));
+      setContinueWatching(saved.slice(0,20));
+    }catch{}
+  },[]);
 
   useEffect(()=>{
     if(!selected){
@@ -399,17 +430,19 @@ export default function Home(){
       const progress=Number(data.player_progress);
       const duration=Number(data.player_duration);
       if(status==="completed"||(Number.isFinite(duration)&&duration>0&&Number.isFinite(progress)&&progress>=duration-2)){
-        try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}
+        try{localStorage.removeItem(progressKeyFor(playerContentId));localStorage.removeItem(watchItemKeyFor(playerContentId));}catch{}
+        setContinueWatching(current=>current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase()));
         setResumeSeconds(0);return;
       }
       if(!["playing","paused","seeked"].includes(status)||!Number.isFinite(progress)||progress<0)return;
       const seconds=Math.floor(progress);
-      try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}
+      if(selected)saveWatchProgress(selected,playerContentId,seconds,duration);
+      if(selected)setContinueWatching(current=>[{...selected,watchContentId:playerContentId,watchProgressSeconds:seconds,watchDurationSeconds:Number.isFinite(duration)&&duration>0?Math.floor(duration):0,lastWatchedAt:Date.now()},...current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase())].slice(0,20));
       setResumeSeconds(seconds);
     };
     window.addEventListener("message",onPlayerMessage);
     return()=>window.removeEventListener("message",onPlayerMessage);
-  },[playerContentId]);
+  },[playerContentId,selected]);
 
   const runSearch=async(query:string,category:string,country=searchCountry,year=searchYear,ageRating=searchAgeRating,sort=searchSort)=>{
     if(query.trim().length<2){
@@ -716,6 +749,7 @@ export default function Home(){
         >{label}</button>)}
         {movieShelfLoading&&<LoaderCircle aria-label="Loading movies" className="h-4 w-4 animate-spin text-zinc-400"/>}
       </div>}
+      {browse==="Home"&&<Row title="Continue Watching" items={continueWatching} onOpen={play}/>}
       {browse==="My List"
         ? <Row title="My List" items={list} onOpen={play}/>
         : Object.entries(rows)
@@ -739,7 +773,7 @@ export default function Home(){
         <button type="button" onClick={()=>{setPlaybackUrl("");setPlaybackError("");}} className="ml-4 flex shrink-0 items-center gap-2 rounded bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"><X className="h-4 w-4"/>Back to details</button>
       </div>
       <div className="flex min-h-0 flex-1 items-center justify-center bg-black">
-        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="h-full w-full object-contain" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0)video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>}
+        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="h-full w-full object-contain" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0)video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;if(selected)saveWatchProgress(selected,playerContentId,seconds,video.duration);if(selected)setContinueWatching(current=>[{...selected,watchContentId:playerContentId,watchProgressSeconds:seconds,watchDurationSeconds:Number.isFinite(video.duration)?Math.floor(video.duration):0,lastWatchedAt:Date.now()},...current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase())].slice(0,20));setResumeSeconds(seconds);}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));localStorage.removeItem(watchItemKeyFor(playerContentId));}catch{}setContinueWatching(current=>current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase()));setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>}
       </div>
       <div className="shrink-0 border-t border-white/10 bg-[#111] px-4 py-2 text-center text-[11px] text-zinc-500">Playback is provided by the selected video source; availability can vary by title and region.</div>
     </div>}
@@ -815,7 +849,7 @@ export default function Home(){
       </div>}
       {vidsrcInfoError&&<p role="status" className="mt-3 text-xs text-amber-300">{vidsrcInfoError}</p>}
       {playbackUrl&&<div className="mt-5 overflow-hidden rounded-lg bg-black">
-        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0){video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
+        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0){video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;if(selected)saveWatchProgress(selected,playerContentId,seconds,video.duration);if(selected)setContinueWatching(current=>[{...selected,watchContentId:playerContentId,watchProgressSeconds:seconds,watchDurationSeconds:Number.isFinite(video.duration)?Math.floor(video.duration):0,lastWatchedAt:Date.now()},...current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase())].slice(0,20));setResumeSeconds(seconds);}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));localStorage.removeItem(watchItemKeyFor(playerContentId));}catch{}setContinueWatching(current=>current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase()));setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
         <p className="px-3 py-2 text-xs text-zinc-400">Playback controls and available subtitle options are provided by the video player. Availability can vary by title and region.</p>
       </div>}
       {playbackError&&<p role="status" className="mt-4 text-sm text-amber-300">{playbackError}</p>}
