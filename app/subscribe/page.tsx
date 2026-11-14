@@ -102,7 +102,7 @@ export default function SubscribePage() {
       });
       const data = await response.json();
       if (response.status === 401 || data.signInRequired) {
-        window.location.assign("/sign-in?next=%2Fsubscribe");
+        window.location.assign(signInHref);
         return;
       }
       if (!response.ok || !data.checkoutUrl) throw new Error(data.error || "Could not start checkout.");
