@@ -101,7 +101,7 @@ function textList(value:unknown):string[]{
   return [];
 }
 
-function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"|"documentary"):SearchRecord|null{
+function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"|"documentary"|"documentary"):SearchRecord|null{
   const titleValue=row.title||row.Title||row.name||row.Name||row.titleText||row.originalTitle||row.original_title;
   const title=typeof titleValue==="string"?titleValue.trim():String(titleValue??"").trim();
   if(!title)return null;
@@ -177,7 +177,7 @@ function mergeUnique(existing:SearchRecord[],incoming:SearchRecord[]){
   return merged;
 }
 
-async function fetchExternal(base:string,query:string,kind:"movie"|"tv"){
+async function fetchExternal(base:string,query:string,kind:"movie"|"tv"|"documentary"){
   const target=new URL("/search",base);
   target.searchParams.set("q",query);
   target.searchParams.set("type",kind);
@@ -274,7 +274,7 @@ async function fetchAniList(query: string, page: number, perPage = 50) {
   };
 }
 
-async function fetchPopular(base:string,kind:"movie"|"tv"){
+async function fetchPopular(base:string,kind:"movie"|"tv"|"documentary"){
   const target=new URL("/popular",base);
   target.searchParams.set("type",kind);
   const response=await fetch(target.toString(),{
