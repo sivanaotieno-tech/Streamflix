@@ -1,4 +1,5 @@
 import { imdbCatalog } from "./imdb-catalog";
+import { imdbPythonCatalog } from "./imdb-python-catalog";
 import { expandedCatalog } from "./expanded-catalog";
 
 export type CatalogTitle = {
@@ -57,9 +58,12 @@ const catalogKey = (item: CatalogTitle) => `${item.title.trim().toLowerCase()}::
 const curatedCatalog = Array.from(
   new Map([...handCuratedCatalog, ...expandedCatalog].map((item) => [catalogKey(item), item])).values(),
 );
-const curatedKeys = new Set(curatedCatalog.map(catalogKey));
+// Curated records win first, followed by the existing PHP chart import and
+// the supplemental Python chart import. Duplicate title/year pairs are skipped.
+const mergedCatalog = new Map<string, CatalogTitle>();
+for (const item of [...curatedCatalog, ...imdbCatalog, ...imdbPythonCatalog]) {
+  const key = catalogKey(item);
+  if (!mergedCatalog.has(key)) mergedCatalog.set(key, item);
+}
 
-export const catalog: CatalogTitle[] = [
-  ...curatedCatalog,
-  ...imdbCatalog.filter((item) => !curatedKeys.has(catalogKey(item))),
-];
+export const catalog: CatalogTitle[] = Array.from(mergedCatalog.values());
