@@ -68,11 +68,11 @@ if (count($byId) < 100) {
 $items = array_values($byId);
 usort($items, static fn(array $a, array $b): int => ($b['rating'] <=> $a['rating']) ?: strcmp($a['title'], $b['title']));
 $json = json_encode($items, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-$source = "import type { CatalogTitle } from './catalog';\\n\\nexport const imdbCatalog: CatalogTitle[] = " . $json . ";\\n";
+$source = "import type { CatalogTitle } from './catalog';\n\nexport const imdbCatalog: CatalogTitle[] = " . $json . ";\n";
 if (file_put_contents($output, $source) === false) {
     fwrite(STDERR, "Could not write generated IMDb catalogue.\n");
     exit(1);
 }
 
-fwrite(STDOUT, sprintf("Wrote %d unique IMDb chart titles to %s\\n", count($items), $output));
+fwrite(STDOUT, sprintf("Wrote %d unique IMDb chart titles to %s\n", count($items), $output));
 if ($errors) fwrite(STDERR, "Some charts could not be refreshed; review the log above.\n");

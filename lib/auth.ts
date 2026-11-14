@@ -9,6 +9,7 @@ export type AuthUser = {
   email: string;
   createdAt: string;
   lastLoginAt: string;
+  isDemo?: boolean;
 };
 
 export type AuthCodeRecord = {
@@ -117,8 +118,89 @@ export function createAuthSessionToken() {
   return randomBytes(32).toString("base64url");
 }
 
+export function demoAuthReady() {
+  return Boolean(process.env.STREAMIVIO_DEMO_SECRET && process.env.STREAMIVIO_DEMO_SECRET.length >= 32);
+}
+
+function demoSignature(expiresAt: string) {
+  const secret = process.env.STREAMIVIO_DEMO_SECRET;
+  if (!secret || secret.length < 32) throw new Error("Demo sign-in is not configured.");
+  return createHmac("sha256", secret).update(`streamivio-demo:${expiresAt}`).digest("hex");
+}
+
+export function createDemoSessionToken() {
+  const expiresAt = String(Math.floor(Date.now() / 1000) + 12 * 60 * 60);
+  return `demo.${expiresAt}.${demoSignature(expiresAt)}`;
+}
+
+function getDemoAuthenticatedUser(token: string): AuthUser | null {
+  const match = token.match(/^demo\.(\d{10})\.([a-f0-9]{64})$/);
+  if (!match || !demoAuthReady()) return null;
+  const expiresAt = Number(match[1]);
+  const now = Math.floor(Date.now() / 1000);
+  if (!Number.isSafeInteger(expiresAt) || expiresAt <= now || expiresAt > now + 12 * 60 * 60 + 60) return null;
+  const expected = Buffer.from(demoSignature(match[1]), "hex");
+  const supplied = Buffer.from(match[2], "hex");
+  if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) return null;
+  const createdAt = new Date().toISOString();
+  return { email: "demo@streamivio.com", createdAt, lastLoginAt: createdAt, isDemo: true };
+}
+
+export function firebaseAuthReady() {
+  return Boolean(
+    process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
+    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN &&
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID
+  );
+}
+
+async function getFirebaseAuthenticatedUser(idToken: string): Promise<AuthUser | null> {
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  if (!apiKey || idToken.length > 8192) return null;
+  try {
+    const response = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idToken }),
+        cache: "no-store",
+        signal: AbortSignal.timeout(7000),
+      }
+    );
+    if (!response.ok) return null;
+    const payload = await response.json() as {
+      users?: Array<{ email?: string; createdAt?: string; lastLoginAt?: string }>;
+    };
+    const account = payload.users?.[0];
+    if (!account?.email) return null;
+    const toIso = (value?: string) => {
+      const timestamp = Number(value);
+      return Number.isFinite(timestamp) && timestamp > 0
+        ? new Date(timestamp).toISOString()
+        : new Date().toISOString();
+    };
+    return {
+      email: normalizeEmail(account.email),
+      createdAt: toIso(account.createdAt),
+      lastLoginAt: toIso(account.lastLoginAt),
+    };
+  } catch (error) {
+    console.error("Firebase token verification failed", error instanceof Error ? error.message : "unknown error");
+    return null;
+  }
+}
+
 export async function getAuthenticatedUser(token: string | undefined | null): Promise<AuthUser | null> {
-  if (!token || !/^[A-Za-z0-9_-]{40,50}$/.test(token)) return null;
+  if (!token) return null;
+  if (token.startsWith("demo.")) return getDemoAuthenticatedUser(token);
+  // Firebase ID tokens are JWTs. Verify them with Firebase before trusting the account email.
+  if (token.split(".").length === 3) {
+    if (!firebaseAuthReady()) return null;
+    return getFirebaseAuthenticatedUser(token);
+  }
+  // Keep existing Streamivio OTP sessions valid during the transition.
+  if (!/^[A-Za-z0-9_-]{40,50}$/.test(token)) return null;
   const email = await authRedisCommand<string | null>("GET", authSessionKey(token));
   if (!email) return null;
   const raw = await authRedisCommand<string | null>("GET", authUserKey(email));

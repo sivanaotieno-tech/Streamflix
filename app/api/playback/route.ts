@@ -13,6 +13,30 @@ const isSafeHttps = (value: string) => {
   }
 };
 
+
+const ANIME_TITLE_ALIASES: Record<string,string> = {
+  jjk: "Jujutsu Kaisen",
+  aot: "Attack on Titan",
+  snk: "Attack on Titan",
+  mha: "My Hero Academia",
+  bnha: "My Hero Academia",
+  hxh: "Hunter x Hunter",
+  fmab: "Fullmetal Alchemist: Brotherhood",
+  opm: "One Punch Man",
+  csm: "Chainsaw Man",
+  sxf: "Spy x Family",
+};
+const canonicalTitle = (value: string) => ANIME_TITLE_ALIASES[value.trim().toLowerCase()] || value;
+const KNOWN_ANIME_IMDB_IDS: Record<string,string> = {
+  jujutsukaisen: "tt12343534",
+  attackontitan: "tt2560140",
+  demonslayer: "tt9335498",
+  demonslayerkimetsunoyaiba: "tt9335498",
+  chainsawman: "tt13616990",
+  onepunchman: "tt4508902",
+  hunterxhunter: "tt2098220",
+  jojosbizarreadventure: "tt2359704",
+};
 const normalizeTitle = (value: string) =>
   value
     .replace(/\s*\(\d{4}\)\s*$/, "")
@@ -212,7 +236,7 @@ async function lookupImdbId(title: string, year: string | null, kind: "movie" | 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const id = (params.get("id") || "").trim();
-  const title = (params.get("title") || "").trim();
+  const title = canonicalTitle((params.get("title") || "").trim());
   const requestedType = (params.get("type") || "movie").trim().toLowerCase();
   const suppliedImdbId = (params.get("imdb_id") || params.get("imdbId") || "").trim();
   const kind: "movie" | "tv" = isTvType(requestedType) ? "tv" : "movie";
@@ -271,7 +295,7 @@ export async function GET(request: NextRequest) {
   }
 
   // Prefer IDs supplied by title metadata, then IDs stored in the website catalog.
-  const storedImdbId = suppliedImdbId || (local as any)?.imdb_id || (local as any)?.imdbId;
+  const storedImdbId = suppliedImdbId || (local as any)?.imdb_id || (local as any)?.imdbId || (resolvedKind === "tv" ? KNOWN_ANIME_IMDB_IDS[normalizeTitle(catalogTitle)] : undefined);
   if (isImdbId(storedImdbId)) {
     // The configured source is tried before the external iframe. It only returns URLs explicitly
     // configured in the authorized catalog; it does not extract third-party streams.
@@ -386,7 +410,9 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(
     {
       available: false,
-      message: "The IMDb lookup could not verify this exact title. Check the title and release year, or add its verified IMDb ID to the catalog.",
+      message: resolvedKind === "tv" && (String((local as any)?.type || requestedType).toLowerCase() === "anime" || requestedType === "anime")
+        ? "This anime is in Streamivio, but a verified playback listing could not be matched yet. Its AniList catalogue entry is still valid."
+        : "The title could not be matched to a verified IMDb record. Check its title and release year, or add a verified IMDb ID to the catalog.",
       debug: process.env.NODE_ENV === "development" ? "IMDb providers returned no verified exact title match." : undefined,
     },
     { status: 404, headers: { "Cache-Control": "no-store" } },

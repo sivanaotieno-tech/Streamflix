@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { authStorageReady, emailDeliveryReady } from "@/lib/auth";
+import { firebaseAuthReady, emailDeliveryReady } from "@/lib/auth";
 import { envReady as billingEnvironmentReady } from "@/lib/billing";
 
 export const runtime = "nodejs";
@@ -10,18 +10,18 @@ export const dynamic = "force-dynamic";
  * It deliberately returns booleans only—never environment values or key names.
  */
 export async function GET() {
-  const authStorage = authStorageReady();
+  const authentication = firebaseAuthReady();
   const email = emailDeliveryReady();
   const billing = billingEnvironmentReady();
 
   return NextResponse.json({
-    status: authStorage && email && billing ? "ready" : "needs_configuration",
+    status: authentication && billing ? "ready" : "needs_configuration",
     services: {
-      authentication: { ready: authStorage },
-      verificationEmail: { ready: authStorage && email },
+      authentication: { ready: authentication },
+      verificationEmail: { ready: email },
       paymentGateway: { ready: billing },
     },
-    note: "Readiness only. It does not send email or create a payment. Complete a sandbox sign-in and payment to verify live provider connectivity.",
+    note: "Readiness only. Firebase verifies account sign-in; email readiness is informational. No payment is created by this check.",
   }, {
     headers: { "Cache-Control": "no-store" },
   });

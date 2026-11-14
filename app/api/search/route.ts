@@ -9,6 +9,22 @@ type SearchRecord=Record<string,any>;
 const fold=(value:unknown)=>String(value??"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const compact=(value:unknown)=>fold(value).replace(/\s+/g,"");
 const words=(value:unknown)=>fold(value).split(/\s+/).filter(Boolean);
+const ANIME_SEARCH_ALIASES: Record<string,string> = {
+  jjk: "Jujutsu Kaisen",
+  aot: "Attack on Titan",
+  snk: "Attack on Titan",
+  mha: "My Hero Academia",
+  bnha: "My Hero Academia",
+  hxh: "Hunter x Hunter",
+  fmab: "Fullmetal Alchemist: Brotherhood",
+  opm: "One Punch Man",
+  csm: "Chainsaw Man",
+  sxf: "Spy x Family",
+  demonslayer: "Demon Slayer: Kimetsu no Yaiba",
+  kimetsunoyaiba: "Demon Slayer: Kimetsu no Yaiba",
+  shingekinokyojin: "Attack on Titan",
+};
+
 
 function matchesScope(type:string,scope:Scope){
   if(scope==="all")return true;
@@ -101,7 +117,7 @@ function textList(value:unknown):string[]{
   return [];
 }
 
-function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"):SearchRecord|null{
+function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"|"documentary"):SearchRecord|null{
   const titleValue=row.title||row.Title||row.name||row.Name||row.titleText||row.originalTitle||row.original_title;
   const title=typeof titleValue==="string"?titleValue.trim():String(titleValue??"").trim();
   if(!title)return null;
@@ -177,7 +193,7 @@ function mergeUnique(existing:SearchRecord[],incoming:SearchRecord[]){
   return merged;
 }
 
-async function fetchExternal(base:string,query:string,kind:"movie"|"tv"){
+async function fetchExternal(base:string,query:string,kind:"movie"|"tv"|"documentary"){
   const target=new URL("/search",base);
   target.searchParams.set("q",query);
   target.searchParams.set("type",kind);
@@ -192,7 +208,94 @@ async function fetchExternal(base:string,query:string,kind:"movie"|"tv"){
     .filter((row:SearchRecord|null):row is SearchRecord=>Boolean(row));
 }
 
-async function fetchPopular(base:string,kind:"movie"|"tv"){
+async function fetchAniList(query: string, page: number, perPage = 50) {
+  const searchTerm = ANIME_SEARCH_ALIASES[compact(query)] || query;
+
+  const graph = `query ($page: Int, $perPage: Int, $search: String) {
+    Page(page: $page, perPage: $perPage) {
+      pageInfo { total currentPage lastPage hasNextPage }
+      media(type: ANIME, sort: POPULARITY_DESC, search: $search) {
+        id
+        idMal
+        title { romaji english native }
+        description(asHtml: false)
+        startDate { year }
+        averageScore
+        genres
+        coverImage { extraLarge large }
+        bannerImage
+        episodes
+        format
+        countryOfOrigin
+        isAdult
+      }
+    }
+  }`;
+  const response = await fetch("https://graphql.anilist.co", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({
+      query: graph,
+      variables: { page, perPage, ...(searchTerm ? { search: searchTerm } : {}) },
+    }),
+    cache: "force-cache",
+    next: { revalidate: 300 },
+    signal: AbortSignal.timeout(9000),
+  });
+  if (!response.ok) throw new Error("Anime discovery returned HTTP " + response.status);
+  const payload = await response.json();
+  const pageData = payload?.data?.Page;
+  const media = Array.isArray(pageData?.media) ? pageData.media : [];
+  const countryNames: Record<string, string> = {
+    JP: "Japan", KR: "South Korea", CN: "China", US: "United States", TW: "Taiwan",
+  };
+  const results = media
+    // Streamivio's public discovery shelves exclude adult-only titles.
+    .filter((item: SearchRecord) => item && !item.isAdult && item.title)
+    .map((item: SearchRecord): SearchRecord => {
+      const id = String(item.id);
+      const title = String(item.title.english || item.title.romaji || item.title.native || "").trim();
+      const alternateTitles = [item.title.english, item.title.romaji, item.title.native, query].filter((value: unknown) => typeof value === "string" && value.trim() && value.trim() !== title);
+      const description = String(item.description || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      const countryCode = String(item.countryOfOrigin || "");
+      const cover = item.coverImage?.extraLarge || item.coverImage?.large || null;
+      return {
+        id: "anilist-" + id,
+        anilistId: id,
+        malId: item.idMal ? String(item.idMal) : undefined,
+        title,
+        name: title,
+        original_title: String(item.title.romaji || item.title.native || title),
+        alternate_titles: alternateTitles,
+        overview: description,
+        description,
+        year: item.startDate?.year ? String(item.startDate.year) : "",
+        rating: typeof item.averageScore === "number" ? Number((item.averageScore / 10).toFixed(1)) : 0,
+        type: "anime",
+        media_type: "anime",
+        genres: Array.isArray(item.genres) ? item.genres : [],
+        country: countryCode ? [countryNames[countryCode] || countryCode] : [],
+        ageRating: null,
+        contentRating: null,
+        poster: cover,
+        poster_url: cover,
+        backdrop: item.bannerImage || null,
+        episodes: item.episodes || null,
+        format: item.format || null,
+        source: "AniList",
+        url: "https://anilist.co/anime/" + encodeURIComponent(id),
+        playback_available: false,
+      };
+    })
+    .filter((item: SearchRecord) => Boolean(item.title));
+  return {
+    results,
+    total: Number(pageData?.pageInfo?.total || results.length),
+    hasNextPage: Boolean(pageData?.pageInfo?.hasNextPage),
+  };
+}
+
+async function fetchPopular(base:string,kind:"movie"|"tv"|"documentary"){
   const target=new URL("/popular",base);
   target.searchParams.set("type",kind);
   const response=await fetch(target.toString(),{
@@ -231,6 +334,68 @@ export async function GET(request:NextRequest){
   if(year&&(!/^[0-9]{4}$/.test(year)||Number(year)<1888||Number(year)>2200))return NextResponse.json({error:"Enter a valid four-digit release year."},{status:400});
 
   const scope=rawScope as Scope;
+  if (scope === "anime") {
+    const page = Math.floor(offset / 50) + 1;
+    const fallback = catalog
+      .filter(item => matchesScope(item.type, "anime"))
+      .map(item => ({ ...item, name: item.title, poster_url: (item as any).poster || null, source: item.source || "Streamivio Library" }))
+      .filter((item: SearchRecord) => {
+        if (!popular && scoreResult(item, rawQuery) <= 0) return false;
+        if (genre && !textList(item.genres).some(value => compact(value) === genre)) return false;
+        if (country && !countryMatches(item, country)) return false;
+        if (year && String(item.year || "") !== year) return false;
+        if (ageRating && (item.ageRating || item.contentRating) && String(item.ageRating || item.contentRating).toLocaleLowerCase() !== ageRating) return false;
+        return true;
+      });
+
+    try {
+      const anime = await fetchAniList(popular ? "" : rawQuery, page, 50);
+      const filtered = anime.results.filter((item: SearchRecord) => {
+        if (genre && !textList(item.genres).some(value => compact(value) === genre)) return false;
+        if (country && !countryMatches(item, country)) return false;
+        if (year && String(item.year || "") !== year) return false;
+        if (ageRating && String(item.ageRating || item.contentRating || "").toLocaleLowerCase() !== ageRating) return false;
+        return true;
+      });
+      if (sort === "title") filtered.sort((a: SearchRecord, b: SearchRecord) => String(a.title).localeCompare(String(b.title)));
+      else if (sort === "rating") filtered.sort((a: SearchRecord, b: SearchRecord) => (numberOrUndefined(b.rating) || 0) - (numberOrUndefined(a.rating) || 0));
+      else if (sort === "year") filtered.sort((a: SearchRecord, b: SearchRecord) => Number(b.year || 0) - Number(a.year || 0));
+      const results = filtered.slice(0, limit);
+      const nextOffset = page * 50;
+      return NextResponse.json({
+        results,
+        total: anime.total,
+        limit,
+        offset,
+        nextOffset,
+        hasMore: anime.hasNextPage,
+        query: rawQuery,
+        sources: ["AniList"],
+        unavailable: [],
+        database: "AniList",
+      }, {
+        headers: { "Cache-Control": "public, max-age=60, s-maxage=300, stale-while-revalidate=600" },
+      });
+    } catch (error) {
+      console.error("AniList discovery failed; using Streamivio's bundled anime catalog", error);
+      const results = fallback.slice(offset, offset + limit);
+      return NextResponse.json({
+        results,
+        total: fallback.length,
+        limit,
+        offset,
+        nextOffset: offset + results.length,
+        hasMore: offset + results.length < fallback.length,
+        query: rawQuery,
+        sources: ["Streamivio Library"],
+        unavailable: ["AniList"],
+        database: "bundled-json-fallback",
+      }, {
+        headers: { "Cache-Control": "public, max-age=20, s-maxage=60, stale-while-revalidate=180" },
+      });
+    }
+  }
+
   const apiBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/+$/,"");
   let mediaResults:SearchRecord[]=[];
   let catalogDatabase="bundled-json-fallback";
@@ -251,7 +416,7 @@ export async function GET(request:NextRequest){
         if(country)upstream.searchParams.set("country",country);
         if(year)upstream.searchParams.set("year",year);
         upstream.searchParams.set("sort",sort);
-        upstream.searchParams.set("limit","100");
+        upstream.searchParams.set("limit","250");
         upstream.searchParams.set("offset","0");
         const response=await fetch(upstream.toString(),{
           headers:{Accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(4500)
@@ -277,9 +442,22 @@ export async function GET(request:NextRequest){
     }
   }
 
+  // Include anime in the unified All category as well as the dedicated Anime shelf.
+  if (scope === "all") {
+    try {
+      const anime = await fetchAniList(popular ? "" : rawQuery, 1, 50);
+      mediaResults = mergeUnique(mediaResults, anime.results);
+      sources.push("AniList");
+      catalogDatabase += "+AniList";
+    } catch (error) {
+      console.error("AniList unified search is unavailable", error);
+      unavailable.push("AniList");
+    }
+  }
+
   // Enrich discovery shelves with IMDb's current popular lists, not just the small bundled starter catalog.
-  if(popular&&apiBase&&(scope==="all"||scope==="movies"||scope==="tv")){
-    const types:("movie"|"tv")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:["movie","tv"];
+  if(popular&&apiBase&&(scope==="all"||scope==="movies"||scope==="tv"||scope==="documentaries")){
+    const types:("movie"|"tv"|"documentary")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:scope==="documentaries"?["documentary"]:["movie","tv","documentary"];
     const remotePopular=await Promise.all(types.map(async kind=>{
       try{return {kind,results:await fetchPopular(apiBase,kind),failed:false};}
       catch(error){console.error("IMDb popular catalog failed",kind,error);return {kind,results:[],failed:true};}
@@ -332,11 +510,11 @@ export async function GET(request:NextRequest){
   combined=combined.filter(filterResult);
 
   const externalEligible=!popular&&Boolean(apiBase)&&rawQuery.length>=2&&
-    (scope==="all"||scope==="movies"||scope==="tv");
+    (scope==="all"||scope==="movies"||scope==="tv"||scope==="documentaries");
   if(scope!=="games")sources.push("Streamivio Library");
   if(scope==="all"||scope==="games")sources.push("Games catalog");
   if(externalEligible&&apiBase){
-    const types:("movie"|"tv")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:["movie","tv"];
+    const types:("movie"|"tv"|"documentary")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:scope==="documentaries"?["documentary"]:["movie","tv","documentary"];
     const remote=await Promise.all(types.map(async kind=>{
       try{return {kind,results:await fetchExternal(apiBase,rawQuery,kind),failed:false};}
       catch(error){console.error("External title search failed",kind,error);return {kind,results:[],failed:true};}

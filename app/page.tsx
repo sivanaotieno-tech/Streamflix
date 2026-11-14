@@ -2,6 +2,8 @@
 
 import {useEffect,useRef,useState,type FormEvent} from "react";
 import {Search,Play,Plus,Film,X,LoaderCircle,Home as HomeIcon,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard, Users, Trophy, FileVideo} from "lucide-react";
+import { signOut as firebaseSignOut } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase-client";
 import {StreamivioLogo} from "@/components/streamivio-logo";
 import {OpeningScreen} from "@/components/opening-screen";
 
@@ -35,6 +37,10 @@ type Item={
   directors?:string[];
   runtime?:string|null;
   contentRating?:string|null;
+  watchContentId?:string;
+  watchProgressSeconds?:number;
+  watchDurationSeconds?:number;
+  lastWatchedAt?:number;
 };
 
 const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["TV Shows","tv"],["Anime","anime"],["Documentaries","documentaries"],["Kids & Family","kids"],["Reality","reality"],["Games","games"]] as const;
@@ -53,6 +59,13 @@ const getIdFromEmbedUrl=(value:string)=>{
   }catch{return "";}
 };
 const progressKeyFor=(id:string)=>"streamivio:vidsrc-progress:"+id.toLowerCase();
+const watchItemKeyFor=(id:string)=>"streamivio:watch-item:"+id.toLowerCase();
+const saveWatchProgress=(item:Item,id:string,seconds:number,duration=0)=>{
+  try{
+    localStorage.setItem(progressKeyFor(id),String(seconds));
+    localStorage.setItem(watchItemKeyFor(id),JSON.stringify({...item,watchContentId:id,watchProgressSeconds:seconds,watchDurationSeconds:Number.isFinite(duration)&&duration>0?Math.floor(duration):0,lastWatchedAt:Date.now()}));
+  }catch{}
+};
 const formatSeconds=(value:number)=>{
   const total=Math.max(0,Math.floor(Number.isFinite(value)?value:0));
   return Math.floor(total/60)+":"+String(total%60).padStart(2,"0");
@@ -121,6 +134,7 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
           <span className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10"/>
           <span className="absolute bottom-2 left-2 right-2 truncate text-xs font-bold drop-shadow md:bottom-3 md:left-3 md:text-sm">{m.title||m.name}</span>
           <span className="poster-play absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100"><span className="rounded-full border border-white/80 bg-black/60 p-2"><Play className="h-4 w-4 fill-white"/></span></span>
+          {(m.watchProgressSeconds||0)>0&&<span className="absolute bottom-0 left-0 right-0 h-1 bg-white/25"><span className="block h-full bg-red-500" style={{width:m.watchDurationSeconds&&m.watchDurationSeconds>0?Math.min(100,(m.watchProgressSeconds!/m.watchDurationSeconds)*100)+"%":"12%"}}/></span>}
         </div>
         <div className="mt-1 truncate text-[10px] text-zinc-400">{m.year||m.source}{m.rating?" · ★ "+m.rating.toFixed(1):""}</div>
       </button>)}
@@ -130,6 +144,7 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
 
 export default function Home(){
   const[rows,setRows]=useState<Record<string,Item[]>>({});
+  const[continueWatching,setContinueWatching]=useState<Item[]>([]);
   const[hero,setHero]=useState<Item|null>(null);
   const[q,setQ]=useState("");
   const[results,setResults]=useState<Item[]>([]);
@@ -150,6 +165,11 @@ export default function Home(){
   const[movieShelfLoading,setMovieShelfLoading]=useState(false);
   const[movieTotal,setMovieTotal]=useState(0);
   const[movieLoadingMore,setMovieLoadingMore]=useState(false);
+  const[shelfTotals,setShelfTotals]=useState<Record<string,number>>({});
+  const[shelfLoadingMore,setShelfLoadingMore]=useState<Record<string,boolean>>({});
+  const[animeTotal,setAnimeTotal]=useState(0);
+  const[animeOffset,setAnimeOffset]=useState(0);
+  const[animeLoadingMore,setAnimeLoadingMore]=useState(false);
   const[gamesLoading,setGamesLoading]=useState(true);
   const searchAbort=useRef<AbortController|null>(null);
   const searchTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -185,7 +205,7 @@ export default function Home(){
   const [browse,setBrowse]=useState("Home");
   const [welcomeDismissed,setWelcomeDismissed]=useState(false);
   const [loading,setLoading]=useState(true);
-  const [authUser,setAuthUser]=useState<{email:string}|null>(null);
+  const [authUser,setAuthUser]=useState<{email:string;isDemo?:boolean}|null>(null);
   const [authStatusLoading,setAuthStatusLoading]=useState(true);
 
   useEffect(()=>{
@@ -193,7 +213,7 @@ export default function Home(){
     fetch("/api/auth/me",{cache:"no-store"})
       .then(async response=>{
         const data=await response.json().catch(()=>({}));
-        if(!cancelled&&response.ok&&data.authenticated&&data.user?.email)setAuthUser({email:String(data.user.email)});
+        if(!cancelled&&response.ok&&data.authenticated&&data.user?.email)setAuthUser({email:String(data.user.email),isDemo:data.user.isDemo===true});
       })
       .catch(()=>{})
       .finally(()=>{if(!cancelled)setAuthStatusLoading(false);});
@@ -201,6 +221,7 @@ export default function Home(){
   },[]);
 
   const signOut=async()=>{
+    try{await firebaseSignOut(getFirebaseAuth());}catch{}
     try{await fetch("/api/auth/signout",{method:"POST",cache:"no-store"});}catch{}
     setAuthUser(null);
   };
@@ -219,8 +240,29 @@ export default function Home(){
 
   const play=(m:Item)=>{
     setSelected(m);setSeason("");setEpisode("");setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");
-    setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(0);setPendingDirectResume(0);setStartAt("");
+    setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(Number(m.watchProgressSeconds)||0);setPendingDirectResume(0);setStartAt("");
   };
+
+  useEffect(()=>{
+    try{
+      const saved:Item[]=[];
+      for(let index=0;index<localStorage.length;index++){
+        const key=localStorage.key(index);
+        if(!key||!key.startsWith("streamivio:vidsrc-progress:"))continue;
+        const contentId=key.slice("streamivio:vidsrc-progress:".length);
+        const seconds=Number(localStorage.getItem(key)||0);
+        if(!Number.isFinite(seconds)||seconds<=0)continue;
+        const raw=localStorage.getItem(watchItemKeyFor(contentId));
+        if(!raw)continue;
+        try{
+          const item=JSON.parse(raw) as Item;
+          if(item&&(item.title||item.name))saved.push({...item,watchContentId:contentId,watchProgressSeconds:seconds});
+        }catch{}
+      }
+      saved.sort((a,b)=>(b.lastWatchedAt||0)-(a.lastWatchedAt||0));
+      setContinueWatching(saved.slice(0,20));
+    }catch{}
+  },[]);
 
   useEffect(()=>{
     if(!selected){
@@ -396,17 +438,19 @@ export default function Home(){
       const progress=Number(data.player_progress);
       const duration=Number(data.player_duration);
       if(status==="completed"||(Number.isFinite(duration)&&duration>0&&Number.isFinite(progress)&&progress>=duration-2)){
-        try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}
+        try{localStorage.removeItem(progressKeyFor(playerContentId));localStorage.removeItem(watchItemKeyFor(playerContentId));}catch{}
+        setContinueWatching(current=>current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase()));
         setResumeSeconds(0);return;
       }
       if(!["playing","paused","seeked"].includes(status)||!Number.isFinite(progress)||progress<0)return;
       const seconds=Math.floor(progress);
-      try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}
+      if(selected)saveWatchProgress(selected,playerContentId,seconds,duration);
+      if(selected)setContinueWatching(current=>[{...selected,watchContentId:playerContentId,watchProgressSeconds:seconds,watchDurationSeconds:Number.isFinite(duration)&&duration>0?Math.floor(duration):0,lastWatchedAt:Date.now()},...current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase())].slice(0,20));
       setResumeSeconds(seconds);
     };
     window.addEventListener("message",onPlayerMessage);
     return()=>window.removeEventListener("message",onPlayerMessage);
-  },[playerContentId]);
+  },[playerContentId,selected]);
 
   const runSearch=async(query:string,category:string,country=searchCountry,year=searchYear,ageRating=searchAgeRating,sort=searchSort)=>{
     if(query.trim().length<2){
@@ -430,7 +474,7 @@ export default function Home(){
       const found=Array.isArray(data.results)?data.results:[];
       setResults(found);
       setSearchTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):found.length);
-      setSearchOffset(found.length);
+      setSearchOffset(Number.isFinite(Number(data.nextOffset))?Math.max(0,Number(data.nextOffset)):found.length);
       setSearchSources(Array.isArray(data.sources)?data.sources.filter((source:any)=>typeof source==="string"):[]);
       setSearchUnavailable(Array.isArray(data.unavailable)?data.unavailable:[]);
     }catch(error){
@@ -463,7 +507,7 @@ export default function Home(){
       const found=Array.isArray(data.results)?data.results: [];
       setResults(current=>[...current,...found.filter((item:any)=>!current.some(existing=>String(existing.id)===String(item.id)))]);
       setSearchTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):searchTotal);
-      setSearchOffset(searchOffset+found.length);
+      setSearchOffset(Number.isFinite(Number(data.nextOffset))?Math.max(searchOffset,Number(data.nextOffset)):searchOffset+found.length);
       setSearchSources(Array.isArray(data.sources)?data.sources.filter((source:any)=>typeof source==="string"):[]);
       setSearchUnavailable(Array.isArray(data.unavailable)?data.unavailable:[]);
     }catch(error){
@@ -497,13 +541,62 @@ export default function Home(){
     }
   };
 
+  const loadMoreShelf=async(scope:string,title:string)=>{
+    if(shelfLoadingMore[title])return;
+    const current=rows[title]||[];
+    if(current.length>=(shelfTotals[title]||0))return;
+    setShelfLoadingMore(previous=>({...previous,[title]:true}));
+    try{
+      const params=new URLSearchParams({scope,popular:"1",limit:"60",offset:String(current.length)});
+      const response=await fetch("/api/search?"+params.toString(),{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"More titles could not be loaded");
+      const next=Array.isArray(data.results)?data.results as Item[]:[];
+      setRows(previous=>{
+        const existing=previous[title]||[];
+        const ids=new Set(existing.map(item=>String(item.id)));
+        return {...previous,[title]:[...existing,...next.filter(item=>!ids.has(String(item.id)))]};
+      });
+      setShelfTotals(previous=>({...previous,[title]:Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):current.length+next.length}));
+    }catch(error){
+      console.error("More "+title+" could not be loaded",error);
+    }finally{
+      setShelfLoadingMore(previous=>({...previous,[title]:false}));
+    }
+  };
+
+  const loadMoreAnime=async()=>{
+    if(animeLoadingMore||animeOffset>=animeTotal)return;
+    setAnimeLoadingMore(true);
+    try{
+      const params=new URLSearchParams({scope:"anime",popular:"1",limit:"50",offset:String(animeOffset)});
+      const response=await fetch("/api/search?"+params.toString(),{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"More anime could not be loaded");
+      const next=Array.isArray(data.results)?data.results as Item[]:[];
+      setRows(previous=>{
+        const existing=previous["Anime Spotlight"]||[];
+        const ids=new Set(existing.map(item=>String(item.id)));
+        return {...previous,"Anime Spotlight":[...existing,...next.filter(item=>!ids.has(String(item.id)))]};
+      });
+      setAnimeTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):animeTotal);
+      setAnimeOffset(Number.isFinite(Number(data.nextOffset))?Math.max(animeOffset,Number(data.nextOffset)):animeOffset+50);
+    }catch(error){
+      console.error("More Streamivio anime could not be loaded",error);
+    }finally{
+      setAnimeLoadingMore(false);
+    }
+  };
+
   useEffect(()=>{
-    fetch("/api/search?scope=anime&popular=1")
+    fetch("/api/search?scope=anime&popular=1&limit=50&offset=0")
       .then(async response=>{
         const data=await response.json();
         if(!response.ok)throw new Error(data.error||"Anime catalog unavailable");
         const anime=(Array.isArray(data.results)?data.results:[]).map((x:any):Item=>({...x,name:x.title,source:x.source||"Anime"}));
         setRows(current=>({...current,"Anime Spotlight":anime}));
+        setAnimeTotal(Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):anime.length);
+        setAnimeOffset(Number.isFinite(Number(data.nextOffset))?Math.max(0,Number(data.nextOffset)):anime.length);
       })
       .catch(error=>console.error("Anime catalog could not be loaded",error))
       .finally(()=>setLoading(false));
@@ -537,11 +630,13 @@ export default function Home(){
   useEffect(()=>{
     const shelves=[["tv","TV to Explore"],["documentaries","Documentaries"],["kids","Family & Kids"],["reality","Reality & Competition"]];
     Promise.all(shelves.map(async ([scope,title])=>{
-      const response=await fetch("/api/search?scope="+scope+"&popular=1");
+      const params=new URLSearchParams({scope,popular:"1",limit:"60",offset:"0"});
+      const response=await fetch("/api/search?"+params.toString());
       if(!response.ok)throw new Error("Local "+scope+" catalog unavailable");
       const data=await response.json();
       const items=Array.isArray(data.results)?data.results as Item[]:[];
       setRows(current=>({...current,[title]:items}));
+      setShelfTotals(current=>({...current,[title]:Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):items.length}));
     })).catch(error=>console.error("Some local catalog shelves could not be loaded",error));
   },[]);
 
@@ -610,7 +705,7 @@ export default function Home(){
           {q&&<button type="button" onClick={()=>setQ("")} aria-label="Clear search" className="absolute right-3 text-zinc-400 hover:text-white"><X className="h-3.5 w-3.5"/></button>}
         </form>
         <button onClick={()=>{setBrowse("My List");setQ("");}} className="hidden text-xs font-semibold text-zinc-300 hover:text-white sm:block">My List</button>
-        {authUser?<><span title={authUser.email} className="hidden max-w-28 truncate text-xs text-zinc-300 lg:block">{authUser.email}</span><button onClick={()=>void signOut()} className="text-xs font-semibold text-zinc-300 hover:text-white">Sign out</button></>:<a href="/sign-in" className="whitespace-nowrap text-xs font-semibold text-zinc-200 hover:text-white">{authStatusLoading?"Checking…":"Sign in"}</a>}
+        {authUser?<>{authUser.isDemo&&<span className="rounded-full border border-sky-500/40 bg-sky-500/10 px-2 py-1 text-[10px] font-bold text-sky-300">DEMO</span>}<span title={authUser.email} className="hidden max-w-28 truncate text-xs text-zinc-300 lg:block">{authUser.isDemo?"Demo account":authUser.email}</span><button onClick={()=>void signOut()} className="text-xs font-semibold text-zinc-300 hover:text-white">Sign out</button></>:<a href="/sign-in" className="whitespace-nowrap text-xs font-semibold text-zinc-200 hover:text-white">{authStatusLoading?"Checking…":"Sign in"}</a>}
         <a href="/subscribe" aria-label="Open Streamivio subscription plans" className="rounded-full bg-sky-500 px-4 py-2 text-xs font-bold text-[#06111d] transition hover:bg-sky-400 sm:text-sm">Subscribe</a>
       </div>
     </header>
@@ -713,6 +808,7 @@ export default function Home(){
         >{label}</button>)}
         {movieShelfLoading&&<LoaderCircle aria-label="Loading movies" className="h-4 w-4 animate-spin text-zinc-400"/>}
       </div>}
+      {browse==="Home"&&<Row title="Continue Watching" items={continueWatching} onOpen={play}/>}
       {browse==="My List"
         ? <Row title="My List" items={list} onOpen={play}/>
         : Object.entries(rows)
@@ -727,6 +823,9 @@ export default function Home(){
 )
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
       {!q.trim()&&((browse==="Home"&&movieTotal>0)||(browse==="Movies"&&(rows["Movies to Explore"]?.length||0)<movieTotal))&&<div className="flex justify-center py-6"><button type="button" onClick={()=>browse==="Home"?setBrowse("Movies"):void loadMoreMovies()} disabled={browse==="Movies"&&movieLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{browse==="Home"?`Browse all ${movieTotal} movies`:movieLoadingMore?"Loading movies…":"Load more movies"}</button></div>}
+      {!q.trim()&&browse==="Anime"&&animeOffset<animeTotal&&<div className="flex justify-center py-6"><button type="button" onClick={()=>void loadMoreAnime()} disabled={animeLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{animeLoadingMore?"Loading anime…":"Load more anime"}</button></div>}
+      {!q.trim()&&browse==="TV Shows"&&(rows["TV to Explore"]?.length||0)<(shelfTotals["TV to Explore"]||0)&&<div className="flex justify-center py-6"><button type="button" onClick={()=>void loadMoreShelf("tv","TV to Explore")} disabled={!!shelfLoadingMore["TV to Explore"]} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{shelfLoadingMore["TV to Explore"]?"Loading shows…":"Load more shows"}</button></div>}
+      {!q.trim()&&browse==="Documentaries"&&(rows["Documentaries"]?.length||0)<(shelfTotals["Documentaries"]||0)&&<div className="flex justify-center py-6"><button type="button" onClick={()=>void loadMoreShelf("documentaries","Documentaries")} disabled={!!shelfLoadingMore["Documentaries"]} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{shelfLoadingMore["Documentaries"]?"Loading documentaries…":"Load more documentaries"}</button></div>}
     </div>}
 
 
@@ -736,7 +835,7 @@ export default function Home(){
         <button type="button" onClick={()=>{setPlaybackUrl("");setPlaybackError("");}} className="ml-4 flex shrink-0 items-center gap-2 rounded bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"><X className="h-4 w-4"/>Back to details</button>
       </div>
       <div className="flex min-h-0 flex-1 items-center justify-center bg-black">
-        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="h-full w-full object-contain" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0)video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>}
+        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="h-full w-full object-contain" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0)video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;if(selected)saveWatchProgress(selected,playerContentId,seconds,video.duration);if(selected)setContinueWatching(current=>[{...selected,watchContentId:playerContentId,watchProgressSeconds:seconds,watchDurationSeconds:Number.isFinite(video.duration)?Math.floor(video.duration):0,lastWatchedAt:Date.now()},...current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase())].slice(0,20));setResumeSeconds(seconds);}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));localStorage.removeItem(watchItemKeyFor(playerContentId));}catch{}setContinueWatching(current=>current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase()));setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>}
       </div>
       <div className="shrink-0 border-t border-white/10 bg-[#111] px-4 py-2 text-center text-[11px] text-zinc-500">Playback is provided by the selected video source; availability can vary by title and region.</div>
     </div>}
@@ -812,7 +911,7 @@ export default function Home(){
       </div>}
       {vidsrcInfoError&&<p role="status" className="mt-3 text-xs text-amber-300">{vidsrcInfoError}</p>}
       {playbackUrl&&<div className="mt-5 overflow-hidden rounded-lg bg-black">
-        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0){video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
+        {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0){video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;if(selected)saveWatchProgress(selected,playerContentId,seconds,video.duration);if(selected)setContinueWatching(current=>[{...selected,watchContentId:playerContentId,watchProgressSeconds:seconds,watchDurationSeconds:Number.isFinite(video.duration)?Math.floor(video.duration):0,lastWatchedAt:Date.now()},...current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase())].slice(0,20));setResumeSeconds(seconds);}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));localStorage.removeItem(watchItemKeyFor(playerContentId));}catch{}setContinueWatching(current=>current.filter(item=>(item.watchContentId||"").toLowerCase()!==playerContentId.toLowerCase()));setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="aspect-video w-full border-0"/>}
         <p className="px-3 py-2 text-xs text-zinc-400">Playback controls and available subtitle options are provided by the video player. Availability can vary by title and region.</p>
       </div>}
       {playbackError&&<p role="status" className="mt-4 text-sm text-amber-300">{playbackError}</p>}
