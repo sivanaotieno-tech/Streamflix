@@ -204,7 +204,7 @@ export default function Home(){
 
   const signOut=async()=>{
     try{await fetch("/api/auth/signout",{method:"POST",cache:"no-store"});}catch{}
-    try{await firebaseSignOut(firebaseAuth);}catch{}
+    try{await firebaseSignOut(getFirebaseAuth());}catch{}
     setAuthUser(null);
   };
 
