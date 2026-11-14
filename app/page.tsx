@@ -152,6 +152,8 @@ export default function Home(){
   const[movieShelfLoading,setMovieShelfLoading]=useState(false);
   const[movieTotal,setMovieTotal]=useState(0);
   const[movieLoadingMore,setMovieLoadingMore]=useState(false);
+  const[shelfTotals,setShelfTotals]=useState<Record<string,number>>({});
+  const[shelfLoadingMore,setShelfLoadingMore]=useState<Record<string,boolean>>({});
   const[animeTotal,setAnimeTotal]=useState(0);
   const[animeOffset,setAnimeOffset]=useState(0);
   const[animeLoadingMore,setAnimeLoadingMore]=useState(false);
@@ -503,6 +505,30 @@ export default function Home(){
     }
   };
 
+  const loadMoreShelf=async(scope:string,title:string)=>{
+    if(shelfLoadingMore[title])return;
+    const current=rows[title]||[];
+    if(current.length>=(shelfTotals[title]||0))return;
+    setShelfLoadingMore(previous=>({...previous,[title]:true}));
+    try{
+      const params=new URLSearchParams({scope,popular:"1",limit:"60",offset:String(current.length)});
+      const response=await fetch("/api/search?"+params.toString(),{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||"More titles could not be loaded");
+      const next=Array.isArray(data.results)?data.results as Item[]:[];
+      setRows(previous=>{
+        const existing=previous[title]||[];
+        const ids=new Set(existing.map(item=>String(item.id)));
+        return {...previous,[title]:[...existing,...next.filter(item=>!ids.has(String(item.id)))]};
+      });
+      setShelfTotals(previous=>({...previous,[title]:Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):current.length+next.length}));
+    }catch(error){
+      console.error("More "+title+" could not be loaded",error);
+    }finally{
+      setShelfLoadingMore(previous=>({...previous,[title]:false}));
+    }
+  };
+
   const loadMoreAnime=async()=>{
     if(animeLoadingMore||animeOffset>=animeTotal)return;
     setAnimeLoadingMore(true);
@@ -759,6 +785,8 @@ export default function Home(){
           .map(([title,items])=><Row key={title} title={title} items={items} onOpen={play}/>)}
       {!q.trim()&&((browse==="Home"&&movieTotal>0)||(browse==="Movies"&&(rows["Movies to Explore"]?.length||0)<movieTotal))&&<div className="flex justify-center py-6"><button type="button" onClick={()=>browse==="Home"?setBrowse("Movies"):void loadMoreMovies()} disabled={browse==="Movies"&&movieLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{browse==="Home"?`Browse all ${movieTotal} movies`:movieLoadingMore?"Loading movies…":"Load more movies"}</button></div>}
       {!q.trim()&&browse==="Anime"&&animeOffset<animeTotal&&<div className="flex justify-center py-6"><button type="button" onClick={()=>void loadMoreAnime()} disabled={animeLoadingMore} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{animeLoadingMore?"Loading anime…":"Load more anime"}</button></div>}
+      {!q.trim()&&browse==="TV Shows"&&(rows["TV to Explore"]?.length||0)<(shelfTotals["TV to Explore"]||0)&&<div className="flex justify-center py-6"><button type="button" onClick={()=>void loadMoreShelf("tv","TV to Explore")} disabled={!!shelfLoadingMore["TV to Explore"]} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{shelfLoadingMore["TV to Explore"]?"Loading shows…":"Load more shows"}</button></div>}
+      {!q.trim()&&browse==="Documentaries"&&(rows["Documentaries"]?.length||0)<(shelfTotals["Documentaries"]||0)&&<div className="flex justify-center py-6"><button type="button" onClick={()=>void loadMoreShelf("documentaries","Documentaries")} disabled={!!shelfLoadingMore["Documentaries"]} className="rounded-full border border-white/20 px-5 py-2 text-sm font-semibold hover:bg-white/10 disabled:opacity-50">{shelfLoadingMore["Documentaries"]?"Loading documentaries…":"Load more documentaries"}</button></div>}
     </div>}
 
 
