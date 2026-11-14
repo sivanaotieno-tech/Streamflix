@@ -94,6 +94,7 @@ Configure these server-side variables:
 
 - `INTASEND_PUBLISHABLE_KEY` and `INTASEND_SECRET_KEY`.
 - `INTASEND_WEBHOOK_CHALLENGE` — configure the same challenge in IntaSend's webhook settings.
+- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` — persistent checkout and subscription transaction storage.
 - `NEXT_PUBLIC_APP_URL` — the public HTTPS origin of the deployed Streamivio site.
 
 Configure IntaSend's collection-event webhook to point to `https://YOUR-DOMAIN/api/billing/webhook`. The server validates the challenge and verifies the invoice with IntaSend before activating a membership. A redirect alone never counts as proof of payment. The hosted-checkout reference is persisted even when IntaSend returns it as `id` rather than `invoice_id`, so the return page can query payment status.
