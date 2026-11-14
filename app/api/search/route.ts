@@ -255,7 +255,7 @@ async function fetchAniList(query: string, page: number, perPage = 50) {
     .map((item: SearchRecord): SearchRecord => {
       const id = String(item.id);
       const title = String(item.title.english || item.title.romaji || item.title.native || "").trim();
-      const alternateTitles = [item.title.english, item.title.romaji, item.title.native].filter((value: unknown) => typeof value === "string" && value.trim() && value.trim() !== title);
+      const alternateTitles = [item.title.english, item.title.romaji, item.title.native, query].filter((value: unknown) => typeof value === "string" && value.trim() && value.trim() !== title);
       const description = String(item.description || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
       const countryCode = String(item.countryOfOrigin || "");
       const cover = item.coverImage?.extraLarge || item.coverImage?.large || null;
