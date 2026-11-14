@@ -9,6 +9,22 @@ type SearchRecord=Record<string,any>;
 const fold=(value:unknown)=>String(value??"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"").toLocaleLowerCase().replace(/[^a-z0-9]+/g," ").trim();
 const compact=(value:unknown)=>fold(value).replace(/\s+/g,"");
 const words=(value:unknown)=>fold(value).split(/\s+/).filter(Boolean);
+const ANIME_SEARCH_ALIASES: Record<string,string> = {
+  jjk: "Jujutsu Kaisen",
+  aot: "Attack on Titan",
+  snk: "Attack on Titan",
+  mha: "My Hero Academia",
+  bnha: "My Hero Academia",
+  hxh: "Hunter x Hunter",
+  fmab: "Fullmetal Alchemist: Brotherhood",
+  opm: "One Punch Man",
+  csm: "Chainsaw Man",
+  sxf: "Spy x Family",
+  "demon slayer": "Demon Slayer: Kimetsu no Yaiba",
+  "kimetsu no yaiba": "Demon Slayer: Kimetsu no Yaiba",
+  "shingeki no kyojin": "Attack on Titan",
+};
+
 
 function matchesScope(type:string,scope:Scope){
   if(scope==="all")return true;
@@ -193,13 +209,15 @@ async function fetchExternal(base:string,query:string,kind:"movie"|"tv"|"documen
 }
 
 async function fetchAniList(query: string, page: number, perPage = 50) {
+  const searchTerm = ANIME_SEARCH_ALIASES[compact(query)] || query;
+
   const graph = `query ($page: Int, $perPage: Int, $search: String) {
     Page(page: $page, perPage: $perPage) {
       pageInfo { total currentPage lastPage hasNextPage }
       media(type: ANIME, sort: POPULARITY_DESC, search: $search) {
         id
         idMal
-        title { romaji english }
+        title { romaji english native }
         description(asHtml: false)
         startDate { year }
         averageScore
@@ -218,7 +236,7 @@ async function fetchAniList(query: string, page: number, perPage = 50) {
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: JSON.stringify({
       query: graph,
-      variables: { page, perPage, ...(query ? { search: query } : {}) },
+      variables: { page, perPage, ...(searchTerm ? { search: searchTerm } : {}) },
     }),
     cache: "force-cache",
     next: { revalidate: 300 },
@@ -236,7 +254,8 @@ async function fetchAniList(query: string, page: number, perPage = 50) {
     .filter((item: SearchRecord) => item && !item.isAdult && item.title)
     .map((item: SearchRecord): SearchRecord => {
       const id = String(item.id);
-      const title = String(item.title.english || item.title.romaji || "").trim();
+      const title = String(item.title.english || item.title.romaji || item.title.native || "").trim();
+      const alternateTitles = [item.title.english, item.title.romaji, item.title.native].filter((value: unknown) => typeof value === "string" && value.trim() && value.trim() !== title);
       const description = String(item.description || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
       const countryCode = String(item.countryOfOrigin || "");
       const cover = item.coverImage?.extraLarge || item.coverImage?.large || null;
@@ -246,6 +265,8 @@ async function fetchAniList(query: string, page: number, perPage = 50) {
         malId: item.idMal ? String(item.idMal) : undefined,
         title,
         name: title,
+        original_title: String(item.title.romaji || item.title.native || title),
+        alternate_titles: alternateTitles,
         overview: description,
         description,
         year: item.startDate?.year ? String(item.startDate.year) : "",
