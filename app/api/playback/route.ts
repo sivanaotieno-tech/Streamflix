@@ -28,14 +28,14 @@ const ANIME_TITLE_ALIASES: Record<string,string> = {
 };
 const canonicalTitle = (value: string) => ANIME_TITLE_ALIASES[value.trim().toLowerCase()] || value;
 const KNOWN_ANIME_IMDB_IDS: Record<string,string> = {
-  "jujutsu kaisen": "tt12343534",
-  "attack on titan": "tt2560140",
-  "demon slayer": "tt9335498",
-  "demon slayer kimetsu no yaiba": "tt9335498",
-  "chainsaw man": "tt13616990",
-  "one punch man": "tt4508902",
-  "hunter x hunter": "tt2098220",
-  "jojos bizarre adventure": "tt2359704",
+  jujutsukaisen: "tt12343534",
+  attackontitan: "tt2560140",
+  demonslayer: "tt9335498",
+  demonslayerkimetsunoyaiba: "tt9335498",
+  chainsawman: "tt13616990",
+  onepunchman: "tt4508902",
+  hunterxhunter: "tt2098220",
+  jojosbizarreadventure: "tt2359704",
 };
 const normalizeTitle = (value: string) =>
   value
