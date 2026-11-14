@@ -55,10 +55,10 @@ The response returns a `title` object with a consistent shape for the detail dia
 Streamivio now merges its hand-curated titles with a generated IMDb chart catalogue. The importer uses the MIT-licensed [hooshid/imdb-scraper](https://github.com/hooshid/imdb-scraper) PHP library and imports IMDb's Top 250 Movies and Top 250 TV charts (up to 500 chart entries before duplicate removal). The original hand-curated records take precedence when a title/year already exists.
 
 - Generated data: `app/data/imdb-catalog.ts`
-- Importer: `catalog-importer/import.php`
+- Importers: `catalog-importer/import.php` (PHP) and `catalog-importer/scrape_imdb_top.py` (Python supplement)
 - Dependency: `hooshid/imdb-scraper` via Composer
 - Refresh: GitHub Actions → **Refresh IMDb catalogue** → **Run workflow**, or the scheduled weekly run
-- The importer stores IMDb IDs and poster URLs from chart metadata; it does not download poster files or video files.
+- Both importers store IMDb IDs and available poster URLs from chart metadata; they do not download poster files or video files. The Python importer uses the chart page once per list rather than making a separate request for every title, and preserves the last successful generated file if IMDb blocks or changes the page.
 - IMDb charts are a curated subset, **not the entire IMDb database**. Search can continue using the configured metadata service for titles outside the local charts.
 
 To run the importer locally (PHP 8+, Composer, cURL):
