@@ -80,27 +80,11 @@ For the `all`, `movies`, and `tv` scopes, the website can supplement a short loc
 
 Example: `/api/search?q=matrx&scope=all&sort=relevance` can find "The Matrix" despite a small typo; `/api/search?q=space&scope=movies&sort=year` orders matching movies by newest year.
 
-## Email sign-in and account creation
+## Firebase Authentication and account creation
 
-Streamivio uses passwordless email verification. Visit `/sign-in`, choose **Create account** or **Sign in**, and request a six-digit code. The message uses the black-and-red Streamivio design from the email reference image. Codes are generated securely on the server, expire after 10 minutes, allow at most five verification attempts, and have a 60-second resend cooldown. Successful verification creates or signs in the account and sets an HTTP-only, same-site session cookie for up to 30 days.
+Streamivio uses Firebase Authentication for email/password and Google sign-in. New email/password accounts must verify their email before a server session is created. Firebase Admin verifies ID tokens, creates an HTTP-only session cookie, and writes the user profile to Cloud Firestore.
 
-API endpoints:
-
-- `POST /api/auth/request-code` — rate-limited verification-email request.
-- `POST /api/auth/verify-code` — validates the one-time code and creates a session.
-- `GET /api/auth/me` — checks the current signed-in user.
-- `POST /api/auth/signout` — revokes the current session.
-
-### Required account and email configuration
-
-Set the following as **server-side** environment variables in Vercel Project Settings → Environment Variables. Do not put secrets into client-side variables or commit them to GitHub.
-
-- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` — persistent authentication, rate-limit, and payment records.
-- `STREAMIVIO_AUTH_SECRET` — a random secret of at least 32 characters. Generate one with `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`.
-- `RESEND_API_KEY` — transactional-email API key.
-- `STREAMIVIO_EMAIL_FROM` — sender address on a domain verified in Resend, for example `Streamivio <no-reply@yourdomain.com>`.
-
-The sign-in API returns a clear configuration error until these values exist and the sender domain is verified. The email is an automated transactional security message; the code itself is cryptographically generated, not produced by a language model.
+See [Firebase setup](docs/FIREBASE_SETUP.md) for Firebase Console steps, Vercel environment variables, Firestore rules and account testing. The old email-code API routes are retained temporarily for backwards compatibility but are no longer used by the sign-in page.
 
 ## Subscription payments
 
@@ -110,11 +94,12 @@ Configure these server-side variables:
 
 - `INTASEND_PUBLISHABLE_KEY` and `INTASEND_SECRET_KEY`.
 - `INTASEND_WEBHOOK_CHALLENGE` — configure the same challenge in IntaSend's webhook settings.
+- `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` — persistent checkout and subscription transaction storage.
 - `NEXT_PUBLIC_APP_URL` — the public HTTPS origin of the deployed Streamivio site.
 
 Configure IntaSend's collection-event webhook to point to `https://YOUR-DOMAIN/api/billing/webhook`. The server validates the challenge and verifies the invoice with IntaSend before activating a membership. A redirect alone never counts as proof of payment. The hosted-checkout reference is persisted even when IntaSend returns it as `id` rather than `invoice_id`, so the return page can query payment status.
 
-Payment references: [IntaSend hosted checkout documentation](https://developers.intasend.com/guides/collections/checkout/) and [Resend email API](https://resend.com/docs/api-reference/emails/send-email).
+Payment reference: [IntaSend hosted checkout documentation](https://developers.intasend.com/guides/collections/checkout/).
 
 ## Local Python development
 
@@ -152,13 +137,14 @@ The frontend accepts progress messages only from the exact `https://vidsrc.sh` i
 
 References: [VidSrc home](https://vidsrc.sh/), [embed/API documentation](https://vidsrc.sh/vidsrc/docs/).
 
-## Account sign-in, verification email and payment gateway
+## Account sign-in and payment gateway
 
-Streamivio includes passwordless email sign-in and sign-up with a six-digit code, styled with the black-and-red design in the reference email. Codes are generated cryptographically, expire after 10 minutes, and are stored as HMAC hashes in Upstash Redis. Resend delivers the transactional message.
+Firebase Authentication handles customer sign-in and sign-up. Firebase Admin creates HTTP-only session cookies, and Firestore stores account profiles. See [Firebase setup](docs/FIREBASE_SETUP.md).
 
-The membership checkout uses IntaSend hosted checkout for the payment methods enabled on the merchant account, including M-Pesa and cards when available. Payment status is checked against the provider before membership is activated. The `/api/system/status` endpoint returns secret-free readiness flags.
+The membership checkout remains a separate integration. IntaSend hosted checkout is the default payment adapter; the optional Hyperswitch path is sandbox-only. Upstash Redis currently stores checkout and subscription transaction records. Payment status is checked with the provider before membership is activated.
 
-**Production credentials must be configured before these flows can operate.** Follow [Production Setup: Sign-in Email and Payments](docs/PRODUCTION_SETUP.md) for the exact Vercel, Resend, Upstash and IntaSend settings and sandbox test procedure. Do not commit API keys or tokens.
+**Production credentials must be configured before these flows can operate.** Follow [Production Setup](docs/PRODUCTION_SETUP.md) and [Firebase setup](docs/FIREBASE_SETUP.md). Never commit API keys, service-account private keys or provider tokens.
+
 
 ## Deployment
 
