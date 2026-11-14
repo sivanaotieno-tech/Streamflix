@@ -258,6 +258,8 @@ export default function Home(){
   const isOnePieceTitle=/one piece/i.test(String(selected?.title||selected?.name||""));
   const seasonNumbers=new Set<number>(providerSeasons.map((entry:any)=>Number(entry?.season??entry)).filter((value:number)=>Number.isInteger(value)&&value>0));
   if(isJujutsuKaisen){seasonNumbers.add(1);seasonNumbers.add(2);seasonNumbers.add(3);}
+  const isJoJoTitle=/jojo.?s bizarre adventure/i.test(String(selected?.title||selected?.name||""));
+  if(isJoJoTitle){for(let part=1;part<=6;part++)seasonNumbers.add(part);}
   const seasonOptions=Array.from(seasonNumbers).sort((a,b)=>a-b).map(season=>({season}));
 
   const get=async(s:string,p:string)=>{
