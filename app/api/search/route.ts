@@ -101,7 +101,7 @@ function textList(value:unknown):string[]{
   return [];
 }
 
-function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"):SearchRecord|null{
+function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"|"documentary"):SearchRecord|null{
   const titleValue=row.title||row.Title||row.name||row.Name||row.titleText||row.originalTitle||row.original_title;
   const title=typeof titleValue==="string"?titleValue.trim():String(titleValue??"").trim();
   if(!title)return null;
@@ -395,7 +395,7 @@ export async function GET(request:NextRequest){
         if(country)upstream.searchParams.set("country",country);
         if(year)upstream.searchParams.set("year",year);
         upstream.searchParams.set("sort",sort);
-        upstream.searchParams.set("limit","100");
+        upstream.searchParams.set("limit","250");
         upstream.searchParams.set("offset","0");
         const response=await fetch(upstream.toString(),{
           headers:{Accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(4500)
@@ -435,8 +435,8 @@ export async function GET(request:NextRequest){
   }
 
   // Enrich discovery shelves with IMDb's current popular lists, not just the small bundled starter catalog.
-  if(popular&&apiBase&&(scope==="all"||scope==="movies"||scope==="tv")){
-    const types:("movie"|"tv")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:["movie","tv"];
+  if(popular&&apiBase&&(scope==="all"||scope==="movies"||scope==="tv"||scope==="documentaries")){
+    const types:("movie"|"tv"|"documentary")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:scope==="documentaries"?["documentary"]:["movie","tv","documentary"];
     const remotePopular=await Promise.all(types.map(async kind=>{
       try{return {kind,results:await fetchPopular(apiBase,kind),failed:false};}
       catch(error){console.error("IMDb popular catalog failed",kind,error);return {kind,results:[],failed:true};}
@@ -489,11 +489,11 @@ export async function GET(request:NextRequest){
   combined=combined.filter(filterResult);
 
   const externalEligible=!popular&&Boolean(apiBase)&&rawQuery.length>=2&&
-    (scope==="all"||scope==="movies"||scope==="tv");
+    (scope==="all"||scope==="movies"||scope==="tv"||scope==="documentaries");
   if(scope!=="games")sources.push("Streamivio Library");
   if(scope==="all"||scope==="games")sources.push("Games catalog");
   if(externalEligible&&apiBase){
-    const types:("movie"|"tv")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:["movie","tv"];
+    const types:("movie"|"tv"|"documentary")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:scope==="documentaries"?["documentary"]:["movie","tv","documentary"];
     const remote=await Promise.all(types.map(async kind=>{
       try{return {kind,results:await fetchExternal(apiBase,rawQuery,kind),failed:false};}
       catch(error){console.error("External title search failed",kind,error);return {kind,results:[],failed:true};}
