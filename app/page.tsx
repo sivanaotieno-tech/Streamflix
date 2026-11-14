@@ -4,6 +4,8 @@ import {useEffect,useRef,useState,type FormEvent} from "react";
 import {Search,Play,Plus,Film,X,LoaderCircle,Home as HomeIcon,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard, Users, Trophy, FileVideo} from "lucide-react";
 import {StreamivioLogo} from "@/components/streamivio-logo";
 import {OpeningScreen} from "@/components/opening-screen";
+import { signOut as firebaseSignOut } from "firebase/auth";
+import { getFirebaseAuth } from "@/lib/firebase-client";
 
 type Item={
   id:string|number;
