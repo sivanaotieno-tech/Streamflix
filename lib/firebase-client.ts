@@ -1,5 +1,5 @@
 import { getApp, getApps, initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, type Auth } from "firebase/auth";
 
 const required = [
   "NEXT_PUBLIC_FIREBASE_API_KEY",
@@ -26,5 +26,12 @@ function getFirebaseConfig() {
   };
 }
 
-const app = getApps().length ? getApp() : initializeApp(getFirebaseConfig());
-export const firebaseAuth = getAuth(app);
+let authInstance: Auth | undefined;
+
+/** Lazy initialization keeps production builds possible before Firebase secrets are configured. */
+export function getFirebaseAuth() {
+  if (authInstance) return authInstance;
+  const app = getApps().length ? getApp() : initializeApp(getFirebaseConfig());
+  authInstance = getAuth(app);
+  return authInstance;
+}
