@@ -85,7 +85,7 @@ export default function SignInPage() {
         setNotice("Please verify your email first. We sent you a fresh verification link.");
         return;
       }
-      await establishServerSession(credential);
+      await establishServerSession(credential.user);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
