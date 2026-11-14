@@ -20,9 +20,9 @@ const ANIME_SEARCH_ALIASES: Record<string,string> = {
   opm: "One Punch Man",
   csm: "Chainsaw Man",
   sxf: "Spy x Family",
-  "demon slayer": "Demon Slayer: Kimetsu no Yaiba",
-  "kimetsu no yaiba": "Demon Slayer: Kimetsu no Yaiba",
-  "shingeki no kyojin": "Attack on Titan",
+  demonslayer: "Demon Slayer: Kimetsu no Yaiba",
+  kimetsunoyaiba: "Demon Slayer: Kimetsu no Yaiba",
+  shingekinokyojin: "Attack on Titan",
 };
 
 
