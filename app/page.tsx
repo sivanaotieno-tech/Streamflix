@@ -53,6 +53,9 @@ const getIdFromEmbedUrl=(value:string)=>{
   }catch{return "";}
 };
 const progressKeyFor=(id:string)=>"streamivio:vidsrc-progress:"+id.toLowerCase();
+type SkipRange={start:number;end:number};
+type EpisodeSkipPoints={intro?:SkipRange;credits?:SkipRange};
+const skipPointsKeyFor=(id:string,season:string,episode:string)=>"streamivio:skip-points:"+[id,season||"0",episode||"0"].join(":").toLowerCase();
 const formatSeconds=(value:number)=>{
   const total=Math.max(0,Math.floor(Number.isFinite(value)?value:0));
   return Math.floor(total/60)+":"+String(total%60).padStart(2,"0");
@@ -177,7 +180,8 @@ export default function Home(){
   const[playerContentId,setPlayerContentId]=useState("");
   const[resumeSeconds,setResumeSeconds]=useState(0);
   const[autoSkip,setAutoSkip]=useState(false);
-  const[skipNotice,setSkipNotice]=useState<"intro"|"outro"|null>(null);
+  const[skipNotice,setSkipNotice]=useState<"intro"|"credits"|null>(null);
+  const[episodeSkipPoints,setEpisodeSkipPoints]=useState<EpisodeSkipPoints>({});
   const directVideoRef=useRef<HTMLVideoElement|null>(null);
   const lastAutoSkipRef=useRef<string>("");
   const[pendingDirectResume,setPendingDirectResume]=useState(0);
@@ -210,6 +214,30 @@ export default function Home(){
   };
 
   const providerSeasons=Array.isArray(vidsrcInfo?.seasons)?vidsrcInfo.seasons:[];
+  const activeSkipKey=skipPointsKeyFor(playerContentId||String(selected?.id||""),season,episode);
+
+  useEffect(()=>{
+    if(!playerContentId&&!selected)return;
+    try{
+      const saved=localStorage.getItem(activeSkipKey);
+      setEpisodeSkipPoints(saved?JSON.parse(saved) as EpisodeSkipPoints:{});
+    }catch{setEpisodeSkipPoints({});}
+    setSkipNotice(null);
+    lastAutoSkipRef.current="";
+  },[activeSkipKey,playerContentId,selected?.id]);
+
+  const setEpisodeSkipPoint=(kind:"intro"|"credits",edge:"start"|"end")=>{
+    const video=directVideoRef.current;
+    if(!video||!Number.isFinite(video.currentTime))return;
+    const point=Math.floor(video.currentTime);
+    setEpisodeSkipPoints(previous=>{
+      const current=previous[kind]||{start:0,end:0};
+      const nextRange={...current,[edge]:point};
+      const next={...previous,[kind]:nextRange};
+      try{localStorage.setItem(activeSkipKey,JSON.stringify(next));}catch{}
+      return next;
+    });
+  };
   const isJujutsuKaisen=/jujutsu kaisen/i.test(String(selected?.title||selected?.name||""));
   const seasonNumbers=new Set<number>(providerSeasons.map((entry:any)=>Number(entry?.season??entry)).filter((value:number)=>Number.isInteger(value)&&value>0));
   if(isJujutsuKaisen){seasonNumbers.add(1);seasonNumbers.add(2);seasonNumbers.add(3);}
@@ -740,9 +768,9 @@ export default function Home(){
         <button type="button" onClick={()=>{setPlaybackUrl("");setPlaybackError("");}} className="ml-4 flex shrink-0 items-center gap-2 rounded bg-white/10 px-3 py-2 text-xs font-semibold hover:bg-white/20"><X className="h-4 w-4"/>Back to details</button>
       </div>
       <div className="flex min-h-0 flex-1 items-center justify-center bg-black">
-        {(playbackFormat==="mp4"||playbackFormat==="hls")?<div className="relative flex h-full w-full items-center justify-center"><video ref={directVideoRef} key={playbackUrl} controls autoPlay playsInline className="h-full w-full object-contain" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0)video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);const duration=video.duration;let segment: "intro"|"outro"|null=null;if(seconds>=90&&seconds<180)segment="intro";else if(Number.isFinite(duration)&&duration>180&&seconds>=duration-90&&seconds<duration-10)segment="outro";setSkipNotice(segment);if(autoSkip&&segment&&lastAutoSkipRef.current!==segment+":"+playerContentId){video.currentTime=segment==="intro"?180:Math.max(0,duration-5);lastAutoSkipRef.current=segment+":"+playerContentId;setSkipNotice(null);}try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}setSkipNotice(null);lastAutoSkipRef.current="";}}>Your browser cannot play this video format.</video>{skipNotice&&<button type="button" onClick={()=>{const video=directVideoRef.current;if(video){video.currentTime=skipNotice==="intro"?180:Math.max(0,video.duration-5);setSkipNotice(null);}}} className="absolute bottom-24 right-6 rounded-md border border-white/30 bg-black/80 px-5 py-3 text-sm font-bold text-white shadow-xl hover:bg-white hover:text-black">Skip {skipNotice==="intro"?"Intro":"Credits"} <span className="ml-2 text-xs opacity-70">↗</span></button>}</div>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>}
+        {(playbackFormat==="mp4"||playbackFormat==="hls")?<div className="relative flex h-full w-full items-center justify-center"><video ref={directVideoRef} key={playbackUrl} controls autoPlay playsInline className="h-full w-full object-contain" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0)video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);const duration=video.duration;let segment: "intro"|"credits"|null=null;const intro=episodeSkipPoints.intro;const credits=episodeSkipPoints.credits;if(intro&&intro.end>intro.start&&seconds>=intro.start&&seconds<intro.end)segment="intro";else if(credits&&credits.end>credits.start&&seconds>=credits.start&&seconds<credits.end)segment="credits";setSkipNotice(segment);if(autoSkip&&segment&&lastAutoSkipRef.current!==segment+":"+playerContentId){const range=segment==="intro"?intro:credits;if(range){video.currentTime=range.end;lastAutoSkipRef.current=segment+":"+playerContentId;setSkipNotice(null);}}try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}setSkipNotice(null);lastAutoSkipRef.current="";}}>Your browser cannot play this video format.</video>{skipNotice&&<button type="button" onClick={()=>{const video=directVideoRef.current;const range=skipNotice==="intro"?episodeSkipPoints.intro:episodeSkipPoints.credits;if(video&&range)video.currentTime=range.end;setSkipNotice(null);}} className="absolute bottom-24 right-6 rounded-md border border-white/30 bg-black/80 px-5 py-3 text-sm font-bold text-white shadow-xl hover:bg-white hover:text-black">Skip {skipNotice==="intro"?"Intro":"Credits"} <span className="ml-2 text-xs opacity-70">↗</span></button>}</div>:<iframe ref={playerIframeRef} title={"Player for "+(selected.title||selected.name||"selected title")} src={playbackUrl} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" className="h-full w-full border-0"/>}
       </div>
-      <div className="shrink-0 border-t border-white/10 bg-[#111] px-4 py-2 text-center text-[11px] text-zinc-500">Playback is provided by the selected video source; availability can vary by title and region.</div>
+      <div className="shrink-0 border-t border-white/10 bg-[#111] px-3 py-3 sm:px-5"><div className="mb-2 flex flex-wrap items-center justify-center gap-2"><span className="mr-1 text-[10px] font-bold uppercase tracking-wider text-zinc-500">Episode skip markers</span><button type="button" onClick={()=>setEpisodeSkipPoint("intro","start")} className="rounded border border-white/15 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:bg-white/10">Intro start</button><button type="button" onClick={()=>setEpisodeSkipPoint("intro","end")} className="rounded border border-white/15 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:bg-white/10">Intro end</button><button type="button" onClick={()=>setEpisodeSkipPoint("credits","start")} className="rounded border border-white/15 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:bg-white/10">Credits start</button><button type="button" onClick={()=>setEpisodeSkipPoint("credits","end")} className="rounded border border-white/15 px-2.5 py-1.5 text-[11px] text-zinc-300 hover:bg-white/10">Credits end</button></div><p className="text-center text-[10px] text-zinc-500">Set each marker while the video is playing. Saved per title, season and episode on this device. Auto-skip uses only saved markers.</p></div>
     </div>}
     {selected&&!playbackUrl&&<div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-5" onClick={()=>setSelected(null)}><div className="max-h-[90vh] w-full max-w-xl overflow-auto rounded-lg bg-[#181818] p-6" onClick={e=>e.stopPropagation()}>
       <div className="text-xs font-bold uppercase tracking-wider text-red-400">{detailTitle?.source||selected.source}</div>
