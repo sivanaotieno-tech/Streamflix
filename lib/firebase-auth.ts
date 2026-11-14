@@ -35,13 +35,15 @@ export async function getAuthenticatedUser(sessionCookie?: string | null): Promi
 }
 
 export async function saveFirebaseUserProfile(user: AuthUser) {
-  await adminDb().collection("users").doc(user.uid).set({
+  const ref = adminDb().collection("users").doc(user.uid);
+  const existing = await ref.get();
+  await ref.set({
     uid: user.uid,
     email: user.email,
     displayName: user.displayName,
     emailVerified: user.emailVerified,
     lastLoginAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
-    createdAt: FieldValue.serverTimestamp(),
+    ...(existing.exists ? {} : { createdAt: FieldValue.serverTimestamp() }),
   }, { merge: true });
 }
