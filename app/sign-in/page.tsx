@@ -101,7 +101,7 @@ export default function SignInPage() {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({ prompt: "select_account" });
       const credential = await signInWithPopup(getFirebaseAuth(), provider);
-      await establishServerSession(credential);
+      await establishServerSession(credential.user);
     } catch (err) {
       setError(friendlyError(err));
     } finally {
