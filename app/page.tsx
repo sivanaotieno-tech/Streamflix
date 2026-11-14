@@ -594,11 +594,13 @@ export default function Home(){
   useEffect(()=>{
     const shelves=[["tv","TV to Explore"],["documentaries","Documentaries"],["kids","Family & Kids"],["reality","Reality & Competition"]];
     Promise.all(shelves.map(async ([scope,title])=>{
-      const response=await fetch("/api/search?scope="+scope+"&popular=1");
+      const params=new URLSearchParams({scope,popular:"1",limit:"60",offset:"0"});
+      const response=await fetch("/api/search?"+params.toString());
       if(!response.ok)throw new Error("Local "+scope+" catalog unavailable");
       const data=await response.json();
       const items=Array.isArray(data.results)?data.results as Item[]:[];
       setRows(current=>({...current,[title]:items}));
+      setShelfTotals(current=>({...current,[title]:Number.isFinite(Number(data.total))?Math.max(0,Number(data.total)):items.length}));
     })).catch(error=>console.error("Some local catalog shelves could not be loaded",error));
   },[]);
 
