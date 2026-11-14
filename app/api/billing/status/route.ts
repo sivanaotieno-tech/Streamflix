@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { AUTH_COOKIE_NAME, getAuthenticatedUser } from "@/lib/auth";
+import { AUTH_COOKIE_NAME, getAuthenticatedUser } from "@/lib/firebase-auth";
 import { getLatestRecordForEmail, getRecord, intasendStatus, updateRecord, type SubscriptionRecord } from "@/lib/billing";
 import { getHyperswitchPayment, normalizeHyperswitchStatus } from "@/lib/hyperswitch";
 
