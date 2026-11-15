@@ -4,12 +4,20 @@ This importer uses **Node.js only** and IMDb's official daily non-commercial bul
 
 ## Run locally
 
-From the Streamivio repository root:
+From the Streamivio repository root, run the build normally:
 
 ```powershell
-npm run catalog:import
 npm run build
 ```
+
+**Licensing gate:** IMDb's published bulk datasets are for personal, non-commercial use. Streamivio has discussed paid plans, so do not import or publish this data for a monetized service unless you have written permission or another licence covering that use. Only after confirming that your use is permitted, set the acknowledgement and run the importer:
+
+```powershell
+$env:IMDB_DATASET_LICENSE_CONFIRMED = "true"
+npm run catalog:import
+```
+
+The GitHub Actions workflow always checks the production build. It runs the data import and commits generated metadata only when the repository variable `IMDB_DATASET_LICENSE_CONFIRMED=true` is explicitly configured.
 
 The importer streams the compressed IMDb title and ratings datasets and writes `app/data/imdb-enriched.ts`. It does not save the full datasets to disk or load millions of rows into memory. Expect the first run to take several minutes and use network bandwidth; subsequent runs download the latest daily files again.
 
