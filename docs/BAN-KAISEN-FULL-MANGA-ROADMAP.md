@@ -10,11 +10,11 @@
 ## Canon guardrails
 
 - Keep established character names, ages and relationships consistent.
-- Opening cast: Kira Shikimoru (8), Rengi (8), Hikari Tokito (8), Daigo Shikimoru (14; Kira's older brother), and Haruka (24; the white-van driver).
+- Opening cast: Kira Shikimoru (8, 127 cm; quiet, kind and imaginative), Rengi (8), Hikari Tokito (8), Daigo Shikimoru (14; Kira's older brother), and Haruka (24; the white-van driver). Named white-van classmates: Kaito, Renjiro, Daichi, Haruki, Takeshi, Taiga, Kuroda, Ryota, Shinobu and Masato.
 - Core systems: Kuro Essence, Domains shaped by beliefs and fears, and Ban Law.
 - Arc 9 remains **Prohibited Law** (Hikari Tokito).
 - Arc 10 remains **Tokito Arc**.
-- The 999,999 figure is a maximum chapter-numbering/platform capacity target, not a prewritten chapter count.
+- The creator's serial target is exactly 99,999 collected volumes. The separate 999,999 figure is the maximum chapter-numbering/platform capacity target, not a prewritten chapter count.
 - The manga is canon-only: no filler chapters. A chapter is published only after its manuscript, page art and lettering are complete and reviewed.
 - The titles and summaries marked as proposed below are creative scaffolding, not previously established canon.
 
