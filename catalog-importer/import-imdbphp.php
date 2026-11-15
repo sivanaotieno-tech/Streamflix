@@ -10,7 +10,7 @@ use Imdb\Title;
 
 $root = dirname(__DIR__);
 $seedFile = __DIR__ . '/imdbphp-seed-ids.txt';
-$outputFile = $root . '/app/data/imdbphp-metadata.json';
+$outputFile = $root . '/app/data/imdbphp-enriched.ts';
 if (!is_dir(__DIR__ . '/cache') && !mkdir(__DIR__ . '/cache', 0775, true) && !is_dir(__DIR__ . '/cache')) {
     throw new RuntimeException('Unable to create IMDbPHP cache directory.');
 }
@@ -24,6 +24,9 @@ foreach (array_unique(array_map('trim', $ids)) as $imdbId) {
         $name = trim((string) $title->title());
         if ($name === '') continue;
         $rating = $title->rating();
+        $animeIds = ['tt0388629', 'tt0409591', 'tt0434665', 'tt5626028', 'tt10233448', 'tt13616990', 'tt12343534', 'tt9335498'];
+        $movieType = strtolower((string) $title->movietype());
+        $type = in_array($imdbId, $animeIds, true) ? 'anime' : (str_contains($movieType, 'tv') || str_contains($movieType, 'series') ? 'tv' : 'movie');
         $items[] = [
             'id' => 'imdb-' . $imdbId,
             'imdbId' => $imdbId,
@@ -31,9 +34,11 @@ foreach (array_unique(array_map('trim', $ids)) as $imdbId) {
             'overview' => trim((string) $title->plotoutline(true)),
             'year' => (string) $title->year(),
             'rating' => is_numeric($rating) ? (float) $rating : 0,
+            'type' => $type,
             'genres' => array_values(array_filter($title->genres(), 'is_string')),
+            'country' => [],
             'source' => 'IMDb via IMDbPHP',
-            'imdbUrl' => 'https://www.imdb.com/title/' . $imdbId . '/',
+            'poster' => null,
         ];
         fwrite(STDOUT, "Imported {$imdbId}: {$name}\n");
     } catch (Throwable $error) {
@@ -48,7 +53,8 @@ if (!$items) {
 }
 $tmp = $outputFile . '.tmp';
 $json = json_encode($items, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-if (file_put_contents($tmp, $json . PHP_EOL, LOCK_EX) === false || !rename($tmp, $outputFile)) {
+$source = "import type { CatalogTitle } from \\\"./catalog\\\";\\n\\nexport const imdbPhpEnrichedCatalog: CatalogTitle[] = " . $json . ";\\n";
+if (file_put_contents($tmp, $source, LOCK_EX) === false || !rename($tmp, $outputFile)) {
     throw new RuntimeException('Unable to write IMDbPHP metadata output.');
 }
 fwrite(STDOUT, sprintf("Saved %d IMDbPHP records to %s\n", count($items), $outputFile));
