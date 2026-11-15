@@ -24,7 +24,8 @@ const githubSources = [
   { name: "anime-and-manga/lists", note: "Open JSON ID mappings and title lists for anime and manga.", href: "https://github.com/anime-and-manga/lists" },
   { name: "opentomedb/opentome", note: "Open manga and light-novel volume metadata. Data has a non-commercial licence; review its terms before using it commercially.", href: "https://github.com/opentomedb/opentome" },
   { name: "kuiti/manga-source-index", note: "An index of manga-source definitions from open-source reader projects; it contains source metadata, not manga chapters.", href: "https://github.com/kuiti/manga-source-index" },
-  { name: "sekiseigumi/metachan-api", note: "An open-source anime and manga metadata API project; self-hosting and maintenance are required.", href: "https://github.com/sekiseigumi/metachan-api" }
+  { name: "sekiseigumi/metachan-api", note: "An open-source anime and manga metadata API project; self-hosting and maintenance are required.", href: "https://github.com/sekiseigumi/metachan-api" },
+  { name: "stabldev/mangareader-api", note: "FastAPI-based manga search, featured/trending discovery and title metadata. It scrapes MangaReader.to; check its source-site terms and rights before enabling chapter retrieval. Its documented API does not establish that full chapter-page delivery is available.", href: "https://github.com/stabldev/mangareader-api" }
 ];
 
 export default function MangaPage() {
@@ -64,6 +65,10 @@ export default function MangaPage() {
         <div className="mb-5 flex items-center gap-2"><Github size={18}/><h2 className="text-xl font-bold">Open-source manga data sources</h2></div>
         <p className="mb-4 max-w-3xl text-sm leading-6 text-zinc-400">These GitHub projects can support Streamivio's manga metadata and source discovery. They do not grant rights to republish copyrighted chapters; Streamivio links readers to publishers or rights-cleared material.</p>
         <div className="grid gap-3 md:grid-cols-2">{githubSources.map(source=><a key={source.name} href={source.href} target="_blank" rel="noreferrer" className="rounded-xl border border-white/10 bg-white/[.03] p-4 hover:bg-white/[.06]"><div className="flex items-center justify-between gap-3 text-sm font-semibold">{source.name}<ExternalLink size={14} className="shrink-0 text-zinc-500"/></div><p className="mt-2 text-xs leading-5 text-zinc-500">{source.note}</p></a>)}</div>
+      </section>
+      <section className="mt-10 rounded-2xl border border-sky-300/15 bg-sky-300/[.04] p-5">
+        <h2 className="text-lg font-bold">Original manga chapter capacity</h2>
+        <p className="mt-2 text-sm leading-6 text-zinc-400">Streamivio is designed to support long-running original series with chapter numbers up to 999,999. This is a platform capacity target, not a claim that 999,999 chapters already exist. A chapter is counted as published only after its story and page artwork are generated, reviewed and saved.</p>
       </section>
       <footer className="mt-12 border-t border-white/10 pt-5 text-xs text-zinc-600">Streamivio Manga · Publisher links open in a new tab. Titles and reading availability may vary by region.</footer>
     </div>
