@@ -1,6 +1,7 @@
 import { imdbCatalog } from "./imdb-catalog";
 import { expandedCatalog } from "./expanded-catalog";
 import { imdbPhpCatalog } from "./imdbphp-catalog";
+import { imdbPhpEnrichedCatalog } from "./imdbphp-enriched";
 
 export type CatalogTitle = {
   id: string;
@@ -56,7 +57,7 @@ const handCuratedCatalog: CatalogTitle[] = [
 
 const catalogKey = (item: CatalogTitle) => `${item.title.trim().toLowerCase()}::${item.year}`;
 const curatedCatalog = Array.from(
-  new Map([...handCuratedCatalog, ...expandedCatalog, ...imdbPhpCatalog].map((item) => [catalogKey(item), item])).values(),
+  new Map([...handCuratedCatalog, ...expandedCatalog, ...imdbPhpCatalog, ...imdbPhpEnrichedCatalog].map((item) => [catalogKey(item), item])).values(),
 );
 const curatedKeys = new Set(curatedCatalog.map(catalogKey));
 
