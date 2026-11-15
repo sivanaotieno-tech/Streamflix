@@ -19,7 +19,7 @@ const DATASETS = "https://datasets.imdbws.com";
 const MISSING = "\\N";
 
 function normalize(value) {
-  return value.normalize("NFKD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  return value.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function parseList(value) {
@@ -45,11 +45,11 @@ async function* readDataset(filename) {
   let headers;
   for await (const line of lines) {
     if (!headers) {
-      headers = line.split("\\t");
+      headers = line.split("\t");
       continue;
     }
     if (!line) continue;
-    const values = line.split("\\t");
+    const values = line.split("\t");
     const row = {};
     for (let index = 0; index < headers.length; index += 1) {
       row[headers[index]] = values[index] ?? "";
@@ -66,12 +66,12 @@ function mapType(titleType, requestedType) {
 
 async function main() {
   const seedText = await readFile(idsPath, "utf8");
-  const seedIds = new Set(seedText.split(/\\r?\\n/).map((value) => value.trim()).filter((value) => /^tt\\d{5,12}$/.test(value)));
+  const seedIds = new Set(seedText.split(/\r?\n/).map((value) => value.trim()).filter((value) => /^tt\d{5,12}$/.test(value)));
 
   const searchText = await readFile(searchesPath, "utf8");
-  const searches = searchText.split(/\\r?\\n/).filter(Boolean).map((line) => {
-    const [type, year, ...nameParts] = line.split("\\t");
-    return { type, year: Number(year), title: nameParts.join("\\t").trim(), key: normalize(nameParts.join("\\t")) };
+  const searches = searchText.split(/\r?\n/).filter(Boolean).map((line) => {
+    const [type, year, ...nameParts] = line.split("\t");
+    return { type, year: Number(year), title: nameParts.join("\t").trim(), key: normalize(nameParts.join("\t")) };
   }).filter((item) => item.key && Number.isFinite(item.year));
 
   const searchesByName = new Map();
