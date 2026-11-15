@@ -1,0 +1,46 @@
+name: IMDb catalogue import and build
+
+on:
+  push:
+    branches:
+      - replace-php-imdb-importer
+
+permissions:
+  contents: write
+
+concurrency:
+  group: imdb-catalog-import-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  import-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out Streamivio
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: true
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Import official IMDb metadata
+        run: npm run catalog:import
+      - name: Verify Next.js production build
+        run: npm run build
+      - name: Commit generated catalogue
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/data/imdb-enriched.ts
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: refresh generated IMDb catalogue"
+            git push
+          else
+            echo "Generated IMDb catalogue is already up to date."
+          fi
