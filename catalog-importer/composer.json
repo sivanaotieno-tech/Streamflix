@@ -13,7 +13,8 @@
     "php": ">=8.0",
     "ext-curl": "*",
     "ext-json": "*",
-    "hooshid/imdb-scraper": "dev-master"
+    "hooshid/imdb-scraper": "dev-master",
+    "imdbphp/imdbphp": "^8.3.2"
   },
   "minimum-stability": "dev",
   "prefer-stable": true
