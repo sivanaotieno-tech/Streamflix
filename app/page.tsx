@@ -237,7 +237,7 @@ export default function Home(){
   const [browse,setBrowse]=useState("Home");
   const [welcomeDismissed,setWelcomeDismissed]=useState(false);
   const [loading,setLoading]=useState(true);
-  const [authUser,setAuthUser]=useState<{email:string}|null>(null);
+  const [authUser,setAuthUser]=useState<{email:string;displayName?:string|null;photoURL?:string|null}|null>(null);
   const [authStatusLoading,setAuthStatusLoading]=useState(true);
 
   useEffect(()=>{
