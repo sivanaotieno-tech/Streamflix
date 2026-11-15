@@ -65,6 +65,11 @@ function mapType(titleType, requestedType) {
 }
 
 async function main() {
+  if (process.env.IMDB_DATASET_LICENSE_CONFIRMED !== "true") {
+    throw new Error(
+      "IMDb bulk datasets are restricted to personal, non-commercial use unless you have a separate licence. Set IMDB_DATASET_LICENSE_CONFIRMED=true only after confirming your use is permitted."
+    );
+  }
   const seedText = await readFile(idsPath, "utf8");
   const seedIds = new Set(seedText.split(/\r?\n/).map((value) => value.trim()).filter((value) => /^tt\d{5,12}$/.test(value)));
 
