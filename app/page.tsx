@@ -47,6 +47,11 @@ const isTvItem=(item:Item|null)=>{
   return ["tv","tvshow","tv show","series","anime","documentary","documentaries","kids","reality"].includes(type)||source.includes("tv show");
 };
 const isGameItem=(item:Item|null)=>String(item?.type||"").toLowerCase()==="game"||String(item?.id||"").startsWith("game-");
+const getCanonicalTitleUrl=(item:Item)=>{
+  const rawId=String(item.imdbId||item.imdb_id||item.imdbID||item.id||"");
+  const id=rawId.startsWith("imdb-")?rawId.slice(5):rawId;
+  return (isTvItem(item)?"/tv-show/":"/movie/")+encodeURIComponent(id);
+};
 const getIdFromEmbedUrl=(value:string)=>{
   try{
     const parts=new URL(value).pathname.split("/").filter(Boolean);
@@ -907,6 +912,7 @@ export default function Home(){
       </div>}
       {playbackError&&<p role="status" className="mt-4 text-sm text-amber-300">{playbackError}</p>}
       <div className="mt-5 flex flex-wrap gap-3">
+        <a href={getCanonicalTitleUrl(selected)} className="rounded border border-white/15 px-4 py-2 text-sm font-semibold text-zinc-200 hover:bg-white/10">Open title page ↗</a>
         
         {/one piece/i.test(String(selected.title||selected.name||""))&&<a href="/anime/one-piece" className="flex items-center gap-2 rounded border border-amber-400/50 px-5 py-2 font-bold text-amber-200 hover:bg-amber-400/10">One Pace Edition</a>}
         {!isGameItem(selected)&&<button onClick={()=>void startPlayback()} disabled={playbackLoading} className="flex items-center gap-2 rounded bg-[#e50914] px-5 py-2 font-bold disabled:opacity-60"><Play className="h-4 w-4 fill-current"/>{playbackLoading?"Checking source…":playbackUrl?"Reload player":"Play"}</button>}
