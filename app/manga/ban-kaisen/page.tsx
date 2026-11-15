@@ -72,12 +72,13 @@ export default function BanKaisenReaderPage() {
             <p className="text-[10px] font-bold uppercase tracking-[.2em] text-zinc-500">Opening cast</p>
             <ul className="mt-3 space-y-3">{cast.map(([name, detail]) => <li key={name}><p className="text-xs font-semibold text-zinc-200">{name}</p><p className="text-[10px] text-zinc-500">{detail}</p></li>)}</ul>
           </div>
+          <div className="mt-6 border-t border-white/10 pt-5"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-zinc-500">Canon arc guide</p><p className="mt-3 text-xs leading-5 text-zinc-300">Arc 9 · Prohibited Law — Hikari Tokito</p><p className="mt-2 text-xs leading-5 text-zinc-300">Arc 10 · Tokito Arc</p><p className="mt-3 text-[10px] leading-5 text-rose-200">Divine Arc is excluded from BAN KAISEN canon.</p><p className="mt-2 text-[10px] leading-5 text-zinc-600">The first eight arc titles and the complete volume/chapter register still need to be brought into the verified story bible.</p></div>
         </aside>}
 
         <section className="min-w-0 px-4 py-6 md:px-8 md:py-9">
           <div className="mx-auto max-w-4xl">
             <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-              <div><p className="text-[10px] font-bold uppercase tracking-[.25em] text-rose-300">Volume 1 · Whispers from The Heart</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">The White Van</h2><p className="mt-1 text-xs text-zinc-500">Page {page} of 40</p></div>
+              <div className="flex items-center gap-4"><div className="w-28 shrink-0"><MiniArtwork/></div><div><p className="text-[10px] font-bold uppercase tracking-[.25em] text-rose-300">Volume 1 · Whispers from The Heart</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">The White Van</h2><p className="mt-1 text-xs text-zinc-500">Page {page} of 40</p></div></div>
               <button onClick={() => setShowDetails(!showDetails)} className="rounded-full border border-white/10 px-3 py-2 text-xs text-zinc-400 hover:bg-white/10">{showDetails ? "Hide chapter notes" : "Chapter notes"}</button>
             </div>
             {showDetails && <div className="mb-5 rounded-2xl border border-white/10 bg-white/[.03] p-4 text-sm leading-6 text-zinc-400"><p>Chapter 1 follows an ordinary school day: the morning white-van ride, classes, football, lunch, a conversation between Kira and Hikari, and the journey home. The 40-page chapter plan is registered, but its final page-by-page manuscript, finished artwork and lettering are still being prepared.</p></div>}
