@@ -72,7 +72,7 @@ Each volume will be split into chapter manuscripts with page-by-page panel scrip
 
 ## Chapter 1 production anchor
 
-**The White Van** remains the opening chapter in Volume 1, **Whispers from The Heart**. The existing 40-page reader navigation is a layout scaffold only. Each page must be replaced with an approved page script and original illustration before it is marked complete.
+**The White Van** is the opening chapter in Volume 1, **Whispers from The Heart**. The creator has supplied the complete 40-page manuscript, now preserved at `docs/BAN-KAISEN-VOL1-CH01-THE-WHITE-VAN.md`. The reader links to that manuscript. The existing 40-page navigation remains a layout scaffold; original illustrations, panel layouts, tones and lettering must still be produced and reviewed before the manga pages are marked complete.
 
 ## Artwork and writing pipeline
 
