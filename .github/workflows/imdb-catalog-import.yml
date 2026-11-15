@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: imdb-catalog-import-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   import-and-build:
