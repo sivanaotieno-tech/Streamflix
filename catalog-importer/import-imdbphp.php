@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// Run from the repository root: cd catalog-importer && composer install && php import-imdbphp.php
+// Run from the repository root: cd catalog-importer && composer update imdbphp/imdbphp && php import-imdbphp.php
 // IMDbPHP scrapes IMDb pages. Run this as a cached, occasional import job, not per visitor request.
 // Respect IMDb's terms, robots policies, and rate limits.
 
@@ -31,7 +31,7 @@ foreach (array_unique(array_map('trim', $ids)) as $imdbId) {
             'id' => 'imdb-' . $imdbId,
             'imdbId' => $imdbId,
             'title' => $name,
-            'overview' => trim((string) $title->plotoutline(true)),
+            'overview' => trim(html_entity_decode(strip_tags((string) $title->plotoutline(true)), ENT_QUOTES | ENT_HTML5, 'UTF-8')),
             'year' => (string) $title->year(),
             'rating' => is_numeric($rating) ? (float) $rating : 0,
             'type' => $type,
