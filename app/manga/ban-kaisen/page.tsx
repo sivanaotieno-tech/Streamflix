@@ -4,7 +4,28 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, BookOpen, ChevronLeft, ChevronRight, List, Maximize2, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 
-const pages = Array.from({ length: 40 }, (_, index) => index + 1);
+const pages = Array.from({ length: 40 }, (_, index) => index + 1);\n\nconst arcGuide = [
+  { n: 1, title: "The Quiet Before", note: "Kira, Rengi and Hikari's everyday world begins to show cracks." },
+  { n: 2, title: "Black Ink District", note: "A neighbourhood mystery exposes the first traces of Kuro Essence." },
+  { n: 3, title: "The Bell That Forgot", note: "A school-day incident turns memory into a dangerous weapon." },
+  { n: 4, title: "Broken Lunchbox", note: "Friendship, family pressure and a strange curse collide." },
+  { n: 5, title: "Red Thread Tournament", note: "Young fighters test their beliefs in a contest with hidden rules." },
+  { n: 6, title: "The Borrowed Face", note: "An enemy learns to imitate the people others trust." },
+  { n: 7, title: "Under the Empty Stadium", note: "A missing-person case leads beneath the city." },
+  { n: 8, title: "Kuro Essence Rising", note: "The first major confrontation reveals the cost of power." },
+  { n: 9, title: "Prohibited Law", note: "Hikari Tokito faces a law that should never have been broken." },
+  { n: 10, title: "Tokito Arc", note: "The Tokito history and its consequences come into focus." },
+  { n: 11, title: "The Glass Shrine", note: "A sealed shrine reflects the fears of everyone who enters." },
+  { n: 12, title: "Seven Unwritten Rules", note: "The group discovers seven rules governing unstable Domains." },
+  { n: 13, title: "The City That Sank Upward", note: "A district turns inside out as gravity and belief collapse." },
+  { n: 14, title: "No One Leaves at Dawn", note: "A night-long siege forces the cast to choose who to save." },
+  { n: 15, title: "The Hollow Parade", note: "A festival becomes cover for a coordinated Kuro Essence outbreak." },
+  { n: 16, title: "Ashes of the First Domain", note: "The origin of Domains is uncovered, along with a terrible lie." },
+  { n: 17, title: "The Ban Court", note: "The laws behind Ban techniques are challenged in public." },
+  { n: 18, title: "All Names Erased", note: "The enemy attacks identity itself; allies must remember one another." },
+  { n: 19, title: "The Last Ordinary Day", note: "The cast prepares for the end and settles unfinished promises." },
+  { n: 20, title: "Straight up BS in a kettle", note: "The final battle. Every rule, bond and sacrifice converges." },
+];
 const cast = [
   ["Kira Shikimoru", "8 · Main character"],
   ["Rengi", "8"],
@@ -72,7 +93,7 @@ export default function BanKaisenReaderPage() {
             <p className="text-[10px] font-bold uppercase tracking-[.2em] text-zinc-500">Opening cast</p>
             <ul className="mt-3 space-y-3">{cast.map(([name, detail]) => <li key={name}><p className="text-xs font-semibold text-zinc-200">{name}</p><p className="text-[10px] text-zinc-500">{detail}</p></li>)}</ul>
           </div>
-          <div className="mt-6 border-t border-white/10 pt-5"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-zinc-500">Canon arc guide</p><p className="mt-3 text-xs leading-5 text-zinc-300">Arc 9 · Prohibited Law — Hikari Tokito</p><p className="mt-2 text-xs leading-5 text-zinc-300">Arc 10 · Tokito Arc</p><p className="mt-3 text-[10px] leading-5 text-rose-200">Divine Arc is excluded from BAN KAISEN canon.</p><p className="mt-2 text-[10px] leading-5 text-zinc-600">The first eight arc titles and the complete volume/chapter register still need to be brought into the verified story bible.</p></div>
+          <div className="mt-6 border-t border-white/10 pt-5"><p className="text-[10px] font-bold uppercase tracking-[.2em] text-zinc-500">Complete arc roadmap · 20 arcs</p><ol className="mt-3 space-y-3">{arcGuide.map((arc) => <li key={arc.n} className="border-l border-rose-300/30 pl-3"><p className="text-[10px] font-bold uppercase tracking-wider text-rose-300">Arc {arc.n}{arc.n === 20 ? " · Final battle" : ""}</p><p className="mt-1 text-xs font-semibold text-zinc-200">{arc.title}</p><p className="mt-1 text-[10px] leading-4 text-zinc-500">{arc.note}</p></li>)}</ol><p className="mt-4 text-[10px] leading-5 text-rose-200">Divine Arc is removed and is not part of this roadmap. Arcs 1–8 and 11–20 are newly proposed story development, while Arcs 9–10 retain the established titles.</p></div>
         </aside>}
 
         <section className="min-w-0 px-4 py-6 md:px-8 md:py-9">
