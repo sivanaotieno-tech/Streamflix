@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BookOpen, ExternalLink, Github, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, ExternalLink, GitBranch, Search, Sparkles } from "lucide-react";
 
 type RemoteManga = {
   title?: string;
@@ -96,7 +96,7 @@ export default function MangaPage() {
 
       <section className="mb-14"><div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-bold">Curated titles</h2><span className="text-xs text-zinc-500">{local.length} titles</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{local.map(item=><article key={item.title} className="rounded-2xl border border-white/10 bg-white/[.035] p-5"><p className="text-[10px] font-bold uppercase tracking-widest text-sky-300">Manga · {item.year}</p><h3 className="mt-2 text-lg font-bold">{item.title}</h3><p className="mt-2 min-h-12 text-sm leading-6 text-zinc-400">{item.description}</p><a href={item.href} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold hover:bg-white/10">Official reading destination <ExternalLink size={12}/></a></article>)}</div></section>
 
-      <section><div className="mb-5 flex items-center gap-2"><Github size={18}/><h2 className="text-xl font-bold">Open-source data sources</h2></div><div className="grid gap-3 md:grid-cols-2">{sources.map(([name,note,href])=><a key={name} href={href} target="_blank" rel="noreferrer" className="rounded-xl border border-white/10 bg-white/[.03] p-4 hover:bg-white/[.06]"><div className="flex items-center justify-between gap-3 text-sm font-semibold">{name}<ExternalLink size={14}/></div><p className="mt-2 text-xs leading-5 text-zinc-500">{note}</p></a>)}</div><p className="mt-4 text-xs leading-5 text-zinc-500">The connected MangaReader API is a scraper for MangaReader.to and documents featured, trending, search and manga-detail endpoints. Its documented response does not guarantee chapter-page delivery. Respect source-site terms and only publish content Streamivio has permission to distribute.</p></section>
+      <section><div className="mb-5 flex items-center gap-2"><GitBranch size={18}/><h2 className="text-xl font-bold">Open-source data sources</h2></div><div className="grid gap-3 md:grid-cols-2">{sources.map(([name,note,href])=><a key={name} href={href} target="_blank" rel="noreferrer" className="rounded-xl border border-white/10 bg-white/[.03] p-4 hover:bg-white/[.06]"><div className="flex items-center justify-between gap-3 text-sm font-semibold">{name}<ExternalLink size={14}/></div><p className="mt-2 text-xs leading-5 text-zinc-500">{note}</p></a>)}</div><p className="mt-4 text-xs leading-5 text-zinc-500">The connected MangaReader API is a scraper for MangaReader.to and documents featured, trending, search and manga-detail endpoints. Its documented response does not guarantee chapter-page delivery. Respect source-site terms and only publish content Streamivio has permission to distribute.</p></section>
     </div>
   </main>;
 }
