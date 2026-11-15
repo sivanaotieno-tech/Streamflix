@@ -53,7 +53,7 @@ if (!$items) {
 }
 $tmp = $outputFile . '.tmp';
 $json = json_encode($items, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-$source = "import type { CatalogTitle } from \\\"./catalog\\\";\\n\\nexport const imdbPhpEnrichedCatalog: CatalogTitle[] = " . $json . ";\\n";
+$source = "import type { CatalogTitle } from './catalog';\n\nexport const imdbPhpEnrichedCatalog: CatalogTitle[] = " . $json . ";\n";
 if (file_put_contents($tmp, $source, LOCK_EX) === false || !rename($tmp, $outputFile)) {
     throw new RuntimeException('Unable to write IMDbPHP metadata output.');
 }
