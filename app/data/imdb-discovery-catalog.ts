@@ -1,0 +1,37 @@
+import type { CatalogTitle } from "./catalog";
+
+// Additional editorial picks with stable IMDb identifiers. Metadata is enriched
+// at request time by the optional Node.js IMDb dataset importer; IDs also drive canonical URLs.
+export const imdbDiscoveryCatalog: CatalogTitle[] = [
+  { id: "imdb-tt4154796", imdbId: "tt4154796", title: "Avengers: Endgame", overview: "", year: "2019", rating: 0, type: "movie", genres: ["Action","Adventure","Drama"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt15239678", imdbId: "tt15239678", title: "Dune: Part Two", overview: "", year: "2024", rating: 0, type: "movie", genres: ["Adventure","Drama","Sci-Fi"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt15398776", imdbId: "tt15398776", title: "Oppenheimer", overview: "", year: "2023", rating: 0, type: "movie", genres: ["Biography","Drama","History"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt1517268", imdbId: "tt1517268", title: "Barbie", overview: "", year: "2023", rating: 0, type: "movie", genres: ["Adventure","Comedy","Fantasy"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt22022452", imdbId: "tt22022452", title: "Inside Out 2", overview: "", year: "2024", rating: 0, type: "movie", genres: ["Animation","Adventure","Comedy"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt9362722", imdbId: "tt9362722", title: "Spider-Man: Across the Spider-Verse", overview: "", year: "2023", rating: 0, type: "movie", genres: ["Animation","Action","Adventure"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt1745960", imdbId: "tt1745960", title: "Top Gun: Maverick", overview: "", year: "2022", rating: 0, type: "movie", genres: ["Action","Drama"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt6710474", imdbId: "tt6710474", title: "Everything Everywhere All at Once", overview: "", year: "2022", rating: 0, type: "movie", genres: ["Action","Adventure","Comedy"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt1877830", imdbId: "tt1877830", title: "The Batman", overview: "", year: "2022", rating: 0, type: "movie", genres: ["Action","Crime","Drama"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt0816692", imdbId: "tt0816692", title: "Interstellar", overview: "", year: "2014", rating: 0, type: "movie", genres: ["Adventure","Drama","Sci-Fi"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt6751668", imdbId: "tt6751668", title: "Parasite", overview: "", year: "2019", rating: 0, type: "movie", genres: ["Drama","Thriller"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt3915174", imdbId: "tt3915174", title: "Puss in Boots: The Last Wish", overview: "", year: "2022", rating: 0, type: "movie", genres: ["Animation","Adventure","Comedy"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt23289160", imdbId: "tt23289160", title: "Godzilla Minus One", overview: "", year: "2023", rating: 0, type: "movie", genres: ["Action","Drama","Sci-Fi"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt18259086", imdbId: "tt18259086", title: "Sonic the Hedgehog 3", overview: "", year: "2024", rating: 0, type: "movie", genres: ["Action","Adventure","Comedy"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt3581920", imdbId: "tt3581920", title: "The Last of Us", overview: "", year: "2023", rating: 0, type: "tv", genres: ["Action","Adventure","Drama"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt4574334", imdbId: "tt4574334", title: "Stranger Things", overview: "", year: "2016", rating: 0, type: "tv", genres: ["Drama","Fantasy","Horror"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt11280740", imdbId: "tt11280740", title: "Severance", overview: "", year: "2022", rating: 0, type: "tv", genres: ["Drama","Mystery","Sci-Fi"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt12637874", imdbId: "tt12637874", title: "Fallout", overview: "", year: "2024", rating: 0, type: "tv", genres: ["Action","Adventure","Drama"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt11126994", imdbId: "tt11126994", title: "Arcane", overview: "", year: "2021", rating: 0, type: "tv", genres: ["Animation","Action","Adventure"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt11737520", imdbId: "tt11737520", title: "One Piece", overview: "", year: "2023", rating: 0, type: "tv", genres: ["Action","Adventure","Comedy"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt0388629", imdbId: "tt0388629", title: "One Piece", overview: "", year: "1999", rating: 0, type: "anime", genres: ["Anime","Action","Adventure"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt0409591", imdbId: "tt0409591", title: "Naruto", overview: "", year: "2002", rating: 0, type: "anime", genres: ["Anime","Action","Adventure"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt0434665", imdbId: "tt0434665", title: "Bleach", overview: "", year: "2004", rating: 0, type: "anime", genres: ["Anime","Action","Adventure"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt5626028", imdbId: "tt5626028", title: "My Hero Academia", overview: "", year: "2016", rating: 0, type: "anime", genres: ["Anime","Action","Adventure"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt10233448", imdbId: "tt10233448", title: "Vinland Saga", overview: "", year: "2019", rating: 0, type: "anime", genres: ["Anime","Action","Adventure"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt13616990", imdbId: "tt13616990", title: "Chainsaw Man", overview: "", year: "2022", rating: 0, type: "anime", genres: ["Anime","Action","Horror"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt12343534", imdbId: "tt12343534", title: "Jujutsu Kaisen", overview: "", year: "2020", rating: 0, type: "anime", genres: ["Anime","Action","Fantasy"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt9335498", imdbId: "tt9335498", title: "Demon Slayer: Kimetsu no Yaiba", overview: "", year: "2019", rating: 0, type: "anime", genres: ["Anime","Action","Fantasy"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt6741278", imdbId: "tt6741278", title: "Invincible", overview: "", year: "2021", rating: 0, type: "tv", genres: ["Animation","Action","Drama"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt0903747", imdbId: "tt0903747", title: "Breaking Bad", overview: "", year: "2008", rating: 0, type: "tv", genres: ["Crime","Drama","Thriller"], country: [], source: "Streamivio IMDb discovery", poster: null },
+  { id: "imdb-tt0944947", imdbId: "tt0944947", title: "Game of Thrones", overview: "", year: "2011", rating: 0, type: "tv", genres: ["Action","Adventure","Drama"], country: [], source: "Streamivio IMDb discovery", poster: null }
+];
