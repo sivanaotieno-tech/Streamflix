@@ -2,14 +2,15 @@
 
 **Project:** Original manga for Streamivio  
 **Canon rule:** Divine Arc is deleted and excluded. Do not restore it under another name.  
-**Final battle title (exact):** **straight up BS in a kettle**  
+**Final arc title:** **The Unnecessary Incident**  
+**Final-arc description:** “Straight up BS in a kettle.”  
 **Status:** Development roadmap. Proposed arcs are creative additions, not previously established canon.
 
 ## Core established material
 
 - Volume 1: **Whispers from The Heart**
 - Chapter 1: **The White Van**
-- Opening cast: Kira Shikimoru (8), Rengi (8), Hikari Tokito (8), Daigo Shikimoru (14; Kira's older brother), and Haruka (24; the white-van driver).
+- Opening cast: Kira Shikimoru (8, 127 cm; quiet, kind and imaginative), Rengi (8), Hikari Tokito (8), Daigo Shikimoru (14; Kira's older brother), and Haruka (24; the white-van driver). Named white-van classmates: Kaito, Renjiro, Daichi, Haruki, Takeshi, Taiga, Kuroda, Ryota, Shinobu and Masato.
 - Established concepts: Kuro Essence, Domains, and Ban Law.
 - Arc 9: **Prohibited Law** — Hikari Tokito.
 - Arc 10: **Tokito Arc**.
@@ -38,11 +39,11 @@ Arcs 1–8 and 11–20 below are newly proposed creative development to complete
 17. **The Ban Court** — The laws governing Ban techniques are challenged before those who enforce them.
 18. **All Names Erased** — The enemy attacks identity itself. The group must preserve one another through memory, promises and action.
 19. **The Last Ordinary Day** — Before the final conflict, the cast returns to ordinary places, resolves personal promises and prepares for what may not be reversible.
-20. **straight up BS in a kettle** — The final battle. The central enemy attempts to collapse Kuro Essence, Domains and Ban Law into one impossible rule. The cast must combine everything learned across the saga; victory requires a meaningful cost and the final resolution of the series' central themes.
+20. **The Unnecessary Incident** — The final battle. The central enemy attempts to collapse Kuro Essence, Domains and Ban Law into one impossible rule. The cast must combine everything learned across the saga; victory requires a meaningful cost and the final resolution of the series' central themes. The creator describes this final arc as “straight up BS in a kettle.”
 
 ## Volume and chapter register
 
-The full serial is planned as a long-form manga. This is a structured production register, not a claim that unwritten chapters or finished artwork already exist.
+The creator's long-form target is exactly **99,999 collected volumes**. The 20 arcs below are saga-level story arcs, not a one-volume-per-arc limit. The separate 999,999 chapter figure is the maximum chapter-numbering/generation capacity target, not a claim that those chapters already exist. This is a production register, not a claim that unwritten chapters or finished artwork already exist.
 
 | Volume | Working title | Arc coverage |
 |---|---|---|
@@ -65,9 +66,9 @@ The full serial is planned as a long-form manga. This is a structured production
 | 17 | The Ban Court | Arc 17 |
 | 18 | All Names Erased | Arc 18 |
 | 19 | The Last Ordinary Day | Arc 19 |
-| 20 | straight up BS in a kettle | Arc 20 · Final battle |
+| 20 | The Unnecessary Incident | Arc 20 · Final battle |
 
-Each volume will be split into chapter manuscripts with page-by-page panel scripts, dialogue, lettering notes and a dedicated mini-artwork thumbnail. Volume and chapter numbering can expand as the actual scripts establish natural breaks. The previously discussed 999,999 figure is a maximum numbering/generation capacity, not a promise to fabricate that many chapters.
+Each volume will be split into chapter manuscripts with page-by-page panel scripts, dialogue, lettering notes and a dedicated mini-artwork thumbnail. Volume and chapter numbering can expand as the actual scripts establish natural breaks. The serial target is exactly 99,999 collected volumes. The separate 999,999 figure is the maximum chapter-numbering/generation capacity, not a promise to fabricate that many chapters.
 
 ## Chapter 1 production anchor
 
