@@ -13,6 +13,24 @@ const cast = [
   ["Haruka", "24 · White-van driver"],
 ];
 
+
+function MiniArtwork() {
+  return <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-rose-300/20 bg-[#100d14]">
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_75%_25%,rgba(190,40,66,.35),transparent_45%),linear-gradient(150deg,#17131d,#08090d_65%)]"/>
+    <svg viewBox="0 0 640 360" className="absolute inset-0 h-full w-full" role="img" aria-label="BAN KAISEN concept art: a white van on a quiet school street">
+      <path d="M0 245 640 205v155H0z" fill="#11131a"/><path d="M0 277 640 244" stroke="#4c3540" strokeWidth="2"/>
+      <path d="M55 80h75v165H55zM145 48h56v197h-56zM510 65h80v155h-80z" fill="#191b25"/>
+      <path d="M66 101h18v24H66zm35 0h18v24h-18zM157 72h15v25h-15zm22 0h15v25h-15zM526 91h20v28h-20zm30 0h20v28h-20z" fill="#a34c62" opacity=".5"/>
+      <ellipse cx="355" cy="291" rx="185" ry="19" fill="#020305" opacity=".75"/>
+      <path d="M192 172h221l54 43v64H166v-77z" fill="#e6e7e9"/><path d="M413 172v43h54l-54-43z" fill="#b9c0c9"/>
+      <path d="M208 184h73v40h-73zM292 184h67v40h-67zM370 184h31v40h-31z" fill="#222a36"/>
+      <path d="M174 232h285v30H174z" fill="#d9dce0"/><path d="M178 245h22v10h-22zM430 245h23v10h-23z" fill="#d65a68"/>
+      <circle cx="226" cy="271" r="22" fill="#08090d" stroke="#7d818b" strokeWidth="7"/><circle cx="402" cy="271" r="22" fill="#08090d" stroke="#7d818b" strokeWidth="7"/>
+      <text x="30" y="45" fill="#f5dce2" fontSize="15" letterSpacing="5">BAN KAISEN · VOL. 01</text>
+    </svg>
+  </div>;
+}
+
 export default function BanKaisenReaderPage() {
   const [page, setPage] = useState(1);
   const [showContents, setShowContents] = useState(true);
@@ -44,7 +62,7 @@ export default function BanKaisenReaderPage() {
           <p className="text-[10px] font-bold uppercase tracking-[.24em] text-zinc-500">Series contents</p>
           <div className="mt-4 rounded-2xl border border-rose-300/20 bg-rose-300/[.06] p-4">
             <span className="rounded-full bg-amber-300/10 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-amber-200">In development</span>
-            <h2 className="mt-3 text-xl font-black">Whispers from The Heart</h2>
+            <div className="mt-3"><MiniArtwork/></div><h2 className="mt-3 text-xl font-black">Whispers from The Heart</h2>
             <p className="mt-1 text-xs text-zinc-500">Volume 1 · Chapter 1</p>
             <p className="mt-3 text-xs leading-5 text-zinc-400">The White Van</p>
           </div>
@@ -62,7 +80,7 @@ export default function BanKaisenReaderPage() {
               <div><p className="text-[10px] font-bold uppercase tracking-[.25em] text-rose-300">Volume 1 · Whispers from The Heart</p><h2 className="mt-1 text-2xl font-black sm:text-3xl">The White Van</h2><p className="mt-1 text-xs text-zinc-500">Page {page} of 40</p></div>
               <button onClick={() => setShowDetails(!showDetails)} className="rounded-full border border-white/10 px-3 py-2 text-xs text-zinc-400 hover:bg-white/10">{showDetails ? "Hide chapter notes" : "Chapter notes"}</button>
             </div>
-            {showDetails && <div className="mb-5 rounded-2xl border border-white/10 bg-white/[.03] p-4 text-sm leading-6 text-zinc-400"><p>Chapter 1 follows an ordinary school day: the morning white-van ride, classes, football, lunch, a conversation between Kira and Hikari, and the journey home. The final page text and finished artwork are still being prepared.</p></div>}
+            {showDetails && <div className="mb-5 rounded-2xl border border-white/10 bg-white/[.03] p-4 text-sm leading-6 text-zinc-400"><p>Chapter 1 follows an ordinary school day: the morning white-van ride, classes, football, lunch, a conversation between Kira and Hikari, and the journey home. The 40-page chapter plan is registered, but its final page-by-page manuscript, finished artwork and lettering are still being prepared.</p></div>}
             <div className="relative mx-auto flex min-h-[55vh] max-w-[760px] items-center justify-center overflow-hidden rounded-2xl border border-white/10 bg-[#111218] p-6 shadow-2xl sm:min-h-[72vh] sm:p-12">
               <div className="pointer-events-none absolute inset-0 opacity-[.035]" style={{ backgroundImage: "linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%), linear-gradient(45deg, #fff 25%, transparent 25%, transparent 75%, #fff 75%)", backgroundPosition: "0 0, 8px 8px", backgroundSize: "16px 16px" }}/>
               <div className="relative max-w-md text-center">
