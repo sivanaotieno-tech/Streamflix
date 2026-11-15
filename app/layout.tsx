@@ -1,5 +1,6 @@
 import "./globals.css";
 import OfflineSupport from "./OfflineSupport";
+import LiveClock from "@/components/live-clock";
 
 export const metadata = {
   title: "Streamivio",
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <OfflineSupport />
+        <LiveClock />
         {children}
       </body>
     </html>
