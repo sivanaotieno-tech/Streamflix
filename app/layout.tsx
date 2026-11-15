@@ -1,6 +1,6 @@
 import "./globals.css";
 import OfflineSupport from "./OfflineSupport";
-import LiveClock from "@/components/live-clock";
+import { LiveClock } from "@/components/live-clock";
 
 export const metadata = {
   title: "Streamivio",
