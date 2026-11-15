@@ -1,37 +1,26 @@
 # IMDbPHP catalogue enrichment
 
-Streamivio keeps catalogue imports out of visitor requests. The checked-in
-`app/data/imdbphp-catalog.ts` provides stable IMDb IDs immediately, while this
-optional importer refreshes descriptions, years, ratings and genres through
-[tboothman/imdbphp](https://github.com/tboothman/imdbphp).
+This importer uses [tboothman/imdbphp](https://github.com/tboothman/imdbphp) to search IMDb for Streamivio's show titles and enrich known IMDb IDs with metadata.
 
-## Run locally
+## Coverage
+
+- `imdbphp-seed-ids.txt` contains the existing IMDb-linked catalogue IDs plus the TV entries in Streamivio's IMDb chart data.
+- `imdbphp-show-searches.tsv` lists every TV, anime, documentary, kids and reality title in the expanded Streamivio catalogue, plus the additional hand-curated show picks. The importer searches IMDb for each title, filters to TV Series / TV Mini Series, and checks the requested title and release year before accepting a match.
+- Search results that are uncertain are skipped and printed to STDERR rather than silently importing a wrong title.
+- IMDbPHP does not contain a complete downloadable database of every show on IMDb. This imports every show represented in Streamivio's current catalogue plus the seeded IMDb chart IDs; it cannot enumerate every show ever listed on IMDb.
+
+## Run
 
 From the repository root:
 
 ```bash
 cd catalog-importer
-composer update imdbphp/imdbphp
+composer install
 php import-imdbphp.php
 ```
 
-The script reads `imdbphp-seed-ids.txt`, uses IMDbPHP's local cache, and writes
-`app/data/imdbphp-enriched.ts`. The app imports that generated file at build
-time. Commit the refreshed generated file to publish the enriched metadata.
+The generated file is `app/data/imdbphp-enriched.ts`. The app imports this file into its catalogue. Commit the generated file after reviewing the imported records.
 
-IMDbPHP scrapes IMDb pages rather than using an official IMDb API. IMDb can
-change its markup or block automated requests; individual failures are logged
-and a failed/empty run never replaces the current catalogue. Run imports
-occasionally, respect IMDb's terms and rate limits, and review metadata before
-publishing. Posters are resolved separately by Streamivio's existing poster
-lookup using the stable IMDb ID.
+## Important
 
-## Canonical title URLs
-
-- Movies: `/movie/{imdb-id}`, e.g. `/movie/tt4154796`
-- TV and anime: `/tv-show/{imdb-id}`, e.g. `/tv-show/tt11737520`
-- Custom IDs are supported when the catalogue record's `id` matches the URL
-  segment, e.g. `/tv-show/t9140554`.
-
-A catalogue record does not imply playable media exists. Playback is still
-resolved and checked separately by the existing playback API.
+IMDbPHP scrapes IMDb pages; it is not an official IMDb API. IMDb can change its page structure, search results, or access rules. The importer uses a cache directory and delays between requests. Run it occasionally, respect IMDb's terms and rate limits, and do not run it on every page view. Poster URLs remain null unless a separate approved artwork source is configured.
