@@ -191,6 +191,43 @@ export default function Home(){
   const[vidsrcInfoLoading,setVidSrcInfoLoading]=useState(false);
   const[vidsrcInfoError,setVidSrcInfoError]=useState("");
   const playerIframeRef=useRef<HTMLIFrameElement|null>(null);
+
+  // Chrome/Edge/Firefox need Media Source Extensions via hls.js for HLS streams.
+  // Native HLS remains preferred where the browser supports it (for example Safari).
+  useEffect(()=>{
+    if(playbackFormat!=="hls"||!playbackUrl)return;
+    const video=directVideoRef.current;
+    if(!video)return;
+    let cancelled=false;
+    let hls:any=null;
+    let script:HTMLScriptElement|null=null;
+    const attach=()=>{
+      if(cancelled)return;
+      const Hls=(window as any).Hls;
+      if(Hls&&Hls.isSupported()){
+        hls=new Hls({enableWorker:true});
+        hls.loadSource(playbackUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.ERROR,(_:unknown,data:any)=>{
+          if(data?.fatal&&!cancelled)setPlaybackError("This HLS stream could not be played. Check the authorized stream URL and CORS settings.");
+        });
+      }else if(video.canPlayType("application/vnd.apple.mpegurl")){
+        video.src=playbackUrl;
+      }else{
+        setPlaybackError("This browser cannot play HLS video. Try a current browser or provide an MP4 stream.");
+      }
+    };
+    if((window as any).Hls){attach();}
+    else{
+      script=document.createElement("script");
+      script.src="https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js";
+      script.async=true;
+      script.onload=attach;
+      script.onerror=()=>{if(!cancelled)setPlaybackError("The HLS playback engine could not load. Check your connection and try again.");};
+      document.head.appendChild(script);
+    }
+    return()=>{cancelled=true;hls?.destroy();if(script?.parentNode)script.parentNode.removeChild(script);};
+  },[playbackFormat,playbackUrl]);
   const[list,setList]=useState<Item[]>([]);
   const [browse,setBrowse]=useState("Home");
   const [welcomeDismissed,setWelcomeDismissed]=useState(false);
