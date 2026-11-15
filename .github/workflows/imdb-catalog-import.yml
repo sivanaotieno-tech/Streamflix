@@ -30,10 +30,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Import official IMDb metadata
+        if: vars.IMDB_DATASET_LICENSE_CONFIRMED == 'true'
         run: npm run catalog:import
       - name: Verify Next.js production build
         run: npm run build
       - name: Commit generated catalogue
+        if: vars.IMDB_DATASET_LICENSE_CONFIRMED == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
