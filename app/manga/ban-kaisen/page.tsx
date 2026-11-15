@@ -28,11 +28,13 @@ const arcs = [
 ];
 
 const cast = [
-  ["Kira Shikimoru", "8 · Main character"],
+  ["Kira Shikimoru", "8 · 127 cm · Quiet, kind and imaginative"],
   ["Rengi", "8"],
   ["Hikari Tokito", "8"],
   ["Daigo Shikimoru", "14 · Kira's older brother"],
   ["Haruka", "24 · White-van driver"],
+  ["Kaito, Renjiro, Daichi, Haruki", "White-van classmates"],
+  ["Takeshi, Taiga, Kuroda, Ryota, Shinobu, Masato", "White-van classmates"],
 ];
 
 export default function BanKaisenReaderPage() {
