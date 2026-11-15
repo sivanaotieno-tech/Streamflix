@@ -158,7 +158,7 @@ async function main() {
     "// Re-run with: npm run catalog:import",
     `export const imdbEnrichedCatalog: CatalogTitle[] = ${JSON.stringify(items, null, 2)};`,
     "",
-  ].join("\\n");
+  ].join("\n");
 
   await mkdir(dirname(outputPath), { recursive: true });
   const temporaryPath = `${outputPath}.tmp`;
