@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { catalog } from "@/app/data/catalog";
+import { TitleDetailPlayer } from "@/components/title-detail-player";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -26,7 +27,7 @@ export default async function MoviePage({ params }: Props) {
             <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-6xl">{item.title}</h1>
             <p className="mt-4 text-sm text-zinc-400">{[item.year, item.genres.join(" · "), item.rating > 0 ? "IMDb " + item.rating.toFixed(1) : ""].filter(Boolean).join("  •  ")}</p>
             {item.overview && <p className="mt-6 max-w-2xl leading-7 text-zinc-300">{item.overview}</p>}
-            <p className="mt-8 text-sm text-amber-300">Playback availability is separate from catalogue metadata.</p>
+            <TitleDetailPlayer id={item.id} title={item.title} kind="movie" imdbId={item.imdbId} />
             <div className="mt-6 flex flex-wrap gap-3">
               <Link href="/" className="rounded-lg bg-white px-5 py-3 text-sm font-semibold text-black">Explore catalogue</Link>
               {item.imdbId && <a href={"https://www.imdb.com/title/" + item.imdbId + "/"} target="_blank" rel="noreferrer" className="rounded-lg border border-zinc-700 px-5 py-3 text-sm font-semibold">IMDb details ↗</a>}
