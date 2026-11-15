@@ -1,7 +1,7 @@
 "use client";
 
 import {useEffect,useRef,useState,type FormEvent} from "react";
-import {Search,Play,Plus,Film,X,LoaderCircle,Home as HomeIcon,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard, Users, Trophy, FileVideo} from "lucide-react";
+import {Search,Play,Plus,Film,X,LoaderCircle,Home as HomeIcon,Compass,Clapperboard,Tv,Bookmark,Gamepad2,UserRound, CreditCard, Users, Trophy, FileVideo,BookOpen} from "lucide-react";
 import {StreamivioLogo} from "@/components/streamivio-logo";
 import {onAuthStateChanged,signOut as firebaseSignOut} from "firebase/auth";
 import {firebaseAuth} from "@/lib/firebase-client";
@@ -637,6 +637,7 @@ export default function Home(){
           {label:"Movies",icon:Clapperboard},
           {label:"TV Shows",icon:Tv},
           {label:"Anime",icon:Compass},
+          {label:"Manga",icon:BookOpen},
           {label:"Documentaries",icon:FileVideo},
           {label:"Kids & Family",icon:Users},
           {label:"Reality",icon:Trophy},
@@ -666,11 +667,12 @@ export default function Home(){
       </div>
     </header>
 
-    <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 grid grid-cols-5 border-t border-white/10 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 lg:hidden">
+    <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 grid grid-cols-6 border-t border-white/10 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 lg:hidden">
       {[
         {label:"Home",icon:HomeIcon},
         {label:"Movies",icon:Clapperboard},
         {label:"TV Shows",icon:Tv},
+        {label:"Manga",icon:BookOpen},
         {label:"My List",icon:Bookmark},
         {label:"Plans",icon:CreditCard}
       ].map(({label,icon:Icon})=><button key={label} onClick={()=>{if(label==="Plans"){window.location.href="/subscribe";return;}setBrowse(label);setQ("");}} className={`flex flex-col items-center gap-1 py-1 text-[10px] ${browse===label?"text-white":"text-zinc-500"}`}><Icon className="h-5 w-5"/><span>{label}</span></button>)}
