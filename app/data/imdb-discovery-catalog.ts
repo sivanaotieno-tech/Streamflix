@@ -1,8 +1,8 @@
 import type { CatalogTitle } from "./catalog";
 
 // Additional editorial picks with stable IMDb identifiers. Metadata is enriched
-// at request time by the optional IMDbPHP importer; IDs also drive canonical URLs.
-export const imdbPhpCatalog: CatalogTitle[] = [
+// at request time by the optional Node.js IMDb dataset importer; IDs also drive canonical URLs.
+export const imdbDiscoveryCatalog: CatalogTitle[] = [
   { id: "imdb-tt4154796", imdbId: "tt4154796", title: "Avengers: Endgame", overview: "", year: "2019", rating: 0, type: "movie", genres: ["Action","Adventure","Drama"], country: [], source: "Streamivio IMDb discovery", poster: null },
   { id: "imdb-tt15239678", imdbId: "tt15239678", title: "Dune: Part Two", overview: "", year: "2024", rating: 0, type: "movie", genres: ["Adventure","Drama","Sci-Fi"], country: [], source: "Streamivio IMDb discovery", poster: null },
   { id: "imdb-tt15398776", imdbId: "tt15398776", title: "Oppenheimer", overview: "", year: "2023", rating: 0, type: "movie", genres: ["Biography","Drama","History"], country: [], source: "Streamivio IMDb discovery", poster: null },

@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "catalog:import": "node catalog-importer/import-imdb.mjs"
   },
   "dependencies": {
     "@myno_21/imdb-scraper": "1.0.0",

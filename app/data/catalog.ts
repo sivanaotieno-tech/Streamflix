@@ -1,7 +1,7 @@
 import { imdbCatalog } from "./imdb-catalog";
 import { expandedCatalog } from "./expanded-catalog";
-import { imdbPhpCatalog } from "./imdbphp-catalog";
-import { imdbPhpEnrichedCatalog } from "./imdbphp-enriched";
+import { imdbDiscoveryCatalog } from "./imdb-discovery-catalog";
+import { imdbEnrichedCatalog } from "./imdb-enriched";
 
 export type CatalogTitle = {
   id: string;
@@ -57,7 +57,30 @@ const handCuratedCatalog: CatalogTitle[] = [
 
 const catalogKey = (item: CatalogTitle) => `${item.title.trim().toLowerCase()}::${item.year}`;
 const curatedCatalog = Array.from(
-  new Map([...handCuratedCatalog, ...expandedCatalog, ...imdbPhpCatalog, ...imdbPhpEnrichedCatalog].map((item) => [catalogKey(item), item])).values(),
+  [...handCuratedCatalog, ...expandedCatalog, ...imdbDiscoveryCatalog, ...imdbEnrichedCatalog]
+    .reduce((merged, item) => {
+      const key = catalogKey(item);
+      const previous = merged.get(key);
+      if (!previous) {
+        merged.set(key, item);
+        return merged;
+      }
+
+      // Dataset rows do not include artwork or plot summaries. Keep existing
+      // editorial/chart values when the incoming enrichment has no replacement.
+      merged.set(key, {
+        ...previous,
+        ...item,
+        overview: item.overview || previous.overview,
+        rating: item.rating > 0 ? item.rating : previous.rating,
+        genres: item.genres.length ? item.genres : previous.genres,
+        country: item.country?.length ? item.country : previous.country,
+        poster: item.poster || previous.poster,
+        ageRating: item.ageRating || previous.ageRating,
+      });
+      return merged;
+    }, new Map<string, CatalogTitle>())
+    .values(),
 );
 const curatedKeys = new Set(curatedCatalog.map(catalogKey));
 
