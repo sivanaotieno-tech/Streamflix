@@ -1,13 +1,16 @@
 {
   "name": "Streamivio",
   "short_name": "Streamivio",
-  "description": "Your entertainment library, online and offline.",
+  "description": "Streamivio — movies, series, anime and more on every screen.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "categories": ["entertainment", "video", "music"],
+  "prefer_related_applications": false,
   "background_color": "#070d17",
   "theme_color": "#070d17",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
       "src": "/streamivio-icon.svg",
