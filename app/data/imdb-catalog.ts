@@ -1,6 +1,4 @@
-import type { CatalogTitle } from './catalog';
-
-export const imdbCatalog: CatalogTitle[] = [
+import type { CatalogTitle } from './catalog';\n\nexport const imdbCatalog: CatalogTitle[] = [
     {
         "id": "imdb-tt0903747",
         "imdbId": "tt0903747",
@@ -1523,19 +1521,6 @@ export const imdbCatalog: CatalogTitle[] = [
         "poster": "https://m.media-amazon.com/images/M/MV5BMGU0MDIzZTAtYjBjZi00ZDQ1LThlYzctNWJkOWU4NTI5OWNkXkEyXkFqcGc@._V1_.jpg"
     },
     {
-        "id": "imdb-tt23849204",
-        "imdbId": "tt23849204",
-        "title": "12th Fail",
-        "overview": "",
-        "year": "2023",
-        "rating": 8.7,
-        "type": "movie",
-        "genres": [],
-        "country": [],
-        "source": "IMDb Top Charts",
-        "poster": "https://m.media-amazon.com/images/M/MV5BNTE3OTIxZDYtNjA0NC00N2YxLTg1NGQtOTYxNmZkMDkwOWNjXkEyXkFqcGc@._V1_.jpg"
-    },
-    {
         "id": "imdb-tt1305826",
         "imdbId": "tt1305826",
         "title": "Adventure Time",
@@ -1874,6 +1859,19 @@ export const imdbCatalog: CatalogTitle[] = [
         "poster": "https://m.media-amazon.com/images/M/MV5BYTNjNjc5OWQtYjMxNC00MzEwLWIxM2UtNjU3NzhkNjZmNGI3XkEyXkFqcGc@._V1_.jpg"
     },
     {
+        "id": "imdb-tt3212600",
+        "imdbId": "tt3212600",
+        "title": "Mahabharat",
+        "overview": "",
+        "year": "2013",
+        "rating": 8.7,
+        "type": "tv",
+        "genres": [],
+        "country": [],
+        "source": "IMDb Top Charts",
+        "poster": "https://m.media-amazon.com/images/M/MV5BYzM1MmNhMGQtNDliNy00ZDIwLTg1MDQtN2NjZjUyNTg2MGMxXkEyXkFqcGc@._V1_.jpg"
+    },
+    {
         "id": "imdb-tt7472896",
         "imdbId": "tt7472896",
         "title": "Mr Inbetween",
@@ -2199,6 +2197,19 @@ export const imdbCatalog: CatalogTitle[] = [
         "poster": "https://m.media-amazon.com/images/M/MV5BZDE0Zjk5OGYtZTk3OC00ZDZhLWE2NGQtNzc3NmJhNjljYzY5XkEyXkFqcGc@._V1_.jpg"
     },
     {
+        "id": "imdb-tt23849204",
+        "imdbId": "tt23849204",
+        "title": "12th Fail",
+        "overview": "",
+        "year": "2023",
+        "rating": 8.6,
+        "type": "movie",
+        "genres": [],
+        "country": [],
+        "source": "IMDb Top Charts",
+        "poster": "https://m.media-amazon.com/images/M/MV5BNTE3OTIxZDYtNjA0NC00N2YxLTg1NGQtOTYxNmZkMDkwOWNjXkEyXkFqcGc@._V1_.jpg"
+    },
+    {
         "id": "imdb-tt13991232",
         "imdbId": "tt13991232",
         "title": "1883",
@@ -2472,19 +2483,6 @@ export const imdbCatalog: CatalogTitle[] = [
         "poster": "https://m.media-amazon.com/images/M/MV5BN2NmMzNkZDAtYzEyMy00NzY2LTlhMmMtNzc2M2M5ZTk2MmY2XkEyXkFqcGc@._V1_.jpg"
     },
     {
-        "id": "imdb-tt0310455",
-        "imdbId": "tt0310455",
-        "title": "Foyle's War",
-        "overview": "",
-        "year": "2002",
-        "rating": 8.6,
-        "type": "tv",
-        "genres": [],
-        "country": [],
-        "source": "IMDb Top Charts",
-        "poster": "https://m.media-amazon.com/images/M/MV5BNjExMDJlZWUtNzQxMS00ZGI4LTg1N2QtMmU3NTkyN2Q4NzYyXkEyXkFqcGc@._V1_.jpg"
-    },
-    {
         "id": "imdb-tt2049116",
         "imdbId": "tt2049116",
         "title": "Gomorrah",
@@ -2587,6 +2585,19 @@ export const imdbCatalog: CatalogTitle[] = [
         "country": [],
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BZjEyNDIzNmEtMjdkYS00ZDAwLTljOWYtNDRhYTVhYTlmOTk1XkEyXkFqcGc@._V1_.jpg"
+    },
+    {
+        "id": "imdb-tt2359704",
+        "imdbId": "tt2359704",
+        "title": "JoJo's Bizarre Adventure",
+        "overview": "",
+        "year": "2012",
+        "rating": 8.6,
+        "type": "tv",
+        "genres": [],
+        "country": [],
+        "source": "IMDb Top Charts",
+        "poster": "https://m.media-amazon.com/images/M/MV5BMzIyNzY4NTMtNmVhYS00OWFhLTkwMWMtOGFkNTdmNWU2ZDdiXkEyXkFqcGc@._V1_.jpg"
     },
     {
         "id": "imdb-tt1489428",
@@ -3146,6 +3157,19 @@ export const imdbCatalog: CatalogTitle[] = [
         "country": [],
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BMGQyNDAzNGItZWM5MC00ZDAxLTg1YjItYzhkZmU5NGQzMWEzXkEyXkFqcGc@._V1_.jpg"
+    },
+    {
+        "id": "imdb-tt2056785",
+        "imdbId": "tt2056785",
+        "title": "Wildwood",
+        "overview": "",
+        "year": "2026",
+        "rating": 8.6,
+        "type": "movie",
+        "genres": [],
+        "country": [],
+        "source": "IMDb Top Charts",
+        "poster": "https://m.media-amazon.com/images/M/MV5BN2JjOGQ1OGMtZmUwYS00YmQ2LTllNzQtZjU2YjY1NzM2NzJjXkEyXkFqcGc@._V1_.jpg"
     },
     {
         "id": "imdb-tt4236770",
@@ -3746,19 +3770,6 @@ export const imdbCatalog: CatalogTitle[] = [
         "poster": "https://m.media-amazon.com/images/M/MV5BMTI1MTY2OTIxNV5BMl5BanBnXkFtZTYwNjQ4NjY3._V1_.jpg"
     },
     {
-        "id": "imdb-tt2244495",
-        "imdbId": "tt2244495",
-        "title": "The Eric Andre Show",
-        "overview": "",
-        "year": "2012",
-        "rating": 8.5,
-        "type": "tv",
-        "genres": [],
-        "country": [],
-        "source": "IMDb Top Charts",
-        "poster": "https://m.media-amazon.com/images/M/MV5BZGY0OGMzYjItNjhkMy00NjZjLThlZTEtMTdlYWU0NzliZWNkXkEyXkFqcGc@._V1_.jpg"
-    },
-    {
         "id": "imdb-tt3230854",
         "imdbId": "tt3230854",
         "title": "The Expanse",
@@ -4017,19 +4028,6 @@ export const imdbCatalog: CatalogTitle[] = [
         "country": [],
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BN2ZiMmQ0YWItN2IwZS00Y2NhLWE0NzQtNGNiOGFjN2U4MWNmXkEyXkFqcGc@._V1_.jpg"
-    },
-    {
-        "id": "imdb-tt0086879",
-        "imdbId": "tt0086879",
-        "title": "Amadeus",
-        "overview": "",
-        "year": "1984",
-        "rating": 8.4,
-        "type": "movie",
-        "genres": [],
-        "country": [],
-        "source": "IMDb Top Charts",
-        "poster": "https://m.media-amazon.com/images/M/MV5BMzc2MjM0NTMtOGY4NC00NzY1LWE2ODUtZjMzY2RhNGNkZDAyXkEyXkFqcGc@._V1_.jpg"
     },
     {
         "id": "imdb-tt0078788",
@@ -4381,6 +4379,19 @@ export const imdbCatalog: CatalogTitle[] = [
         "country": [],
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BMDM0ZWRmMzctM2M5ZS00ZjU0LWIxN2MtNWNlNGY1ZDhjMDVhXkEyXkFqcGc@._V1_.jpg"
+    },
+    {
+        "id": "imdb-tt0086879",
+        "imdbId": "tt0086879",
+        "title": "Amadeus",
+        "overview": "",
+        "year": "1984",
+        "rating": 8.3,
+        "type": "movie",
+        "genres": [],
+        "country": [],
+        "source": "IMDb Top Charts",
+        "poster": "https://m.media-amazon.com/images/M/MV5BMzc2MjM0NTMtOGY4NC00NzY1LWE2ODUtZjMzY2RhNGNkZDAyXkEyXkFqcGc@._V1_.jpg"
     },
     {
         "id": "imdb-tt0169547",
@@ -5161,19 +5172,6 @@ export const imdbCatalog: CatalogTitle[] = [
         "country": [],
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BMjhjMGYyMjAtMzJkYy00NzhlLWIwY2MtMWQ2ODIxZDUyOGYyXkEyXkFqcGc@._V1_.jpg"
-    },
-    {
-        "id": "imdb-tt10431500",
-        "imdbId": "tt10431500",
-        "title": "Miracle in Cell No. 7",
-        "overview": "",
-        "year": "2019",
-        "rating": 8.2,
-        "type": "movie",
-        "genres": [],
-        "country": [],
-        "source": "IMDb Top Charts",
-        "poster": "https://m.media-amazon.com/images/M/MV5BMTEyZTQ4YWItMzNkNi00MTUwLWEyODAtMWI3NDNhNDRiYmQwXkEyXkFqcGc@._V1_.jpg"
     },
     {
         "id": "imdb-tt0476735",
@@ -6501,4 +6499,4 @@ export const imdbCatalog: CatalogTitle[] = [
         "source": "IMDb Top Charts",
         "poster": "https://m.media-amazon.com/images/M/MV5BMTY5OTU0OTc2NV5BMl5BanBnXkFtZTcwMzU4MDcyMQ@@._V1_.jpg"
     }
-];
+];\n
