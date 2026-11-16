@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#070d17">
+  <title>Streamivio</title>
+  <style>html,body{margin:0;width:100%;height:100%;background:#070d17;color:#fff;font:24px Arial,sans-serif}main{height:100%;display:grid;place-content:center;text-align:center}p{color:#a8b8ca;font-size:16px}button{padding:16px 28px;border:0;border-radius:12px;background:#35a8f5;color:#07111d;font-size:20px;font-weight:bold}</style>
+</head>
+<body>
+  <main>
+    <h1>Streamivio</h1>
+    <p>Connecting to your Streamivio TV experience…</p>
+    <button id="launch">Open Streamivio</button>
+  </main>
+  <script>
+    // Replace with the verified public production domain before packaging.
+    const STREAMIVIO_TV_URL = "https://streamivio.com/tv";
+    function launch(){ window.location.replace(STREAMIVIO_TV_URL); }
+    document.getElementById("launch").addEventListener("click",launch);
+    document.addEventListener("keydown",event=>{if(["Enter"," ","Return"].includes(event.key)){event.preventDefault();launch();}});
+    setTimeout(launch,1200);
+  </script>
+</body>
+</html>
