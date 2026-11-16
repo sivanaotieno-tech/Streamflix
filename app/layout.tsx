@@ -1,10 +1,11 @@
 import "./globals.css";
 import OfflineSupport from "./OfflineSupport";
+import DeviceExperience from "@/components/device-experience";
 import { LiveClock } from "@/components/live-clock";
 
 export const metadata = {
   title: "Streamivio",
-  description: "A legitimate movie, TV and live entertainment discovery platform.",
+  description: "Discover movies, series, anime and more on every screen.",
   applicationName: "Streamivio",
   manifest: "/manifest.json",
   icons: {
@@ -25,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <OfflineSupport />
+        <DeviceExperience />
         <LiveClock />
         {children}
       </body>
