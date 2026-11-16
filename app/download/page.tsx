@@ -2,9 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-  ArrowDownToLine, ArrowUpRight, Check, Copy, Download, Monitor,
-  Smartphone, Tablet, Tv, Laptop, Gamepad2, ShieldCheck, Wifi,
-  Play, Share, Plus, ExternalLink
+  ArrowDownToLine, ArrowUpRight, Check, Copy, Download,
+  Smartphone, Tablet, Tv, Laptop, ShieldCheck, Wifi, Play, ExternalLink
 } from "lucide-react";
 
 const APP_URL = "https://streamivio-1r94nmgql-sivanaotieno-techs-projects.vercel.app/";
@@ -30,6 +29,7 @@ export default function DownloadPage() {
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
+    document.title = "Download Streamivio";
     const onPrompt = (event: Event) => {
       event.preventDefault();
       setPromptEvent(event as InstallPrompt);
@@ -48,7 +48,7 @@ export default function DownloadPage() {
 
   async function installApp() {
     if (!promptEvent) {
-      setSelected((current) => current);
+      document.getElementById("install-guide")?.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
     await promptEvent.prompt();
@@ -131,7 +131,7 @@ export default function DownloadPage() {
           })}
         </div>
 
-        <div className="mt-5 grid gap-5 rounded-3xl border border-white/10 bg-[#0c1726]/90 p-6 sm:p-8 md:grid-cols-[1fr_0.85fr]">
+        <div id="install-guide" className="mt-5 grid scroll-mt-8 gap-5 rounded-3xl border border-white/10 bg-[#0c1726]/90 p-6 sm:p-8 md:grid-cols-[1fr_0.85fr]">
           <div>
             <div className="flex items-center gap-3">
               <span className="grid h-11 w-11 place-items-center rounded-xl bg-sky-300/10 text-sky-300"><ActiveIcon className="h-5 w-5" /></span>
