@@ -29,3 +29,29 @@ button{cursor:pointer}
 input:focus,select:focus{outline-color:var(--sv-blue)}
 @media(max-width:1023px){.hero-shell{margin-top:4rem;height:clamp(480px,76vh,650px)}}
 @media(max-width:640px){.hero-shell{height:500px}.hero-art img{object-position:58% center}.hero-art::before{background:linear-gradient(90deg,rgba(5,13,24,.82),rgba(5,13,24,.12)),linear-gradient(0deg,#070d17 0%,rgba(0,0,0,.5) 32%,transparent 78%)}}
+
+
+/* Streamivio adapts to touch screens, desktops and television remotes. */
+html{min-height:100%;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{min-height:100dvh;overscroll-behavior-y:contain}
+button,a,[role="button"]{touch-action:manipulation}
+:focus-visible{outline:3px solid #55baff;outline-offset:4px}
+@supports(padding:max(0px)){
+  body{padding-bottom:env(safe-area-inset-bottom)}
+}
+.sv-touch-mode button,.sv-touch-mode a,.sv-touch-mode [role="button"]{-webkit-user-select:none;user-select:none}
+.sv-tv-mode body{font-size:18px;overflow-x:hidden}
+.sv-tv-mode button,.sv-tv-mode a,.sv-tv-mode [role="button"],.sv-tv-mode input,.sv-tv-mode select{min-height:44px}
+.sv-tv-mode :focus-visible{outline:4px solid #55baff;outline-offset:5px;box-shadow:0 0 0 7px rgba(53,168,245,.2);z-index:20}
+.sv-tv-mode .catalog-card:focus-visible{transform:scale(1.055);filter:brightness(1.18)}
+.sv-tv-mode .hero-shell{height:min(72vh,900px);min-height:560px}
+.sv-tv-mode .catalog-card{min-width:clamp(190px,13vw,290px)}
+@media(max-width:640px){
+  body{padding-bottom:calc(5.5rem + env(safe-area-inset-bottom))}
+  .mobile-bottom-nav{padding-bottom:env(safe-area-inset-bottom)}
+  button,a,[role="button"]{scroll-margin:1rem}
+}
+@media(min-width:1600px){body{font-size:17px}}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
