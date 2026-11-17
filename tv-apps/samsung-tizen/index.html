@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+  <meta name="theme-color" content="#070d17">
+  <title>Streamivio TV</title>
+  <style>html,body{margin:0;width:100%;height:100%;background:#070d17;color:#fff;font:24px Arial,sans-serif}main{height:100%;display:grid;place-content:center;text-align:center;padding:4vw}p{color:#a8b8ca;font-size:18px;max-width:700px}code{color:#8ed4ff}button{padding:16px 28px;border:0;border-radius:12px;background:#35a8f5;color:#07111d;font-size:20px;font-weight:bold}button:focus{outline:4px solid white;outline-offset:4px}</style>
+</head>
+<body>
+  <main>
+    <h1>Streamivio</h1>
+    <p>TV app prototype. Set the verified public Streamivio URL in this package before device testing and store submission.</p>
+    <p>Configuration: <code>tv-apps/config.json</code></p>
+    <button id="launch">Open Streamivio TV</button>
+  </main>
+  <script>
+    // Replace this placeholder only after the public production domain is verified.
+    const STREAMIVIO_TV_URL = "";
+    const button = document.getElementById("launch");
+    button.addEventListener("click", () => {
+      if (!STREAMIVIO_TV_URL) {
+        document.querySelector("main p").textContent = "The public production URL has not been configured yet. Do not submit this prototype to the Samsung store.";
+        return;
+      }
+      window.location.replace(STREAMIVIO_TV_URL.replace(/\/$/, "") + "/tv");
+    });
+    document.addEventListener("keydown", event => {
+      if (["Enter", " ", "Return"].includes(event.key)) {
+        event.preventDefault();
+        button.click();
+      }
+    });
+  </script>
+</body>
+</html>

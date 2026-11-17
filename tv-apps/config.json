@@ -1,0 +1,12 @@
+{
+  "appName": "Streamivio",
+  "productionOrigin": "https://streamivio.stream.app",
+  "tvPath": "/tv",
+  "webExperienceUrl": "https://streamivio.stream.app/tv",
+  "backend": "existing-streamivio-nextjs-firebase-apis",
+  "branding": {
+    "themeColor": "#070d17",
+    "accentColor": "#35a8f5"
+  },
+  "releaseStatus": "domain-pending-verification"
+}

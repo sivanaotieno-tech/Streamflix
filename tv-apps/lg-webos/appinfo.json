@@ -1,0 +1,11 @@
+{
+  "id": "com.streamivio.tv",
+  "version": "1.0.0",
+  "vendor": "Streamivio",
+  "type": "web",
+  "main": "index.html",
+  "title": "Streamivio",
+  "icon": "icon.png",
+  "largeIcon": "largeIcon.png",
+  "resolution": "1920x1080"
+}
