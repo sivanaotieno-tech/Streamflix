@@ -1,4 +1,6 @@
-import type { CatalogTitle } from './catalog';\n\nexport const imdbCatalog: CatalogTitle[] = [
+import type { CatalogTitle } from './catalog';
+
+export const imdbCatalog: CatalogTitle[] = [
     {
         "id": "imdb-tt0903747",
         "imdbId": "tt0903747",
