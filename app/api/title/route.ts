@@ -203,6 +203,40 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // Archived IMDb API fallback, used only when the configured provider did not resolve metadata.
+  if (!metadata && !game) {
+    const imdbApiBase = "https://imdb-api.projects.thetuhin.com";
+    try {
+      if (resolvedProviderId) {
+        const response = await fetch(imdbApiBase + "/title/" + encodeURIComponent(resolvedProviderId), {
+          headers: { Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(5000),
+        });
+        if (response.ok) metadata = await response.json() as AnyRecord;
+      }
+      if (!metadata && titleQuery.length >= 2) {
+        const response = await fetch(imdbApiBase + "/search?query=" + encodeURIComponent(titleQuery), {
+          headers: { Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(5000),
+        });
+        if (response.ok) {
+          const payload = await response.json() as AnyRecord;
+          const candidates: AnyRecord[] = Array.isArray(payload?.results) ? payload.results.filter((row: unknown): row is AnyRecord => isRecord(row)) : Array.isArray(payload) ? payload.filter((row: unknown): row is AnyRecord => isRecord(row)) : [];
+          const match = candidates.find((row) => normalize(firstText(row, ["title", "name", "Title"])) === normalize(titleQuery)) ?? candidates[0];
+          if (match) {
+            const candidateId = firstText(match, ["imdbID", "imdb_id", "imdbId", "id"]);
+            if (/^tt\\d+$/i.test(candidateId)) {
+              const detailResponse = await fetch(imdbApiBase + "/title/" + encodeURIComponent(candidateId), {
+                headers: { Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(5000),
+              });
+              metadata = detailResponse.ok ? await detailResponse.json() as AnyRecord : match;
+            } else metadata = match;
+          }
+        }
+      }
+    } catch (error) {
+      console.warn("Streamivio archived IMDb fallback unavailable", error);
+    }
+  }
+
   if (!local && !game && !metadata && !resolvedProviderId) {
     return NextResponse.json({
       available: false,
