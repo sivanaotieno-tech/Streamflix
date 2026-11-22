@@ -253,7 +253,6 @@ export default function Home(){
     setAuthUser(null);
   };
 
-  const providerSeasons=Array.isArray(vidsrcInfo?.seasons)?vidsrcInfo.seasons:[];
   const activeSkipKey=skipPointsKeyFor(playerContentId||String(selected?.id||""),season,episode);
 
   useEffect(()=>{
@@ -280,7 +279,7 @@ export default function Home(){
   };
   const isJujutsuKaisen=/jujutsu kaisen/i.test(String(selected?.title||selected?.name||""));
   const isOnePieceTitle=/one piece/i.test(String(selected?.title||selected?.name||""));
-  const seasonNumbers=new Set<number>(providerSeasons.map((entry:any)=>Number(entry?.season??entry)).filter((value:number)=>Number.isInteger(value)&&value>0));
+  const seasonNumbers=new Set<number>();
   if(isJujutsuKaisen){seasonNumbers.add(1);seasonNumbers.add(2);seasonNumbers.add(3);}
   const isJoJoTitle=/jojo.?s bizarre adventure/i.test(String(selected?.title||selected?.name||""));
   if(isJoJoTitle){for(let part=1;part<=6;part++)seasonNumbers.add(part);}
