@@ -41,3 +41,15 @@ Example (illustrative only):
 The resolver does not scrape, extract, decrypt, proxy, or bypass access controls. It returns a configured HTTPS URL only after the rights gate passes. A successful lookup does not replace a real browser playback test.
 
 Configure the server-only Vercel variable `STREAMIVIO_RESOLVER_URL` with its HTTPS base URL. Never place provider credentials or signed URLs in client-side variables.
+
+
+## Docker deployment
+
+Build from the repository root:
+
+```powershell
+docker build -t streamivio-authorized-resolver ./authorized-media-resolver
+docker run -d --name streamivio-authorized-resolver -p 8000:8000 -v "${PWD}/pymoviedb-service/data:/data:ro" streamivio-authorized-resolver
+```
+
+The container expects the mounted file at `/data/catalog.json`. Keep the catalogue read-only in the container. Expose it only behind HTTPS and set the Vercel server-side `STREAMIVIO_RESOLVER_URL` to its public HTTPS origin.
