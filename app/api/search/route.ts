@@ -153,6 +153,46 @@ export async function GET(request:NextRequest){
     }));
   }
 
+  const metadataApiBase=(process.env.STREAMIVIO_API_URL||process.env.NEXT_PUBLIC_STREAMIVIO_API_URL||"").replace(/\/+$/,"");
+  if(rawQuery&&!popular&&scope!=="games"&&metadataApiBase&&process.env.STREAMIVIO_METADATA_SEARCH_ENABLED==="true"){
+    const kinds=scope==="movies"?["movie"]:scope==="tv"?["series"]:scope==="anime"?["anime"]:scope==="all"?["movie","series","anime"]:[];
+    const remoteRows:SearchRecord[]=[];
+    const requests=await Promise.all(kinds.map(async kind=>{
+      try{
+        const endpoint=new URL("/media/search",metadataApiBase);
+        endpoint.searchParams.set("q",rawQuery);
+        endpoint.searchParams.set("kind",kind);
+        endpoint.searchParams.set("limit",String(limit));
+        const response=await fetch(endpoint,{cache:"no-store",signal:AbortSignal.timeout(8000)});
+        if(!response.ok)throw new Error("Metadata request failed");
+        const payload=await response.json();
+        const values=Array.isArray(payload)?payload:Array.isArray(payload.results)?payload.results:Array.isArray(payload.metas)?payload.metas:Array.isArray(payload.data)?payload.data:[];
+        return values.map((entry:SearchRecord)=>{
+          const title=String(entry.title||entry.name||entry.titleText||"").trim();
+          const images=entry.images||{};
+          const poster=entry.poster_url||entry.poster||images.poster?.medium||images.poster?.large||entry.image||null;
+          const rawId=String(entry.imdb_id||entry.imdbId||entry.id||"");
+          const rowType=kind==="movie"?"movie":kind==="anime"?"anime":kind==="documentary"?"documentary":"tv";
+          return {...entry,id:rawId||title,title,name:title,overview:entry.overview||entry.description||entry.plot||"",description:entry.description||entry.overview||entry.plot||"",poster,poster_url:poster,year:entry.year||entry.releaseYear||"",rating:numberOrUndefined(entry.rating??entry.imdbRating),genres:textList(entry.genres),type:rowType,imdb_id:/^tt\d+$/i.test(rawId)?rawId:entry.imdb_id||entry.imdbId||null,source:"StreamX Metadata",playback_available:false};
+        }).filter((entry:SearchRecord)=>entry.title);
+      }catch{
+        unavailable.push("StreamX "+kind);
+        return [];
+      }
+    }));
+    for(const batch of requests)remoteRows.push(...batch);
+    const seen=new Set<string>();
+    const uniqueRemote=remoteRows.filter(item=>{
+      const key=String(item.imdb_id||[compact(item.title),item.year].join(":"));
+      if(seen.has(key))return false;
+      seen.add(key);return true;
+    });
+    if(uniqueRemote.length){
+      mediaResults=[...uniqueRemote,...mediaResults];
+      sources.push("StreamX Metadata");
+    }
+  }
+
   let gameResults:SearchRecord[]=[];
   if(scope==="all"||scope==="games"){
     gameResults=gamesCatalog.map(game=>({
