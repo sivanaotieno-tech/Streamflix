@@ -9,8 +9,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import sqlite3
-import time
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -19,9 +17,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 APP_DIR = Path(__file__).resolve().parent
 CATALOG_PATH = Path(os.getenv("STREAMIVIO_CATALOG_PATH", str(APP_DIR.parent / "pymoviedb-service" / "data" / "catalog.json")))
-CACHE_DEFAULT = "/tmp/streamivio_stream_cache.sqlite3" if os.getenv("VERCEL") else str(APP_DIR / "stream_cache.sqlite3")
-CACHE_PATH = Path(os.getenv("STREAMIVIO_STREAM_CACHE", CACHE_DEFAULT))
-CACHE_TTL_SECONDS = max(30, int(os.getenv("STREAMIVIO_CACHE_TTL", "300")))
 IMDB_RE = re.compile(r"^tt[0-9]+$", re.I)
 RIGHTS_STATUSES = {"licensed", "owned", "public_domain"}
 
@@ -29,13 +24,6 @@ app = FastAPI(title="Streamivio Authorised Media Resolver", version="1.1.0")
 origins = [value.strip() for value in os.getenv("STREAMIVIO_CORS_ORIGINS", "").split(",") if value.strip()]
 if origins:
     app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET"], allow_headers=["*"])
-
-
-def db() -> sqlite3.Connection:
-    CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(CACHE_PATH)
-    connection.execute("CREATE TABLE IF NOT EXISTS stream_cache (imdb_id TEXT PRIMARY KEY, stream_url TEXT NOT NULL, media_format TEXT NOT NULL, cached_at INTEGER NOT NULL)")
-    return connection
 
 
 def valid_https_url(value: object) -> bool:
@@ -100,12 +88,6 @@ def stream(imdb_id: str):
     if fmt not in {"hls", "mp4"}:
         raise HTTPException(status_code=415, detail="Only MP4 and HLS media URLs are supported.")
 
-    now = int(time.time())
-    with db() as connection:
-        connection.execute(
-            "INSERT OR REPLACE INTO stream_cache (imdb_id, stream_url, media_format, cached_at) VALUES (?, ?, ?, ?)",
-            (imdb_id, url, fmt, now),
-        )
     return {
         "imdb_id": imdb_id,
         "available": True,
@@ -113,5 +95,4 @@ def stream(imdb_id: str):
         "rights_status": entry.get("rights_status"),
         "stream_url": url,
         "format": fmt,
-        "cached": False,
     }
