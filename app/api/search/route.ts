@@ -101,33 +101,6 @@ function textList(value:unknown):string[]{
   return [];
 }
 
-function normalizeExternal(row:SearchRecord,kind:"movie"|"tv"):SearchRecord|null{
-  const titleValue=row.title||row.Title||row.name||row.Name||row.titleText||row.originalTitle||row.original_title;
-  const title=typeof titleValue==="string"?titleValue.trim():String(titleValue??"").trim();
-  if(!title)return null;
-  const providerId=String(row.imdbID||row.imdb_id||row.imdbId||row.id||"").trim();
-  const rawYear=row.year||row.Year||row.releaseYear||row.release_year||row.releaseDate||row.release_date||row.datePublished||row.date_published;
-  const year=String(rawYear||"").match(/\d{4}/)?.[0]||"";
-  const posterValue=row.poster||row.Poster||row.poster_url||row.image||row.imageUrl||row.primaryImage||row.thumbnail;
-  const poster=typeof posterValue==="string"&&/^https:\/\//i.test(posterValue.trim())?posterValue.trim():null;
-  const rawOverview=row.overview||row.description||row.plot||row.Plot||row.plotOutline||row.synopsis||row.storyline;
-  const ratingValue=typeof row.rating==="object"&&row.rating!==null?row.rating.ratingValue:row.rating;
-  const genres=textList(row.genres||row.genre||row.Genre);
-  const countries=textList(row.country||row.countries||row.Country);
-  const imdbId=/^tt\d+$/i.test(providerId)?providerId:undefined;
-  return {
-    id:imdbId||"imdb-search-"+compact(title)+(year?"-"+year:""),
-    title,name:title,overview:String(rawOverview||""),description:String(rawOverview||""),
-    year,rating:numberOrUndefined(ratingValue??row.imDbRating??row.imdbRating??row.userRating),
-    type:kind,genres,country:countries,
-    poster,poster_url:poster,
-    contentRating:row.contentRating||row.age_rating||row.rated||row.Rated||row.certificate||null,
-    ageRating:row.contentRating||row.age_rating||row.rated||row.Rated||row.certificate||null,
-    imdbId,imdb_id:imdbId,imdbID:imdbId,
-    source:"IMDb Search",metadata_source:"IMDb"
-  };
-}
-
 function countryMatches(item:SearchRecord,query:string){
   const wanted=compact(query);
   const usAliases=["us","usa","unitedstates","unitedstatesofamerica"];
@@ -141,69 +114,6 @@ function countryMatches(item:SearchRecord,query:string){
     const value=compact(country);
     return accepted.includes(value)||accepted.some(alias=>alias.length>=4&&value.startsWith(alias));
   });
-}
-
-function sameMediaFamily(a:SearchRecord,b:SearchRecord){
-  const tvTypes=["tv","anime","documentary","kids","reality","documentaries"];
-  return a.type===b.type||(tvTypes.includes(String(a.type))&&tvTypes.includes(String(b.type)));
-}
-
-function mergeUnique(existing:SearchRecord[],incoming:SearchRecord[]){
-  const merged=[...existing];
-  for(const candidate of incoming){
-    const index=merged.findIndex(item=>{
-      const aId=String(item.imdbId||item.imdb_id||item.imdbID||"");
-      const bId=String(candidate.imdbId||candidate.imdb_id||candidate.imdbID||"");
-      if(aId&&bId&&aId===bId)return true;
-      const sameName=compact(item.title||item.name)===compact(candidate.title||candidate.name);
-      const sameYear=!item.year||!candidate.year||String(item.year)===String(candidate.year);
-      return sameName&&sameYear&&sameMediaFamily(item,candidate);
-    });
-    if(index<0){merged.push(candidate);continue;}
-    const current=merged[index];
-    merged[index]={
-      ...candidate,...current,
-      poster:current.poster||current.poster_url||candidate.poster||null,
-      poster_url:current.poster_url||current.poster||candidate.poster_url||candidate.poster||null,
-      overview:current.overview||current.description||candidate.overview||"",
-      description:current.description||current.overview||candidate.description||"",
-      rating:current.rating??candidate.rating,
-      imdbId:current.imdbId||current.imdb_id||candidate.imdbId,
-      imdb_id:current.imdb_id||current.imdbId||candidate.imdb_id,
-      imdbID:current.imdbID||candidate.imdbID,
-      metadata_source:candidate.metadata_source||current.metadata_source,
-    };
-  }
-  return merged;
-}
-
-async function fetchExternal(base:string,query:string,kind:"movie"|"tv"){
-  const target=new URL("/search",base);
-  target.searchParams.set("q",query);
-  target.searchParams.set("type",kind);
-  const response=await fetch(target.toString(),{
-    headers:{Accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(4200)
-  });
-  if(!response.ok)throw new Error("External title search returned HTTP "+response.status);
-  const payload=await response.json();
-  return (Array.isArray(payload.results)?payload.results:[])
-    .filter((row:unknown)=>Boolean(row)&&typeof row==="object"&&!Array.isArray(row))
-    .map((row:SearchRecord)=>normalizeExternal(row,kind))
-    .filter((row:SearchRecord|null):row is SearchRecord=>Boolean(row));
-}
-
-async function fetchPopular(base:string,kind:"movie"|"tv"){
-  const target=new URL("/popular",base);
-  target.searchParams.set("type",kind);
-  const response=await fetch(target.toString(),{
-    headers:{Accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(6500)
-  });
-  if(!response.ok)throw new Error("IMDb popular titles returned HTTP "+response.status);
-  const payload=await response.json();
-  return (Array.isArray(payload.results)?payload.results:[])
-    .filter((row:unknown)=>Boolean(row)&&typeof row==="object"&&!Array.isArray(row))
-    .map((row:SearchRecord)=>normalizeExternal(row,kind))
-    .filter((row:SearchRecord|null):row is SearchRecord=>Boolean(row));
 }
 
 export async function GET(request:NextRequest){
@@ -231,9 +141,8 @@ export async function GET(request:NextRequest){
   if(year&&(!/^[0-9]{4}$/.test(year)||Number(year)<1888||Number(year)>2200))return NextResponse.json({error:"Enter a valid four-digit release year."},{status:400});
 
   const scope=rawScope as Scope;
-  const apiBase=""; // External IMDb metadata is disabled until a commercial licence is in place.
   let mediaResults:SearchRecord[]=[];
-  let catalogDatabase="bundled-json-fallback";
+  const catalogDatabase="streamivio-editorial";
   const unavailable:string[]=[];
   const sources:string[]=[];
 
@@ -242,61 +151,6 @@ export async function GET(request:NextRequest){
       ...item,name:item.title,poster_url:(item as any).poster||null,
       contentRating:(item as any).ageRating||null,playback_available:false
     }));
-    if(apiBase){
-      try{
-        const upstream=new URL("/catalog",apiBase);
-        if(rawQuery&&!popular)upstream.searchParams.set("q",rawQuery);
-        if(scope!=="all")upstream.searchParams.set("type",scope==="movies"?"movie":scope==="documentaries"?"documentary":scope);
-        if(genre)upstream.searchParams.set("genre",params.get("genre")||"");
-        if(country)upstream.searchParams.set("country",country);
-        if(year)upstream.searchParams.set("year",year);
-        upstream.searchParams.set("sort",sort);
-        upstream.searchParams.set("limit","100");
-        upstream.searchParams.set("offset","0");
-        const response=await fetch(upstream.toString(),{
-          headers:{Accept:"application/json"},cache:"no-store",signal:AbortSignal.timeout(4500)
-        });
-        if(response.ok){
-          const payload=await response.json();
-          if(Array.isArray(payload.results)){
-            const pythonResults:SearchRecord[]=payload.results.map((item:SearchRecord)=>({
-              ...item,name:item.title||item.name,year:item.year==null?"":String(item.year),
-              ageRating:item.age_rating||item.ageRating||null,contentRating:item.age_rating||item.contentRating||null,
-              poster:item.poster_url||item.poster||null,poster_url:item.poster_url||item.poster||null,
-              playback_available:Boolean(item.playback_available)
-            }));
-            // Keep valid bundled-only titles when a Python catalog query misses them; merge by provider ID/title.
-            mediaResults=mergeUnique(pythonResults,mediaResults);
-            catalogDatabase="python-json+bundled-fallback";
-          }else unavailable.push("Streamivio catalog");
-        }else unavailable.push("Streamivio catalog");
-      }catch(error){
-        console.error("Streamivio catalog search failed; using bundled catalog",error);
-        unavailable.push("Streamivio catalog API");
-      }
-    }
-  }
-
-  // Enrich discovery shelves with IMDb's current popular lists, not just the small bundled starter catalog.
-  if(popular&&apiBase&&(scope==="all"||scope==="movies"||scope==="tv")){
-    const types:("movie"|"tv")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:["movie","tv"];
-    const remotePopular=await Promise.all(types.map(async kind=>{
-      try{return {kind,results:await fetchPopular(apiBase,kind),failed:false};}
-      catch(error){console.error("IMDb popular catalog failed",kind,error);return {kind,results:[],failed:true};}
-    }));
-    const externalPopular=remotePopular.flatMap(entry=>{
-      if(entry.failed){unavailable.push(entry.kind==="movie"?"IMDb popular movies":"IMDb popular TV");return [];}
-      return entry.results.filter((item:SearchRecord)=>{
-        if(genre&&!textList(item.genres).some(value=>compact(value)===genre))return false;
-        if(country&&!countryMatches(item,country))return false;
-        if(year&&String(item.year||"")!==year)return false;
-        if(ageRating&&String(item.ageRating||"").toLocaleLowerCase()!==ageRating)return false;
-        return true;
-      });
-    });
-    mediaResults=mergeUnique(mediaResults,externalPopular);
-    sources.push("IMDb popular titles");
-    catalogDatabase=apiBase?"python-json+IMDb-popular":"bundled-json-fallback";
   }
 
   let gameResults:SearchRecord[]=[];
@@ -331,29 +185,8 @@ export async function GET(request:NextRequest){
   };
   combined=combined.filter(filterResult);
 
-  const externalEligible=!popular&&Boolean(apiBase)&&rawQuery.length>=2&&
-    (scope==="all"||scope==="movies"||scope==="tv");
-  if(scope!=="games")sources.push("Streamivio Library");
-  if(scope==="all"||scope==="games")sources.push("Games catalog");
-  if(externalEligible&&apiBase){
-    const types:("movie"|"tv")[]=scope==="movies"?["movie"]:scope==="tv"?["tv"]:["movie","tv"];
-    const remote=await Promise.all(types.map(async kind=>{
-      try{return {kind,results:await fetchExternal(apiBase,rawQuery,kind),failed:false};}
-      catch(error){console.error("External title search failed",kind,error);return {kind,results:[],failed:true};}
-    }));
-    const external=remote.flatMap(entry=>{
-      if(entry.failed){unavailable.push(entry.kind==="movie"?"IMDb movie search":"IMDb TV search");return [];}
-      return entry.results.filter((item: SearchRecord)=>{
-        if(genre&&!textList(item.genres).some(value=>compact(value)===genre))return false;
-        if(country&&!countryMatches(item,country))return false;
-        if(year&&String(item.year||"")!==year)return false;
-        if(ageRating&&String(item.ageRating||"").toLocaleLowerCase()!==ageRating)return false;
-        return true;
-      });
-    });
-    combined=mergeUnique(combined,external);
-    sources.push("IMDb title search");
-  }
+  if(scope!=="games")sources.push("Streamivio Editorial Catalogue");
+  if(scope==="all"||scope==="games")sources.push("Streamivio Games Catalogue");
 
   if(rawQuery&&!popular){
     combined=combined.map(item=>({...item,search_score:scoreResult(item,rawQuery)}));
