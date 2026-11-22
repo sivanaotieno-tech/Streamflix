@@ -68,7 +68,7 @@ export function MediaEngineDashboard() {
     return (payload.Items || []) as MediaItem[];
   }
 
-  async function searchLibrary(event: React.FormEvent) {
+  async function searchLibrary(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError("");
     try { setItems(await fetchItems(token, query)); }
     catch (cause) { setError(cause instanceof Error ? cause.message : "Search failed."); }
@@ -76,7 +76,7 @@ export function MediaEngineDashboard() {
   }
 
   async function startPlayback(item: MediaItem, audio = -1, subtitle = -1) {
-    setBusy(true); setError(""); setStreamUrl(""); hlsRef.current?.destroy(); setSelected(item);
+    setBusy(true); setError(""); setStreamUrl(""); lastProgressSecond.current = 0; hlsRef.current?.destroy(); setSelected(item);
     try {
       const info = await api(`/media/items/${encodeURIComponent(item.Id)}/playback-info`, {
         method: "POST", headers: { "Content-Type": "application/json" },
