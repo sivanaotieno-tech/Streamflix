@@ -70,7 +70,7 @@ cd ..
 php catalog-importer/import.php
 ```
 
-The main website already has a VidSrc embed adapter in `app/api/playback/route.ts`. It uses a resolved IMDb title ID and distinguishes provider availability from verified playback. VidSrc is an external third-party provider; Streamivio does not claim its streams are licensed or guaranteed. Only enable playback for titles you are authorized to access and distribute. IMDb metadata and poster availability do not grant streaming rights. For production, prefer licensed MP4/HLS URLs or an authorized provider.
+Playback is intentionally restricted to authorised media. The website no longer embeds third-party streaming players or queries third-party playback availability. IMDb IDs, title metadata, search results and posters do not grant streaming rights. Only configure media that Streamivio owns or is licensed to distribute.
 
 ## Search
 
@@ -114,7 +114,7 @@ Configure these server-side variables:
 
 Configure IntaSend's collection-event webhook to point to `https://YOUR-DOMAIN/api/billing/webhook`. The server validates the challenge and verifies the invoice with IntaSend before activating a membership. A redirect alone never counts as proof of payment. The hosted-checkout reference is persisted even when IntaSend returns it as `id` rather than `invoice_id`, so the return page can query payment status.
 
-Payment references: [IntaSend hosted checkout documentation](https://developers.intasend.com/guides/collections/checkout/) and [Resend email API](https://resend.com/docs/api-reference/emails/send-email).
+Payment references: [Hyperswitch documentation](https://docs.hyperswitch.io/) and [IntaSend hosted checkout documentation](https://developers.intasend.com/guides/collections/checkout/). Email: [Resend API](https://resend.com/docs/api-reference/emails/send-email).
 
 ## Local Python development
 
@@ -130,36 +130,16 @@ The local API listens on `http://127.0.0.1:8001` by default. See [the Python API
 
 ## Playback and content rights
 
-Streamivio's own direct-stream resolver only returns HTTPS `video_url` values you have configured for content you own or are licensed to distribute. A poster or metadata record does not grant streaming rights. The VidSrc iframe and its third-party availability/rights are controlled by that provider, not Streamivio; use it only where you are authorized to access and display the content. Streamivio does not extract protected player URLs or proxy third-party media bytes.
+The playback API returns only HTTPS MP4 or HLS (.m3u8) URLs explicitly configured in the Streamivio catalogue or returned by the owner-controlled `STREAMIVIO_RESOLVER_URL`. It does not scrape, extract, proxy or embed third-party streaming providers. A configured URL is not proof of playback: media-host CORS, codecs, access controls and browser support still need testing.
 
-## Playback integrations
+Only publish media that Streamivio owns or has a written licence to distribute in each intended territory. Do not assume that a title's IMDb listing, poster, metadata, public URL, fan upload or GitHub repository grants those rights. Keep contracts, licence scope, territory, term, permitted devices and takedown contacts on file.
 
-### VidSrc embedded player
+## Games and third-party source projects
 
-Streamivio can use the third-party VidSrc player when a catalog record has a known IMDb ID (imdb_id) or TMDB ID (tmdb_id). Movie embeds use https://vidsrc.sh/embed/movie/{id}; TV embeds use https://vidsrc.sh/embed/tv/{id}. A TV series can open with its built-in season/episode picker. See the [VidSrc website](https://vidsrc.sh/) and [official embed/API documentation](https://vidsrc.sh/vidsrc/docs/).
-
-VidSrc is an external provider: availability, embed permission, advertising, and playback rights are not controlled by Streamivio. Only use content you are authorized to access and distribute.
-
-### VidSrc-Streamer reference project
-
-Reference: [habitual69/VidSrc-Streamer on GitHub](https://github.com/habitual69/VidSrc-Streamer). Streamivio includes a separate FastAPI + SQLite resolver in the vidsrc-streamer/ folder inspired by the service pattern. It intentionally does not copy third-party URL extraction or IPTV playlist scraping. It only resolves authorized HTTPS video_url values explicitly mapped in Streamivio's own catalog. See [the resolver setup guide](vidsrc-streamer/README.md).
-
-## VidSrc player options and metadata
-
-The playback dialog supports documented VidSrc embed options: subtitle-language preference, custom HTTPS subtitle tracks, autoplay request, TV season/episode selection, optional auto-next, manual start time, and saved-position resume based on validated player messages. TV seasons and provider quality/availability metadata are fetched through Streamivio's same-origin `/api/playback/info` route, which calls the documented `/info/movie/{id}.json` and `/info/tv/{id}.json` endpoints. Metadata responses are cached by the browser/CDN for approximately five minutes.
-
-The frontend accepts progress messages only from the exact `https://vidsrc.sh` iframe origin and the current iframe window. Progress is kept in the viewer's browser local storage; it is not sent to Streamivio servers. The official/default VidSrc domain may still require a user click even when autoplay is requested.
-
-References: [VidSrc home](https://vidsrc.sh/), [embed/API documentation](https://vidsrc.sh/vidsrc/docs/).
+The Arcade page includes original Streamivio-built mini-games and discovery entries for external game projects. External builds are not embedded until both the source-code licence and rights to the original game's assets (art, audio, music, characters, names and other files) have been checked. An open-source engine or port does not automatically license a commercial game's assets. Do not redistribute proprietary ROMs, game data, executables or extracted assets without permission.
 
 ## Account sign-in, verification email and payment gateway
 
-Streamivio includes passwordless email sign-in and sign-up with a six-digit code, styled with the black-and-red design in the reference email. Codes are generated cryptographically, expire after 10 minutes, and are stored as HMAC hashes in Upstash Redis. Resend delivers the transactional message.
+Streamivio includes passwordless email sign-in and sign-up with a six-digit code. Codes are generated cryptographically, expire after 10 minutes, and are stored as HMAC hashes in Upstash Redis. Resend delivers the transactional message.
 
-The membership checkout uses IntaSend hosted checkout for the payment methods enabled on the merchant account, including M-Pesa and cards when available. Payment status is checked against the provider before membership is activated. The `/api/system/status` endpoint returns secret-free readiness flags.
-
-**Production credentials must be configured before these flows can operate.** Follow [Production Setup: Sign-in Email and Payments](docs/PRODUCTION_SETUP.md) for the exact Vercel, Resend, Upstash and IntaSend settings and sandbox test procedure. Do not commit API keys or tokens.
-
-## Deployment
-
-The root `vercel.json` routes API paths to the Python service and the remaining website paths to the Next.js app. Push commits to the configured production branch and verify the Vercel deployment and `/health` endpoint before relying on production behavior.
+Production credentials must be configured and tested before these flows can operate. Payment processing remains sandbox-only when Hyperswitch is selected; do not accept real customer payments until a production integration, merchant onboarding, webhook verification, refunds, customer support and applicable legal/compliance requirements have been completed.
