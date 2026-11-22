@@ -35,3 +35,27 @@ section h2{letter-spacing:-.025em}
 @media(max-width:1023px){.hero-shell{margin-top:4rem;height:clamp(480px,76vh,650px)}}
 @media(max-width:640px){.hero-shell{height:500px}.hero-art img{object-position:58% center}.hero-art::before{background:linear-gradient(90deg,rgba(5,13,24,.82),rgba(5,13,24,.12)),linear-gradient(0deg,#070d17 0%,rgba(0,0,0,.5) 32%,transparent 78%)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important}}
+
+/* Device-tuned Streamivio layouts: touch, tablet, desktop and television viewing. */
+@media(max-width:480px){
+  body{font-size:15px}
+  .catalog-card{min-width:0}
+  .catalog-card:hover{transform:none;filter:none}
+  button,a{min-height:42px}
+  input,select{font-size:16px!important}
+  .hero-shell{height:min(74svh,560px);min-height:420px}
+}
+@media(min-width:481px) and (max-width:1023px){
+  .hero-shell{height:min(72svh,680px)}
+  .catalog-card:hover{transform:none}
+}
+@media(min-width:1280px){
+  main .mx-auto{max-width:1440px}
+}
+@media(min-width:1600px){
+  body{font-size:18px}
+  .hero-shell{height:min(72svh,900px)}
+  .catalog-card{font-size:1.08rem}
+  button,a{min-height:44px}
+}
+@media(hover:none){.catalog-card:hover,.card:hover{transform:none;filter:none;box-shadow:none}}
