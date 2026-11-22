@@ -127,15 +127,22 @@ Streamivio includes passwordless email sign-in and sign-up with a six-digit code
 Production credentials must be configured and tested before these flows can operate. Payment processing remains sandbox-only when Hyperswitch is selected; do not accept real customer payments until a production integration, merchant onboarding, webhook verification, refunds, customer support and applicable legal/compliance requirements have been completed.
 
 
-## Streamivio Media Engine
+## Streamivio Media Engine — standalone hybrid architecture
 
-The private-library playback dashboard is available at `/media`. It connects to a separately deployed Streamivio FastAPI backend and a dedicated Jellyfin server.
+The `/media` page reports the standalone provider status. Streamivio does not require Jellyfin.
 
-Frontend environment variable:
-- `NEXT_PUBLIC_STREAMIVIO_API_URL`: the public HTTPS origin of the deployed `streamivio-api` service (for example, your actual Vercel API deployment URL).
+- **StreamX metadata:** optional self-hosted metadata adapter for discovery and title details. It is disabled until upstream data terms have been reviewed.
+- **Hovod video engine:** self-hosted on a persistent cloud VM; it accepts media Streamivio owns or is licensed to distribute, transcodes to HLS, and provides its embeddable player.
+- **Storage:** S3-compatible object storage (for example Cloudflare R2) holds originals and HLS renditions.
+- **Vercel:** hosts the Next.js site and can call the Streamivio API; it does not run FFmpeg or deliver large video files.
 
-Configure the backend's `JELLYFIN_URL` and `STREAMIVIO_ALLOWED_ORIGINS` variables in its Vercel project. Start a separate Jellyfin host using [MEDIA_ENGINE_SETUP.md](https://github.com/sivanaotieno-tech/streamivio-api/blob/main/MEDIA_ENGINE_SETUP.md) in the API repository. The media server must be reachable from both the backend and the user's browser over HTTPS.
+Server-side Vercel variables:
+- `STREAMIVIO_API_URL`: deployed Streamivio API HTTPS origin.
+- `STREAMIVIO_METADATA_SEARCH_ENABLED=false`: set true only after the API's StreamX upstream terms approval flag has also been set.
+- `STREAMIVIO_RESOLVER_URL`: optional authorised-media resolver HTTPS origin.
 
-The Media Engine dashboard supports Jellyfin sign-in, library search, playback-info negotiation, HLS playback, audio/subtitle stream selection and watch-progress reporting. Jellyfin performs direct play/remux/transcoding and delivers the actual media bytes; Vercel does not host video files or run FFmpeg.
+The playback route checks the API for a rights-cleared Hovod mapping first, then falls back only to manually configured authorised sources. Every direct/resolver entry must carry `distribution_authorized=true`, a valid `rights_status` (`licensed`, `owned`, or `public_domain`) and a non-empty `rights_reference`.
 
-External streaming providers are an adapter framework only until each provider's official API, credentials and distribution/playback permissions are supplied. Do not configure unlicensed streams or bypass DRM. A connected Jellyfin server and authorised media files are required for real playback; a successful website deployment alone does not provide a video catalogue.
+**Important Hovod limitation:** its current public playback IDs are unlisted, not access-controlled. Only use this integration for content cleared for public playback. Do not use it for subscriber-only or private titles until an authenticated playback gateway is implemented.
+
+See the API repository's [standalone setup guide](https://github.com/sivanaotieno-tech/streamivio-api/blob/main/MEDIA_ENGINE_SETUP.md).
