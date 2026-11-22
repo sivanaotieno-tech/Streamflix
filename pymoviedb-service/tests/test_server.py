@@ -9,51 +9,6 @@ from unittest.mock import patch
 from server import MetadataHandler
 
 
-class FakeIMDB:
-    def search(self, title, tv=False):
-        return json.dumps(
-            {
-                "result_count": 1,
-                "results": [
-                    {
-                        "id": "tt1234567",
-                        "name": f"{title} TV Series" if tv else title,
-                        "url": "https://www.imdb.com/title/tt1234567/",
-                        "poster": None,
-                    }
-                ],
-            }
-        )
-
-    def popular_movies(self, genre=None):
-        return json.dumps(
-            {
-                "result_count": 1,
-                "results": [
-                    {
-                        "id": "tt7654321",
-                        "name": f"{genre or 'Popular'} Movie",
-                        "year": 2024,
-                        "url": "https://www.imdb.com/title/tt7654321/",
-                        "poster": "https://example.com/poster.jpg",
-                    }
-                ],
-            }
-        )
-
-    def popular_tv(self, genre=None):
-        return self.popular_movies(genre)
-
-    def get_by_id(self, imdb_id):
-        return json.dumps(
-            {
-                "type": "Movie",
-                "name": "Test title",
-                "url": f"https://www.imdb.com/title/{imdb_id}/",
-            }
-        )
-
-
 class MetadataServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -79,38 +34,79 @@ class MetadataServerTests(unittest.TestCase):
         error.close()
         return error.code
 
-    def test_search_returns_pymoviedb_results(self):
-        with patch("server.create_imdb_client", return_value=FakeIMDB()):
-            status, data = self.get_json("/search?q=Test%20title")
+    def test_search_returns_normalized_imdb_suggestions(self):
+        expected = {
+            "result_count": 1,
+            "results": [{
+                "id": "tt1234567",
+                "imdbID": "tt1234567",
+                "imdb_id": "tt1234567",
+                "name": "Test title",
+                "title": "Test title",
+                "url": "https://www.imdb.com/title/tt1234567/",
+                "poster": None,
+                "year": "2024",
+                "type": "movie",
+                "source": "IMDb",
+            }],
+        }
+        with patch("server.fetch_imdb_suggestions", return_value=expected) as lookup:
+            status, data = self.get_json("/search?q=Test%20title&type=movie")
         self.assertEqual(status, 200)
         self.assertEqual(data["results"][0]["id"], "tt1234567")
+        lookup.assert_called_once_with("Test title", "movie")
 
-    def test_title_returns_pymoviedb_details(self):
-        with patch("server.create_imdb_client", return_value=FakeIMDB()):
+    def test_title_returns_lightweight_imdb_metadata(self):
+        expected = {
+            "result_count": 1,
+            "results": [{
+                "id": "tt1234567",
+                "title": "Test title",
+                "name": "Test title",
+                "type": "movie",
+                "poster": None,
+                "year": "2024",
+                "source": "IMDb",
+            }],
+        }
+        with patch("server.fetch_imdb_suggestions", return_value=expected):
             status, data = self.get_json("/title?id=tt1234567")
         self.assertEqual(status, 200)
         self.assertEqual(data["name"], "Test title")
+        self.assertIn("overview", data)
 
     def test_search_can_filter_tv_results(self):
-        with patch("server.create_imdb_client", return_value=FakeIMDB()):
+        expected = {
+            "result_count": 1,
+            "results": [{
+                "id": "tt7654321",
+                "name": "Test title TV Series",
+                "title": "Test title TV Series",
+                "type": "tv",
+            }],
+        }
+        with patch("server.fetch_imdb_suggestions", return_value=expected) as lookup:
             status, data = self.get_json("/search?q=Test%20title&type=tv")
         self.assertEqual(status, 200)
-        self.assertEqual(data["results"][0]["name"], "Test title TV Series")
+        self.assertEqual(data["results"][0]["type"], "tv")
+        lookup.assert_called_once_with("Test title", "tv")
 
-    def test_popular_movies_returns_pymoviedb_catalog(self):
-        with patch("server.create_imdb_client", return_value=FakeIMDB()):
-            status, data = self.get_json("/popular?type=movie&genre=action")
+    def test_popular_movies_returns_local_catalog(self):
+        status, data = self.get_json("/popular?type=movie&genre=action")
         self.assertEqual(status, 200)
-        self.assertEqual(data["results"][0]["name"], "action Movie")
+        self.assertGreater(data["result_count"], 0)
+        self.assertTrue(all(item["type"] == "movie" for item in data["results"]))
+        self.assertTrue(all("action" in [genre.lower() for genre in item["genres"]] for item in data["results"]))
+        self.assertEqual(data["source"], "Streamivio Library")
 
-    def test_popular_tv_returns_pymoviedb_catalog(self):
-        with patch("server.create_imdb_client", return_value=FakeIMDB()):
-            status, data = self.get_json("/popular?type=tv")
+    def test_popular_tv_returns_local_catalog(self):
+        status, data = self.get_json("/popular?type=tv")
         self.assertEqual(status, 200)
-        self.assertEqual(data["results"][0]["id"], "tt7654321")
+        self.assertGreater(data["result_count"], 0)
+        self.assertTrue(all(item["type"] == "tv" for item in data["results"]))
 
     def test_upstream_search_failure_is_reported_as_gateway_error(self):
-        with patch("server.create_imdb_client", side_effect=OSError("IMDb unavailable")):
+        with patch("server.fetch_imdb_suggestions", side_effect=OSError("IMDb unavailable")):
             self.assertEqual(self.get_error_status("/search?q=Test"), 502)
 
     def test_short_query_is_rejected(self):
