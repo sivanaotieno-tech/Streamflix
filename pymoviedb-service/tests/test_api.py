@@ -7,7 +7,7 @@ from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError
 from urllib.request import urlopen
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 SERVICE_DIR = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(SERVICE_DIR))
@@ -91,25 +91,6 @@ class CatalogTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             catalog.get_catalog({"q": ["x"], "limit": ["20"], "offset": ["0"]})
 
-    def test_imdb_suggestions_are_normalized_and_filtered_by_media_type(self):
-        response = Mock()
-        response.json.return_value = {
-            "d": [
-                {"id": "tt0816692", "l": "Interstellar", "q": "feature", "y": 2014,
-                 "i": {"imageUrl": "https://images.example/interstellar.jpg"}},
-                {"id": "tt0903747", "l": "Breaking Bad", "q": "tvSeries", "y": 2008},
-                {"id": "not-an-imdb-id", "l": "Invalid result", "q": "feature"},
-            ]
-        }
-        response.raise_for_status.return_value = None
-        with patch("server.requests.get", return_value=response):
-            movies = api_server.fetch_imdb_suggestions("Interstellar", "movie")
-            shows = api_server.fetch_imdb_suggestions("Breaking Bad", "tv")
-        self.assertEqual([item["id"] for item in movies["results"]], ["tt0816692"])
-        self.assertEqual(movies["results"][0]["poster"], "https://images.example/interstellar.jpg")
-        self.assertEqual([item["id"] for item in shows["results"]], ["tt0903747"])
-        self.assertEqual(shows["results"][0]["type"], "tv")
-
     def test_configured_direct_streams_require_https(self):
         self.assertEqual(
             api_server.describe_video_url("https://media.example.org/demo.mp4")["format"],
@@ -173,8 +154,8 @@ class HttpSmokeTests(unittest.TestCase):
 
     def test_title_route_rejects_invalid_external_id(self):
         status, payload = self.request_json("/title?id=not-an-imdb-id")
-        self.assertEqual(status, 400)
-        self.assertIn("valid IMDb id", payload["error"])
+        self.assertEqual(status, 404)
+        self.assertIn("local Streamivio catalogue", payload["error"])
 
     def test_popular_route_uses_local_catalog_without_external_scraping(self):
         status, payload = self.request_json("/popular?type=movie")
@@ -183,18 +164,10 @@ class HttpSmokeTests(unittest.TestCase):
         self.assertTrue(all(item["type"] == "movie" for item in payload["results"]))
         self.assertEqual(payload["source"], "Streamivio Library")
 
-    def test_imdb_search_route_returns_normalized_suggestions(self):
-        expected = {
-            "result_count": 1,
-            "results": [{
-                "id": "tt0816692", "title": "Interstellar", "name": "Interstellar",
-                "type": "movie", "poster": None, "year": "2014",
-            }],
-        }
-        with patch.object(api_server, "fetch_imdb_suggestions", return_value=expected):
-            status, payload = self.request_json("/search?q=Interstellar&type=movie")
-        self.assertEqual(status, 200)
-        self.assertEqual(payload["results"][0]["id"], "tt0816692")
+    def test_imdb_search_route_is_disabled_until_licensed(self):
+        status, payload = self.request_json("/search?q=Interstellar&type=movie")
+        self.assertEqual(status, 410)
+        self.assertIn("commercial metadata licence", payload["error"])
 
     def test_playback_is_honest_when_no_stream_is_configured(self):
         status, payload = self.request_json("/playback?id=m-matrix")
