@@ -21,7 +21,7 @@ const entry = (
 });
 
 // A broad Streamivio editorial catalogue, maintained independently of third-party chart datasets.
-// Metadata can be enriched by the title-details endpoint when a viewer opens a title.
+// Synopses, ratings and artwork are added only from sources Streamivio is licensed to use.
 export const expandedCatalog: CatalogTitle[] = [
   // Sonic films and series: editorial discovery records.
   entry("sonic-movie-2020","Sonic the Hedgehog","2020","movie",["Action","Adventure","Comedy","Family"],["United States","Japan"]),
