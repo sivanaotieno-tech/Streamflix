@@ -63,9 +63,16 @@ const formatSeconds=(value:number)=>{
 
 const MOVIE_GENRES=[["All",""],["Action","action"],["Comedy","comedy"],["Drama","drama"],["Horror","horror"],["Romance","romance"],["Sci-Fi","sci_fi"],["Thriller","thriller"]] as const;
 function CatalogPoster({item,className,imageClassName}:{item:Item;className:string;imageClassName:string}){
-  return <div className={className}>
-    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-black">
-      <Film className="h-10 w-10 text-zinc-700"/>
+  return <div className={className+" relative overflow-hidden"}>
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-red-950 via-zinc-900 to-black"/>
+    <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[.06] to-transparent"/>
+    <div className="relative flex h-full flex-col justify-between p-3 sm:p-4">
+      <span className="text-[8px] font-black uppercase tracking-[.24em] text-red-300/80">STREAMIVIO · DISCOVER</span>
+      <div>
+        <p className="mb-2 text-[8px] font-semibold uppercase tracking-[.18em] text-zinc-400">{Array.isArray(item.genres)&&item.genres[0]?item.genres[0]:"FEATURED TITLE"}</p>
+        <h3 className="line-clamp-4 break-words text-base font-black leading-tight text-white drop-shadow sm:text-lg">{item.title||item.name}</h3>
+        <p className="mt-2 text-[9px] font-medium tracking-widest text-zinc-500">{item.year||"STREAMIVIO LIBRARY"}</p>
+      </div>
     </div>
     {item.poster&&<img src={item.poster} alt={String(item.title||item.name||"")} className={imageClassName+" absolute inset-0"} loading="lazy" onError={event=>{event.currentTarget.style.display="none";}}/>}
   </div>;
