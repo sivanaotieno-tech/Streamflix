@@ -23,13 +23,15 @@ export function MediaEngineDashboard() {
   const [error, setError] = useState("");
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const hlsRef = useRef<any>(null);
+  const scriptRef = useRef<HTMLScriptElement | null>(null);
+  const lastProgressSecond = useRef(0);
 
   const headers = useMemo(() => token ? { Authorization: `MediaBrowser Token="${token}"` } : {}, [token]);
   const streams = playback?.MediaSources?.[0]?.MediaStreams || [];
   const audioStreams = streams.filter((stream) => stream.Type === "Audio");
   const subtitleStreams = streams.filter((stream) => stream.Type === "Subtitle");
 
-  useEffect(() => () => { hlsRef.current?.destroy(); }, []);
+  useEffect(() => () => { hlsRef.current?.destroy(); if (scriptRef.current?.parentNode) scriptRef.current.parentNode.removeChild(scriptRef.current); }, []);
 
   async function api(path: string, init: RequestInit = {}) {
     if (!apiBase) throw new Error("Set NEXT_PUBLIC_STREAMIVIO_API_URL to your deployed Streamivio API URL.");
@@ -93,21 +95,38 @@ export function MediaEngineDashboard() {
     if (!streamUrl || !videoRef.current) return;
     const video = videoRef.current;
     let cancelled = false;
-    const attach = async () => {
-      if (video.canPlayType("application/vnd.apple.mpegurl")) { video.src = streamUrl; return; }
-      try {
-        const Hls = (await import("hls.js")).default;
-        if (cancelled) return;
-        if (Hls.isSupported()) { const hls = new Hls(); hlsRef.current = hls; hls.loadSource(streamUrl); hls.attachMedia(video); }
-        else setError("This browser cannot play HLS. Try a supported browser or a compatible direct-play format.");
-      } catch { setError("Could not load the HLS player. Check the browser connection and media-server CORS settings."); }
+    const attach = () => {
+      if (cancelled) return;
+      const Hls = (window as any).Hls;
+      if (Hls?.isSupported()) {
+        const hls = new Hls({ enableWorker: true });
+        hlsRef.current = hls;
+        hls.loadSource(streamUrl);
+        hls.attachMedia(video);
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = streamUrl;
+      } else {
+        setError("This browser cannot play HLS. Try a compatible direct-play format.");
+      }
     };
-    void attach();
+    if ((window as any).Hls) attach();
+    else {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js";
+      script.async = true;
+      script.onload = attach;
+      script.onerror = () => setError("Could not load the HLS player. Check your connection.");
+      scriptRef.current = script;
+      document.head.appendChild(script);
+    }
     return () => { cancelled = true; hlsRef.current?.destroy(); hlsRef.current = null; };
   }, [streamUrl]);
 
   async function reportProgress(stopped = false) {
     if (!selected || !videoRef.current || !token) return;
+    const currentSecond = Math.floor(videoRef.current.currentTime);
+    if (!stopped && currentSecond - lastProgressSecond.current < 20) return;
+    lastProgressSecond.current = currentSecond;
     const ticks = Math.max(0, Math.floor(videoRef.current.currentTime * 10_000_000));
     const path = stopped ? `/media/sessions/${selected.Id}/stopped?position_ticks=${ticks}` : `/media/sessions/${selected.Id}/progress?position_ticks=${ticks}`;
     try { await api(path, { method: "POST" }); } catch { /* Progress reporting must not interrupt playback. */ }
