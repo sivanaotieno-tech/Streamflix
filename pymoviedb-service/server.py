@@ -2,12 +2,11 @@ import json
 import os
 import re
 import sys
-from functools import partial
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import parse_qs, urlsplit
+from urllib.parse import quote, parse_qs, urlsplit
 
-from PyMovieDb import IMDB
+import requests
 from requests.exceptions import RequestException
 
 from catalog import CatalogUnavailable, fetch_titles, get_catalog, get_categories, get_featured, get_genres, normalize
@@ -22,18 +21,53 @@ IMDB_GENRES = {
 }
 
 
-def decode_result(result):
-    if isinstance(result, str):
-        result = json.loads(result)
-    if not isinstance(result, dict):
-        raise ValueError("PyMovieDb returned an unexpected response")
-    return result
-
-
-def create_imdb_client():
-    client = IMDB(timeout=15)
-    client.session.get = partial(client.session.get, timeout=15)
-    return client
+def fetch_imdb_suggestions(query, media_type=None):
+    """Fetch lightweight, structured title metadata without scraping IMDb HTML."""
+    encoded_query = quote(str(query).strip(), safe="")
+    url = f"https://v3.sg.media-imdb.com/suggestion/x/{encoded_query}.json?includeVideos=0"
+    response = requests.get(
+        url,
+        headers={"Accept": "application/json", "User-Agent": "Streamivio/1.0 (+https://streamivio.com)"},
+        timeout=12,
+    )
+    response.raise_for_status()
+    payload = response.json()
+    rows = payload.get("d", []) if isinstance(payload, dict) else []
+    results = []
+    tv_kinds = {"tvSeries", "tvMiniSeries", "tvMovie"}
+    movie_kinds = {"movie", "feature", "short", "tvShort"}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        imdb_id = str(row.get("id") or "").strip()
+        title = str(row.get("l") or "").strip()
+        kind = str(row.get("q") or "").strip()
+        if not re.fullmatch(r"tt\\d+", imdb_id) or not title:
+            continue
+        is_tv = kind in tv_kinds
+        if media_type == "tv" and not is_tv:
+            continue
+        if media_type == "movie" and (is_tv or kind not in movie_kinds):
+            continue
+        image = row.get("i")
+        poster = image.get("imageUrl") if isinstance(image, dict) else None
+        if not isinstance(poster, str) or not poster.startswith("https://"):
+            poster = None
+        results.append({
+            "id": imdb_id,
+            "imdbID": imdb_id,
+            "imdb_id": imdb_id,
+            "name": title,
+            "title": title,
+            "url": f"https://www.imdb.com/title/{imdb_id}/",
+            "poster": poster,
+            "year": str(row.get("y") or ""),
+            "type": "tv" if is_tv else "movie",
+            "source": "IMDb",
+        })
+        if len(results) >= 20:
+            break
+    return {"result_count": len(results), "results": results}
 
 
 def describe_video_url(stream_url):
@@ -136,12 +170,8 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 if title_type not in IMDB_TYPES:
                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Type must be movie or tv"})
                     return
-                imdb = create_imdb_client()
-                data = decode_result(imdb.search(title, tv=title_type == "tv"))
-                results = data.get("results")
-                if not isinstance(results, list):
-                    raise ValueError("PyMovieDb returned no results list")
-                self.send_json(HTTPStatus.OK, {"result_count": data.get("result_count", len(results)), "results": results[:20]})
+                data = fetch_imdb_suggestions(title, title_type)
+                self.send_json(HTTPStatus.OK, data)
                 return
 
             if path == "/popular":
@@ -153,13 +183,19 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 if genre and genre not in IMDB_GENRES:
                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Unsupported IMDb genre"})
                     return
-                imdb = create_imdb_client()
-                method = imdb.popular_movies if title_type == "movie" else imdb.popular_tv
-                data = decode_result(method(genre=genre or None))
-                results = data.get("results")
-                if not isinstance(results, list):
-                    raise ValueError("PyMovieDb returned no results list")
-                self.send_json(HTTPStatus.OK, {"result_count": data.get("result_count", len(results)), "results": results[:50]})
+                # Popular shelves must remain available when an external metadata provider is down.
+                data = get_catalog({
+                    "type": [title_type],
+                    "genre": [genre] if genre else [""],
+                    "sort": ["rating"],
+                    "limit": ["50"],
+                    "offset": ["0"],
+                })
+                self.send_json(HTTPStatus.OK, {
+                    "result_count": data["total"],
+                    "results": data["results"],
+                    "source": "Streamivio Library",
+                })
                 return
 
             if path == "/title":
@@ -171,10 +207,16 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 if not IMDB_ID_PATTERN.fullmatch(title_id):
                     self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Use a catalog title id or a valid IMDb id (tt followed by digits)"})
                     return
-                imdb = create_imdb_client()
-                data = decode_result(imdb.get_by_id(title_id))
-                status = HTTPStatus.NOT_FOUND if data.get("status") == HTTPStatus.NOT_FOUND else HTTPStatus.OK
-                self.send_json(status, data)
+                data = fetch_imdb_suggestions(title_id)
+                match = next((row for row in data["results"] if row["id"] == title_id), None)
+                if match is None:
+                    self.send_json(HTTPStatus.NOT_FOUND, {"id": title_id, "error": "IMDb title was not found"})
+                    return
+                self.send_json(HTTPStatus.OK, {
+                    **match,
+                    "overview": "",
+                    "description": "IMDb title metadata. Full synopsis is not available from the lightweight search endpoint.",
+                })
                 return
             self.send_json(HTTPStatus.NOT_FOUND, {"error": "Route not found"})
         except ValueError as error:
