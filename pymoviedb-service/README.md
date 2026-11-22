@@ -1,6 +1,6 @@
 # Streamivio Python Catalog and Playback API
 
-A standalone Python API backed by the repository's own JSON catalog at `data/catalog.json`. It has no Supabase or other database service dependency.
+A standalone Python API backed by the repository's own JSON catalog at `data/catalog.json`, with lightweight IMDb title suggestions for broad search. It has no Supabase or other database service dependency.
 
 ## Catalog database
 
@@ -48,7 +48,7 @@ Catalog examples: `/catalog?type=movie`, `/catalog?type=anime&genre=adventure`, 
 
 `/catalog?q=...` ranks exact and partial title matches ahead of matches found in plot descriptions. The local search index is tolerant of case, accents, punctuation, and small spelling mistakes. When present in the JSON records, it also searches original and alternate titles, genres, keywords, cast, directors, countries, and descriptions. You can use `sort=relevance` (the default for a non-empty query), `sort=rating`, `sort=year`, or `sort=title`. Country filters accept common aliases such as `US`/`USA`/`United States` and `UK`/`United Kingdom`.
 
-The website combines these catalog results with optional IMDb search results for broader movie and TV searches when the configured metadata service is available. Its same-origin `/api/search` endpoint normalizes and merges duplicates, exposes the `total`, `sources`, and `unavailable` fields, and provides a title-sort option and clear error messages for empty or failed searches.
+The website combines these catalog results with IMDb suggestion results for broader movie and TV searches. Popular shelves always fall back to the bundled Streamivio catalogue, so an external metadata outage does not blank the home page. Its same-origin `/api/search` endpoint normalizes and merges duplicates, exposes the `total`, `sources`, and `unavailable` fields, and provides a title-sort option and clear error messages for empty or failed searches.
 
 A title's playback endpoint returns unavailable until `video_url` is set to a working, authorized media URL. The API does not scrape, unlock, proxy, or supply unauthorized movie streams.
 
@@ -56,18 +56,18 @@ A title's playback endpoint returns unavailable until `video_url` is set to a wo
 
 ## Browser playback
 
-The Streamivio title dialog includes a Play button. It first calls the Next.js `/api/playback` route for a configured authorized HTTPS MP4/HLS URL or an optional private resolver URL (`STREAMIVIO_RESOLVER_URL`). If no direct stream is configured, the route can use the server-side Python metadata API (`PYMOVIEDB_SERVICE_URL` or `PYMOVIEDB_API_URL`) to resolve an exact IMDb ID and return a VidSrc embed URL. The player is embedded in the browser; it does not download or proxy third-party video.
+The Streamivio title dialog includes a Play button. It first calls the Next.js `/api/playback` route for a configured authorized HTTPS MP4/HLS URL or an optional private resolver URL (`STREAMIVIO_RESOLVER_URL`). The catalog API only reports playback when an authorized media URL is configured; metadata lookup does not manufacture a stream. The player does not download or proxy third-party video.
 
 VidSrc is a third-party provider. See the [VidSrc website](https://vidsrc.sh/) and [official embed/API documentation](https://vidsrc.sh/vidsrc/docs/). Its availability, embed policy, rights status, and individual title playback are not controlled or guaranteed by Streamivio. Streamivio now uses the provider's documented `https://vidsrc.sh/embed/movie/{id}` and `https://vidsrc.sh/embed/tv/{id}` path formats. Use only content you are authorized to access and distribute. A deployment and end-to-end playback test are still required to verify your production configuration.
 
 
-## Optional VidSrc-Streamer-style resolver
+## Optional authorized playback resolver
 
 A separate FastAPI + SQLite resolver now lives in `../vidsrc-streamer/`. It exposes `GET /stream/{imdb_id}` and only returns an authorized HTTPS `video_url` explicitly mapped to that IMDb ID in the configured JSON catalog. It does not extract third-party streams. Install and run it using the instructions in `../vidsrc-streamer/README.md`.
 
 For the Next.js app to call it, set the server-only Vercel environment variable `STREAMIVIO_RESOLVER_URL` to the private resolver's HTTPS base URL. Set `PYMOVIEDB_SERVICE_URL` to the Python catalog API's HTTPS base URL if you want server-side IMDb metadata lookup for VidSrc embeds. Redeploy after changing environment variables. Do not deploy the resolver's cache-clear endpoint publicly without authentication.
 
 
-## VidSrc metadata API proxy
+## Playback metadata API
 
-The Next.js app also exposes `GET /api/playback/info?id={imdb-or-tmdb-id}&type=movie|tv`, with optional paired `season` and `episode` parameters for TV episodes. It validates input and calls the official VidSrc metadata endpoints for availability, title, year, seasons and reported quality. No media bytes or direct provider stream URLs are extracted by this route.
+The Next.js app also exposes `GET /api/playback/info?id={imdb-id}&type=movie|tv`, with optional paired `season` and `episode` parameters for TV episodes. It validates input and returns metadata only. It does not extract media bytes or direct provider stream URLs.
