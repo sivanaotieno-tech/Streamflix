@@ -152,8 +152,23 @@ export async function GET(request: NextRequest) {
     playback_available: false,
   };
 
-  const metadata: AnyRecord | null = null;
-  if (!local && !game) {
+  let metadata: AnyRecord | null = null;
+  const metadataApiBase=(process.env.STREAMIVIO_API_URL||process.env.NEXT_PUBLIC_STREAMIVIO_API_URL||"").replace(/\\/+$/,"");
+  const resolvedImdb=imdbId||String(local?.imdb_id||local?.imdbId||(/^tt\\d+$/i.test(id)?id:""));
+  if(metadataApiBase&&process.env.STREAMIVIO_METADATA_SEARCH_ENABLED==="true"&&/^tt\\d{5,12}$/i.test(resolvedImdb)){
+    const metadataKind=["tv","anime","documentary","kids","reality"].includes(suppliedType)?"series":"movie";
+    try{
+      const endpoint=new URL("/media/meta/"+metadataKind+"/"+encodeURIComponent(resolvedImdb),metadataApiBase);
+      const response=await fetch(endpoint,{cache:"no-store",signal:AbortSignal.timeout(8000)});
+      if(response.ok){
+        const payload=await response.json();
+        metadata=(payload?.meta&&typeof payload.meta==="object"?payload.meta:payload?.data&&typeof payload.data==="object"?payload.data:payload) as AnyRecord;
+      }
+    }catch{
+      metadata=null;
+    }
+  }
+  if (!local && !game && !metadata) {
     return NextResponse.json({
       available: false,
       error: "This title is not in the Streamivio editorial catalogue yet.",
