@@ -169,79 +169,14 @@ export async function GET(request: NextRequest) {
     playback_available: false,
   };
 
-  const serviceBase = (process.env.PYMOVIEDB_SERVICE_URL || process.env.PYMOVIEDB_API_URL || "").replace(/\/+$/, "");
-  let metadata: AnyRecord | null = null;
-  let resolvedProviderId = /^tt\d+$/i.test(imdbId) ? imdbId : /^tt\d+$/i.test(id) ? id : "";
-  const kind = ["tv", "anime", "documentary", "documentaries", "kids", "reality", "tvshow", "series"].includes(suppliedType) ||
-    ["tv", "anime", "documentary", "kids", "reality"].includes(String(local?.type || ""))
-    ? "tv" : "movie";
+  const metadata: AnyRecord | null = null;
+  const resolvedProviderId = "";
 
-  if (serviceBase && !game) {
-    if (resolvedProviderId) {
-      metadata = await serviceGet(serviceBase, "/title?id=" + encodeURIComponent(resolvedProviderId));
-    } else if (id && !local) {
-      // The Python catalog can contain titles that are not in the frontend fallback list.
-      // Resolve the catalog ID there before trying external metadata search.
-      const catalogRecord = await serviceGet(serviceBase, "/title?id=" + encodeURIComponent(id));
-      if (catalogRecord && firstText(catalogRecord, ["title", "name"])) metadata = catalogRecord;
-    }
-
-    const searchTitle = titleQuery || String(local?.title || "");
-    if (!metadata && searchTitle.length >= 2) {
-      const searchPath = "/search?q=" + encodeURIComponent(searchTitle) + "&type=" + encodeURIComponent(kind);
-      const payload = await serviceGet(serviceBase, searchPath);
-      const candidates: AnyRecord[] = Array.isArray(payload?.results) ? payload.results.filter((row: unknown): row is AnyRecord => isRecord(row)) : [];
-      const exact = candidates.find((row) => normalize(firstText(row, ["title", "Title", "name", "Name", "titleText"])) === normalize(searchTitle));
-      if (exact) {
-        metadata = exact;
-        const externalId = firstText(exact, ["imdbID", "imdb_id", "imdbId", "id"]);
-        if (/^tt\d+$/i.test(externalId)) {
-          resolvedProviderId = externalId;
-          metadata = await serviceGet(serviceBase, "/title?id=" + encodeURIComponent(externalId)) ?? exact;
-        }
-      }
-    }
-  }
-
-  // Archived IMDb API fallback, used only when the configured provider did not resolve metadata.
-  if (!metadata && !game) {
-    const imdbApiBase = "https://imdb-api.projects.thetuhin.com";
-    try {
-      if (resolvedProviderId) {
-        const response = await fetch(imdbApiBase + "/title/" + encodeURIComponent(resolvedProviderId), {
-          headers: { Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(5000),
-        });
-        if (response.ok) metadata = await response.json() as AnyRecord;
-      }
-      if (!metadata && titleQuery.length >= 2) {
-        const response = await fetch(imdbApiBase + "/search?query=" + encodeURIComponent(titleQuery), {
-          headers: { Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(5000),
-        });
-        if (response.ok) {
-          const payload = await response.json() as AnyRecord;
-          const candidates: AnyRecord[] = Array.isArray(payload?.results) ? payload.results.filter((row: unknown): row is AnyRecord => isRecord(row)) : Array.isArray(payload) ? payload.filter((row: unknown): row is AnyRecord => isRecord(row)) : [];
-          const match = candidates.find((row) => normalize(firstText(row, ["title", "name", "Title"])) === normalize(titleQuery)) ?? candidates[0];
-          if (match) {
-            const candidateId = firstText(match, ["imdbID", "imdb_id", "imdbId", "id"]);
-            if (/^tt\\d+$/i.test(candidateId)) {
-              const detailResponse = await fetch(imdbApiBase + "/title/" + encodeURIComponent(candidateId), {
-                headers: { Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(5000),
-              });
-              metadata = detailResponse.ok ? await detailResponse.json() as AnyRecord : match;
-            } else metadata = match;
-          }
-        }
-      }
-    } catch (error) {
-      console.warn("Streamivio archived IMDb fallback unavailable", error);
-    }
-  }
-
-  if (!local && !game && !metadata && !resolvedProviderId) {
+  if (!local && !game) {
     return NextResponse.json({
       available: false,
-      error: "No matching title was found.",
-      message: "Check the spelling or try a different title. Some external metadata sources may be temporarily unavailable.",
+      error: "This title is not in the Streamivio editorial catalogue yet.",
+      message: "Try another title or add an independently sourced, licensed catalogue record.",
     }, { status: 404, headers: NO_STORE });
   }
 
