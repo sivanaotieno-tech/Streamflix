@@ -3,6 +3,7 @@ import { editorialCatalog } from "./imdbphp-catalog";
 
 export type CatalogTitle = {
   id: string;
+  legacyId?: string;
   title: string;
   overview: string;
   year: string;
@@ -61,4 +62,17 @@ const curatedCatalog = Array.from(
   ])).values(),
 );
 
-export const catalog: CatalogTitle[] = curatedCatalog;
+// Assign stable Streamivio IDs (str + six digits) from title/year, preserving old IDs as legacyId.
+const makeStreamivioId = (key: string) => {
+  let hash = 2166136261;
+  for (let i = 0; i < key.length; i++) hash = Math.imul(hash ^ key.charCodeAt(i), 16777619) >>> 0;
+  return 110000 + (hash % 890000);
+};
+const usedStreamivioIds = new Set<string>();
+export const catalog: CatalogTitle[] = curatedCatalog.map((item) => {
+  const legacyId = item.id;
+  let numericId = makeStreamivioId(catalogKey(item));
+  while (usedStreamivioIds.has(String(numericId))) numericId = numericId >= 999999 ? 110000 : numericId + 1;
+  usedStreamivioIds.add(String(numericId));
+  return { ...item, legacyId, id: `str${numericId}` };
+});
