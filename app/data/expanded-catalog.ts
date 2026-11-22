@@ -7,7 +7,6 @@ const entry = (
   type: CatalogTitle["type"],
   genres: string[],
   country: string[],
-  imdbId?: string,
 ): CatalogTitle => ({
   id: `extra-${id}`,
   title,
@@ -19,13 +18,12 @@ const entry = (
   country,
   source: "Streamivio Library",
   poster: null,
-  ...(imdbId ? { imdbId } : {}),
 });
 
-// A broad editorial catalogue, deliberately separate from IMDb's Top 250 charts.
+// A broad Streamivio editorial catalogue, maintained independently of third-party chart datasets.
 // Metadata can be enriched by the title-details endpoint when a viewer opens a title.
 export const expandedCatalog: CatalogTitle[] = [
-  // Sonic films and series: stable IMDb IDs let poster lookup select the exact artwork result.
+  // Sonic films and series: editorial discovery records.
   entry("sonic-movie-2020","Sonic the Hedgehog","2020","movie",["Action","Adventure","Comedy","Family"],["United States","Japan"]),
   entry("sonic-movie-2-2022","Sonic the Hedgehog 2","2022","movie",["Action","Adventure","Comedy","Family"],["United States","Japan"]),
   entry("sonic-movie-3-2024","Sonic the Hedgehog 3","2024","movie",["Action","Adventure","Comedy","Family"],["United States","Japan"]),
