@@ -1,7 +1,7 @@
 import type { CatalogTitle } from "./catalog";
 
-// Additional editorial picks with stable IMDb identifiers. Metadata is enriched
-// at request time by the optional IMDbPHP importer; IDs also drive canonical URLs.
+// Additional Streamivio editorial picks. Titles and descriptions are curated locally;
+// no third-party ratings, poster artwork or external metadata are bundled.
 export const editorialCatalog: CatalogTitle[] = [
   { id: "editorial-avengers-endgame", title: "Avengers: Endgame", overview: "", year: "2019", rating: 0, type: "movie", genres: ["Action","Adventure","Drama"], country: [], source: "Streamivio Editorial", poster: null },
   { id: "editorial-dune-part-two", title: "Dune: Part Two", overview: "", year: "2024", rating: 0, type: "movie", genres: ["Adventure","Drama","Sci-Fi"], country: [], source: "Streamivio Editorial", poster: null },
