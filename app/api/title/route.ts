@@ -65,6 +65,7 @@ function projectDetails(base: AnyRecord, metadata?: AnyRecord | null) {
   return {
     ...base,
     id: base.id ?? source.id ?? imdbId ?? tmdbId ?? title,
+    streamivioId: /^str\\d{6}$/.test(String(base.id ?? "")) ? base.id : null,\n    legacyId: base.legacyId,
     title,
     name: title,
     overview,
@@ -107,7 +108,7 @@ export async function GET(request: NextRequest) {
     }, { status: 400, headers: NO_STORE });
   }
 
-  const local: AnyRecord | null = (catalog as AnyRecord[]).find((item) => String(item.id) === id) ??
+  const local: AnyRecord | null = (catalog as AnyRecord[]).find((item) => String(item.id) === id || String(item.legacyId) === id) ??
     (catalog as AnyRecord[]).find((item) => normalize(item.title) === normalize(titleQuery) &&
       (suppliedType === "all" || item.type === suppliedType || (suppliedType === "tv" && ["anime", "documentary", "kids", "reality"].includes(item.type)))) ?? null;
   const game: AnyRecord | null = (gamesCatalog as unknown as AnyRecord[]).find((item) => String(item.id) === id) ??
