@@ -153,7 +153,7 @@ export async function GET(request:NextRequest){
     }));
   }
 
-  const metadataApiBase=(process.env.STREAMIVIO_API_URL||process.env.NEXT_PUBLIC_STREAMIVIO_API_URL||"").replace(/\\/+$/,"");
+  const metadataApiBase=(process.env.STREAMIVIO_API_URL||process.env.NEXT_PUBLIC_STREAMIVIO_API_URL||"").replace(/\/+$/,"");
   if(rawQuery&&!popular&&scope!=="games"&&metadataApiBase&&process.env.STREAMIVIO_METADATA_SEARCH_ENABLED==="true"){
     const kinds=scope==="movies"?["movie"]:scope==="tv"?["series"]:scope==="anime"?["anime"]:scope==="all"?["movie","series","anime"]:[];
     const remoteRows:SearchRecord[]=[];
@@ -173,7 +173,7 @@ export async function GET(request:NextRequest){
           const poster=entry.poster_url||entry.poster||images.poster?.medium||images.poster?.large||entry.image||null;
           const rawId=String(entry.imdb_id||entry.imdbId||entry.id||"");
           const rowType=kind==="movie"?"movie":kind==="anime"?"anime":kind==="documentary"?"documentary":"tv";
-          return {...entry,id:rawId||title,title,name:title,overview:entry.overview||entry.description||entry.plot||"",description:entry.description||entry.overview||entry.plot||"",poster,poster_url:poster,year:entry.year||entry.releaseYear||"",rating:numberOrUndefined(entry.rating??entry.imdbRating),genres:textList(entry.genres),type:rowType,imdb_id:/^tt\\d+$/i.test(rawId)?rawId:entry.imdb_id||entry.imdbId||null,source:"StreamX Metadata",playback_available:false};
+          return {...entry,id:rawId||title,title,name:title,overview:entry.overview||entry.description||entry.plot||"",description:entry.description||entry.overview||entry.plot||"",poster,poster_url:poster,year:entry.year||entry.releaseYear||"",rating:numberOrUndefined(entry.rating??entry.imdbRating),genres:textList(entry.genres),type:rowType,imdb_id:/^tt\d+$/i.test(rawId)?rawId:entry.imdb_id||entry.imdbId||null,source:"StreamX Metadata",playback_available:false};
         }).filter((entry:SearchRecord)=>entry.title);
       }catch{
         unavailable.push("StreamX "+kind);
