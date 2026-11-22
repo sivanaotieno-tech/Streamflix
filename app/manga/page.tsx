@@ -50,20 +50,14 @@ export default function MangaPage() {
   async function load(type: "trending" | "featured" | "search", search = "") {
     setLoading(true);
     setError("");
-    try {
-      const params = new URLSearchParams({ type });
-      if (search) params.set("q", search);
-      const response = await fetch("/api/manga/catalog?" + params.toString(), { cache: "no-store" });
-      const json = await response.json() as ApiResponse;
-      if (!response.ok) throw new Error(json.detail || "Manga catalogue is temporarily unavailable.");
-      setRemote(Array.isArray(json.data) ? json.data : []);
-      setMode(type);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not load the manga catalogue.");
-      setRemote([]);
-    } finally {
-      setLoading(false);
-    }
+    const matches = featuredTitles.filter(item =>
+      !search || item.title.toLowerCase().includes(search.toLowerCase()) ||
+      item.description.toLowerCase().includes(search.toLowerCase())
+    );
+    const ordered = type === "featured" ? [...matches].reverse() : matches;
+    setRemote(ordered.map(item => ({ title: item.title, synopsis: item.description })));
+    setMode(type);
+    setLoading(false);
   }
 
   useEffect(() => { void load("trending"); }, []);
@@ -87,7 +81,7 @@ export default function MangaPage() {
       </section>
 
       <section className="mb-14">
-        <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Manga discovery</h2><p className="mt-1 text-xs text-zinc-500">Live results from the MangaReader API</p></div><div className="flex gap-2"><button onClick={()=>void load("trending")} className={"rounded-full px-4 py-2 text-xs font-semibold "+(mode==="trending"?"bg-sky-300 text-black":"border border-white/10 text-zinc-300")}>Trending</button><button onClick={()=>void load("featured")} className={"rounded-full px-4 py-2 text-xs font-semibold "+(mode==="featured"?"bg-sky-300 text-black":"border border-white/10 text-zinc-300")}>Featured</button></div></div>
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-xl font-bold">Manga discovery</h2><p className="mt-1 text-xs text-zinc-500">Curated titles with links to publisher reading destinations</p></div><div className="flex gap-2"><button onClick={()=>void load("trending")} className={"rounded-full px-4 py-2 text-xs font-semibold "+(mode==="trending"?"bg-sky-300 text-black":"border border-white/10 text-zinc-300")}>Trending</button><button onClick={()=>void load("featured")} className={"rounded-full px-4 py-2 text-xs font-semibold "+(mode==="featured"?"bg-sky-300 text-black":"border border-white/10 text-zinc-300")}>Featured</button></div></div>
         {loading&&<p className="py-8 text-sm text-zinc-400">Loading manga catalogue…</p>}
         {error&&<p className="mb-4 rounded-xl border border-amber-300/20 bg-amber-300/5 p-4 text-sm text-amber-100">{error} The curated catalogue remains available below.</p>}
         {!loading&&remote.length>0&&<div className="mb-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{remote.map((item,i)=><article key={item.slug||item.title||i} className="overflow-hidden rounded-2xl border border-white/10 bg-white/[.035]"><div className="aspect-[3/4] bg-zinc-900">{item.cover&&<img src={item.cover} alt={item.title||"Manga cover"} loading="lazy" className="h-full w-full object-cover"/>}</div><div className="p-4"><h3 className="font-bold">{item.title||"Untitled manga"}</h3><p className="mt-1 text-xs text-zinc-500">{item.chapters!==undefined?item.chapters+" chapters":item.chapter!==undefined?"Latest chapter "+item.chapter:""}{item.volumes!==undefined?" · "+item.volumes+" volumes":""}</p><p className="mt-2 line-clamp-3 text-xs leading-5 text-zinc-400">{item.synopsis||item.genres?.join(" · ")||"Manga catalogue entry"}</p></div></article>)}</div>}
@@ -96,7 +90,7 @@ export default function MangaPage() {
 
       <section className="mb-14"><div className="mb-5 flex items-center justify-between"><h2 className="text-xl font-bold">Curated titles</h2><span className="text-xs text-zinc-500">{local.length} titles</span></div><div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{local.map(item=><article key={item.title} className="rounded-2xl border border-white/10 bg-white/[.035] p-5"><p className="text-[10px] font-bold uppercase tracking-widest text-sky-300">Manga · {item.year}</p><h3 className="mt-2 text-lg font-bold">{item.title}</h3><p className="mt-2 min-h-12 text-sm leading-6 text-zinc-400">{item.description}</p><a href={item.href} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-2 text-xs font-semibold hover:bg-white/10">Official reading destination <ExternalLink size={12}/></a></article>)}</div></section>
 
-      <section><div className="mb-5 flex items-center gap-2"><GitBranch size={18}/><h2 className="text-xl font-bold">Open-source data sources</h2></div><div className="grid gap-3 md:grid-cols-2">{sources.map(([name,note,href])=><a key={name} href={href} target="_blank" rel="noreferrer" className="rounded-xl border border-white/10 bg-white/[.03] p-4 hover:bg-white/[.06]"><div className="flex items-center justify-between gap-3 text-sm font-semibold">{name}<ExternalLink size={14}/></div><p className="mt-2 text-xs leading-5 text-zinc-500">{note}</p></a>)}</div><p className="mt-4 text-xs leading-5 text-zinc-500">The connected MangaReader API is a scraper for MangaReader.to and documents featured, trending, search and manga-detail endpoints. Its documented response does not guarantee chapter-page delivery. Respect source-site terms and only publish content Streamivio has permission to distribute.</p></section>
+      <section><div className="mb-5 flex items-center gap-2"><GitBranch size={18}/><h2 className="text-xl font-bold">Open-source data sources</h2></div><div className="grid gap-3 md:grid-cols-2">{sources.map(([name,note,href])=><a key={name} href={href} target="_blank" rel="noreferrer" className="rounded-xl border border-white/10 bg-white/[.03] p-4 hover:bg-white/[.06]"><div className="flex items-center justify-between gap-3 text-sm font-semibold">{name}<ExternalLink size={14}/></div><p className="mt-2 text-xs leading-5 text-zinc-500">{note}</p></a>)}</div><p className="mt-4 text-xs leading-5 text-zinc-500">External scraper-based manga catalogues are not connected. Streamivio links readers to publisher destinations and does not host or redistribute manga chapters.</p></section>
     </div>
   </main>;
 }
