@@ -231,7 +231,7 @@ export async function GET(request:NextRequest){
   if(year&&(!/^[0-9]{4}$/.test(year)||Number(year)<1888||Number(year)>2200))return NextResponse.json({error:"Enter a valid four-digit release year."},{status:400});
 
   const scope=rawScope as Scope;
-  const apiBase=(process.env.PYMOVIEDB_SERVICE_URL||process.env.PYMOVIEDB_API_URL||"").replace(/\/+$/,"");
+  const apiBase=""; // External IMDb metadata is disabled until a commercial licence is in place.
   let mediaResults:SearchRecord[]=[];
   let catalogDatabase="bundled-json-fallback";
   const unavailable:string[]=[];
