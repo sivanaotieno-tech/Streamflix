@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 type StatusPayload = {
-  health?: { service?: string; status?: string; metadata?: string; playback?: string; jellyfin?: boolean };
+  health?: { service?: string; status?: string; metadata?: string; playback?: string;  };
   providers?: { providers?: Array<{ id: string; role: string; configured: boolean; enabled?: boolean; status?: string; playback_access?: string; warning?: string }> };
   error?: string;
 };
