@@ -63,22 +63,11 @@ const formatSeconds=(value:number)=>{
 
 const MOVIE_GENRES=[["All",""],["Action","action"],["Comedy","comedy"],["Drama","drama"],["Horror","horror"],["Romance","romance"],["Sci-Fi","sci_fi"],["Thriller","thriller"]] as const;
 function CatalogPoster({item,className,imageClassName}:{item:Item;className:string;imageClassName:string}){
-  const[poster,setPoster]=useState<string|null>(item.poster||null);
-  const[requested,setRequested]=useState(Boolean(item.poster));
-  const[fromLookup,setFromLookup]=useState(false);
-  const node=useRef<HTMLDivElement|null>(null);
-
-  useEffect(()=>{
-    setPoster(item.poster||null);
-    setRequested(Boolean(item.poster));
-    setFromLookup(false);
-  },[item.id,item.poster]);
-
-
-  return <div ref={node} className={className}>
-    {poster
-      ? <img src={poster} alt={String(item.title||item.name||"")} className={imageClassName} loading="lazy" onError={()=>{setPoster(null);if(!fromLookup)setRequested(false);}}/>
-      : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-black"><Film className="h-10 w-10 text-zinc-700"/></div>}
+  return <div className={className}>
+    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-zinc-800 via-zinc-900 to-black">
+      <Film className="h-10 w-10 text-zinc-700"/>
+    </div>
+    {item.poster&&<img src={item.poster} alt={String(item.title||item.name||"")} className={imageClassName+" absolute inset-0"} loading="lazy" onError={event=>{event.currentTarget.style.display="none";}}/>}
   </div>;
 }
 
