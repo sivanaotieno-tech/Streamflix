@@ -42,7 +42,7 @@ def fetch_imdb_suggestions(query, media_type=None):
         imdb_id = str(row.get("id") or "").strip()
         title = str(row.get("l") or "").strip()
         kind = str(row.get("q") or "").strip()
-        if not re.fullmatch(r"tt\\d+", imdb_id) or not title:
+        if not re.fullmatch(r"tt\d+", imdb_id) or not title:
             continue
         is_tv = kind in tv_kinds
         if media_type == "tv" and not is_tv:
@@ -242,7 +242,7 @@ class MetadataHandler(BaseHTTPRequestHandler):
             self.send_json(HTTPStatus.BAD_GATEWAY, {"error": "IMDb metadata lookup failed"})
 
     def log_message(self, format, *args):
-        print(f"PyMovieDb service: {format % args}", file=sys.stderr, flush=True)
+        print(f"Streamivio catalog service: {format % args}", file=sys.stderr, flush=True)
 
 
 handler = MetadataHandler
@@ -251,5 +251,5 @@ if __name__ == "__main__":
     host = os.environ.get("HOST", "127.0.0.1")
     port = int(os.environ.get("PORT", "8001"))
     server = ThreadingHTTPServer((host, port), MetadataHandler)
-    print(f"PyMovieDb metadata service listening at http://{host}:{port}", flush=True)
+    print(f"Streamivio catalog service listening at http://{host}:{port}", flush=True)
     server.serve_forever()
