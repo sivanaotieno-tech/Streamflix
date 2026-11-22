@@ -35,10 +35,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install Python API dependencies
-        run: python -m pip install -r pymoviedb-service/requirements.txt
+        run: |\n          python -m pip install -r pymoviedb-service/requirements.txt\n          python -m pip install -r vidsrc-streamer/requirements.txt
 
       - name: Test Python catalog and API routes
         run: python -m unittest discover -s pymoviedb-service/tests -v
 
-      - name: Build Next.js app
+      - name: Test authorised media resolver\n        run: python -m unittest discover -s vidsrc-streamer -p 'test_*.py' -v\n\n      - name: Build Next.js app
         run: npm run build
