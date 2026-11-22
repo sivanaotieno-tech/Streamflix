@@ -104,17 +104,17 @@ The sign-in API returns a clear configuration error until these values exist and
 
 ## Subscription payments
 
-The membership page at `/subscribe` requires a verified Streamivio account. It creates an IntaSend hosted checkout for the server-defined plan price and uses the account's verified email address (the browser cannot override it). The current plan prices are KSh 299/2,990 for Plus monthly/yearly and KSh 499/4,990 for Premium monthly/yearly. Payment options depend on what IntaSend has enabled for the account and currency.
+The membership page requires a verified Streamivio account. Plan prices are KSh 299/2,990 for Plus monthly/yearly and KSh 499/4,990 for Premium monthly/yearly.
 
-Configure these server-side variables:
+The recommended configured path is Hyperswitch sandbox:
+- Set `PAYMENT_PROVIDER=hyperswitch` and `HYPERSWITCH_ENV=sandbox`.
+- Set `HYPERSWITCH_API_KEY` to a sandbox key beginning `sk_snd_`.
+- Set `HYPERSWITCH_WEBHOOK_SECRET`, Upstash Redis credentials and the public HTTPS app URL.
+- Configure the Hyperswitch webhook to `https://YOUR-DOMAIN/api/billing/webhook` and confirm signature headers match the webhook configuration.
 
-- `INTASEND_PUBLISHABLE_KEY` and `INTASEND_SECRET_KEY`.
-- `INTASEND_WEBHOOK_CHALLENGE` — configure the same challenge in IntaSend's webhook settings.
-- `NEXT_PUBLIC_APP_URL` — the public HTTPS origin of the deployed Streamivio site.
+The code intentionally refuses Hyperswitch production mode. An alternate IntaSend integration exists when `PAYMENT_PROVIDER` is not set to `hyperswitch`; it requires the IntaSend publishable/secret keys and webhook challenge. Payment methods depend on provider onboarding and account configuration. Do not accept real payments until production credentials, webhook verification, refunds, support processes and legal/compliance requirements have been reviewed.
 
-Configure IntaSend's collection-event webhook to point to `https://YOUR-DOMAIN/api/billing/webhook`. The server validates the challenge and verifies the invoice with IntaSend before activating a membership. A redirect alone never counts as proof of payment. The hosted-checkout reference is persisted even when IntaSend returns it as `id` rather than `invoice_id`, so the return page can query payment status.
-
-Payment references: [Hyperswitch documentation](https://docs.hyperswitch.io/) and [IntaSend hosted checkout documentation](https://developers.intasend.com/guides/collections/checkout/). Email: [Resend API](https://resend.com/docs/api-reference/emails/send-email).
+References: [Hyperswitch documentation](https://docs.hyperswitch.io/), [IntaSend hosted checkout](https://developers.intasend.com/guides/collections/checkout/), and [Resend email API](https://resend.com/docs/api-reference/emails/send-email).
 
 ## Local Python development
 
