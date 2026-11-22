@@ -293,7 +293,7 @@ export default function Home(){
 
   const play=(m:Item)=>{
     setSelected(m);setSeason("");setEpisode("");setPlaybackUrl("");setPlaybackFormat("");setPlaybackError("");setDetailError("");
-    setPlayerContentId("");setVidSrcInfo(null);setVidSrcInfoError("");setResumeSeconds(0);setPendingDirectResume(0);setStartAt("");
+    setPlayerContentId("");setResumeSeconds(0);setPendingDirectResume(0);setStartAt("");
   };
 
   useEffect(()=>{
@@ -343,19 +343,15 @@ export default function Home(){
     setPlaybackLoading(true);setPlaybackError("");setPlaybackUrl("");
     const kind:"movie"|"tv"=isTvItem(selected)?"tv":"movie";
     const resolvedImdbId=String(selected.imdbId||selected.imdb_id||selected.imdbID||titleDetails?.imdbId||titleDetails?.imdb_id||titleDetails?.imdbID||"");
-    const resolvedTmdbId=String(selected.tmdbId||selected.tmdb_id||titleDetails?.tmdbId||titleDetails?.tmdb_id||"");
     try{
       // Prefer authorized catalog URLs; otherwise ask the server to resolve a known title ID.
       const playbackParams=new URLSearchParams({id:String(selected.id),title:String(selected.title||selected.name||""),type:String(selected.type||selected.media_type||(isGameItem(selected)?"game":"movie")),imdb_id:resolvedImdbId});
       if(kind==="tv"&&season.trim()&&episode.trim()){playbackParams.set("season",season);playbackParams.set("episode",episode);}
-      if(autoplay)playbackParams.set("autoplay","1");
-      if(kind==="tv"&&autoNext)playbackParams.set("autonext","1");
-      if(subtitleLanguage.trim())playbackParams.set("ds_lang",subtitleLanguage.trim());
       if(startAt.trim())playbackParams.set("startAt",startAt.trim());
       const response=await fetch("/api/playback?"+playbackParams.toString(),{cache:"no-store"});
       const data=await response.json().catch(()=>({}));
       if(response.ok&&data.available&&typeof data.stream_url==="string"){
-        const directProgressId=String(resolvedImdbId||resolvedTmdbId||selected.id);
+        const directProgressId=String(resolvedImdbId||selected.id);
         let initialStart=resumeOverride!==undefined?resumeOverride:(startAt.trim()?Number(startAt):0);
         if(!initialStart){
           try{initialStart=Number(localStorage.getItem(progressKeyFor(directProgressId))||0);}catch{initialStart=0;}
