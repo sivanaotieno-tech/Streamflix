@@ -61,9 +61,9 @@ The Streamivio title dialog includes a Play button. It first calls the Next.js `
 
 ## Optional authorized playback resolver
 
-A separate FastAPI + SQLite resolver now lives in `../vidsrc-streamer/`. It exposes `GET /stream/{imdb_id}` and only returns an authorized HTTPS `video_url` explicitly mapped to that IMDb ID in the configured JSON catalog. It does not extract third-party streams. Install and run it using the instructions in `../vidsrc-streamer/README.md`.
+A separate FastAPI resolver lives in `../authorized-media-resolver/`. It exposes `GET /stream/{imdb_id}` and only returns an authorized HTTPS MP4/HLS URL explicitly mapped to that IMDb ID in the configured JSON catalog. Every entry must include `distribution_authorized=true`, a valid `rights_status`, and a `rights_reference`. It does not extract third-party streams. Install and run it using the instructions in `../authorized-media-resolver/README.md`.
 
-For the Next.js app to call it, set the server-only Vercel environment variable `STREAMIVIO_RESOLVER_URL` to the private resolver's HTTPS base URL. Set `PYMOVIEDB_SERVICE_URL` to the Python catalogue API's HTTPS base URL only if you need the local catalogue API. Redeploy after changing environment variables. Do not deploy the resolver's cache-clear endpoint publicly without authentication.
+For the Next.js app to call it, set the server-only Vercel environment variable `STREAMIVIO_RESOLVER_URL` to the private resolver's HTTPS base URL. Set `PYMOVIEDB_SERVICE_URL` to the Python catalogue API's HTTPS base URL only if you need the local catalogue API. Redeploy after changing environment variables. The resolver has no cache-clear endpoint. Hovod playback is integrated through the main Streamivio API; its public/unlisted playback IDs are only for content cleared for public playback, not subscriber-only titles.
 
 
 ## Playback metadata API
