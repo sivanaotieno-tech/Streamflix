@@ -153,9 +153,9 @@ export async function GET(request: NextRequest) {
   };
 
   let metadata: AnyRecord | null = null;
-  const metadataApiBase=(process.env.STREAMIVIO_API_URL||process.env.NEXT_PUBLIC_STREAMIVIO_API_URL||"").replace(/\\/+$/,"");
-  const resolvedImdb=imdbId||String(local?.imdb_id||local?.imdbId||(/^tt\\d+$/i.test(id)?id:""));
-  if(metadataApiBase&&process.env.STREAMIVIO_METADATA_SEARCH_ENABLED==="true"&&/^tt\\d{5,12}$/i.test(resolvedImdb)){
+  const metadataApiBase=(process.env.STREAMIVIO_API_URL||process.env.NEXT_PUBLIC_STREAMIVIO_API_URL||"").replace(/\/+$/,"");
+  const resolvedImdb=imdbId||String(local?.imdb_id||local?.imdbId||(/^tt\d+$/i.test(id)?id:""));
+  if(metadataApiBase&&process.env.STREAMIVIO_METADATA_SEARCH_ENABLED==="true"&&/^tt\d{5,12}$/i.test(resolvedImdb)){
     const metadataKind=["tv","anime","documentary","kids","reality"].includes(suppliedType)?"series":"movie";
     try{
       const endpoint=new URL("/media/meta/"+metadataKind+"/"+encodeURIComponent(resolvedImdb),metadataApiBase);
