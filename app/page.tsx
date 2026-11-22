@@ -74,34 +74,6 @@ function CatalogPoster({item,className,imageClassName}:{item:Item;className:stri
     setFromLookup(false);
   },[item.id,item.poster]);
 
-  useEffect(()=>{
-    if(poster||requested||isGameItem(item))return;
-    const target=node.current;
-    if(!target||typeof IntersectionObserver==="undefined")return;
-    let cancelled=false;
-    const observer=new IntersectionObserver(entries=>{
-      if(!entries.some(entry=>entry.isIntersecting))return;
-      observer.disconnect();
-      setRequested(true);
-      const params=new URLSearchParams({
-        title:String(item.title||item.name||""),
-        year:String(item.year||""),
-        type:String(item.type||item.media_type||"movie"),
-        imdb_id:String(item.imdbId||item.imdb_id||item.imdbID||"")
-      });
-      fetch("/api/poster?"+params.toString(),{cache:"force-cache"})
-        .then(async response=>response.ok?response.json():{poster:null})
-        .then(payload=>{
-          if(!cancelled&&typeof payload.poster==="string"&&payload.poster.startsWith("https://")){
-            setPoster(payload.poster);
-            setFromLookup(true);
-          }
-        })
-        .catch(()=>{});
-    },{rootMargin:"240px"});
-    observer.observe(target);
-    return()=>{cancelled=true;observer.disconnect();};
-  },[poster,requested,item.id,item.title,item.name,item.year,item.type,item.media_type]);
 
   return <div ref={node} className={className}>
     {poster
