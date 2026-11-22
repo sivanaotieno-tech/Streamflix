@@ -35,9 +35,11 @@ export function MediaEngineDashboard() {
 
   async function api(path: string, init: RequestInit = {}) {
     if (!apiBase) throw new Error("Set NEXT_PUBLIC_STREAMIVIO_API_URL to your deployed Streamivio API URL.");
+    const requestHeaders = new Headers(headers);
+    new Headers(init.headers).forEach((value, key) => requestHeaders.set(key, value));
     const response = await fetch(apiBase + path, {
       ...init,
-      headers: { ...headers, ...(init.headers || {}) },
+      headers: requestHeaders,
       cache: "no-store",
     });
     const payload = await response.json().catch(() => ({}));
