@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 
 type MediaItem = { Id: string; Name: string; Type: string; ProductionYear?: number; Overview?: string; ImageTags?: Record<string, string> };
 type MediaStream = { Index: number; Type: string; Codec?: string; Language?: string; DisplayTitle?: string; IsDefault?: boolean; IsForced?: boolean; IsExternal?: boolean };
-type PlaybackInfo = { MediaSources?: Array<{ Id: string; SupportsDirectPlay?: boolean; SupportsTranscoding?: boolean; DirectStreamUrl?: string; TranscodingUrl?: string; MediaStreams?: MediaStream[] }>; };
+type PlaybackInfo = { MediaSources?: Array<{ Id: string; SupportsDirectPlay?: boolean; SupportsTranscoding?: boolean; DirectStreamUrl?: string; TranscodingUrl?: string; MediaStreams?: MediaStream[] }>; Streamivio?: { server_url?: string }; };
 const apiBase = (process.env.NEXT_PUBLIC_STREAMIVIO_API_URL || "").replace(/\/+$/, "");
 
 export function MediaEngineDashboard() {
@@ -45,7 +45,7 @@ export function MediaEngineDashboard() {
     return payload;
   }
 
-  async function login(event: React.FormEvent) {
+  async function login(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError("");
     try {
       const result = await api("/media/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ username, password }) });
