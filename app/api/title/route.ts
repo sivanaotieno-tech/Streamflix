@@ -64,7 +64,8 @@ function projectDetails(base: AnyRecord, metadata?: AnyRecord | null) {
 
   return {
     ...base,
-    id: base.id ?? source.id ?? imdbId ?? tmdbId ?? title,\n    streamivioId: /^str\\d{6}$/.test(String(base.id ?? "")) ? base.id : null,\n    legacyId: base.legacyId,
+    id: base.id ?? source.id ?? imdbId ?? tmdbId ?? title,
+    streamivioId: /^str\\d{6}$/.test(String(base.id ?? "")) ? base.id : null,\n    legacyId: base.legacyId,
     title,
     name: title,
     overview,
