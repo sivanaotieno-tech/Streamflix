@@ -31,8 +31,8 @@ Public API routes are configured in `vercel.json` and routed to `pymoviedb-servi
 | `GET /featured` | Highest-rated titles |
 | `GET /title?id=m-matrix` | Local title details |
 | `GET /playback?id=m-matrix` | Returns configured playback URL when available |
-| `GET /search?q=matrix&type=movie` | Optional IMDb metadata lookup |
-| `GET /popular?type=movie` | Optional IMDb popular list |
+| `GET /search?q=matrix&type=movie` | Disabled until a licensed commercial metadata provider is configured |
+| `GET /popular?type=movie` | Local editorial catalogue shelf |
 
 Examples:
 - `/catalog?type=movie`
@@ -48,35 +48,17 @@ The Next.js app also exposes `GET /api/title` for the selected title. For exampl
 /api/title?id=m-matrix&title=The%20Matrix&type=movie
 ```
 
-The response returns a `title` object with a consistent shape for the detail dialog: synopsis, release year, genres, poster, rating, age rating, runtime, cast/directors when available, and any resolved IMDb/TMDB identifiers. It prefers the bundled catalog, enriches an exact title match with server-side IMDb metadata when the Python metadata service is configured, and safely falls back to the catalog when enrichment is unavailable. `metadata_available` makes that distinction explicit. Game records use the same detail API but remain discovery listings; they are not presented as playable video streams.
+The response returns a consistent local `title` object for records in Streamivio's editorial catalogue. External IMDb enrichment is disabled until an appropriate commercial licence is in place. Game records remain discovery listings and are not presented as playable video streams.
 
-## Expanded IMDb catalogue
+## Editorial catalogue
 
-Streamivio now merges its hand-curated titles with a generated IMDb chart catalogue. The importer uses the MIT-licensed [hooshid/imdb-scraper](https://github.com/hooshid/imdb-scraper) PHP library and imports IMDb's Top 250 Movies and Top 250 TV charts (up to 500 chart entries before duplicate removal). The original hand-curated records take precedence when a title/year already exists.
-
-- Generated data: `app/data/imdb-catalog.ts`
-- Importer: `catalog-importer/import.php`
-- Dependency: `hooshid/imdb-scraper` via Composer
-- Refresh: GitHub Actions → **Refresh IMDb catalogue** → **Run workflow**, or the scheduled weekly run
-- The importer stores IMDb IDs and poster URLs from chart metadata; it does not download poster files or video files.
-- IMDb charts are a curated subset, **not the entire IMDb database**. Search can continue using the configured metadata service for titles outside the local charts.
-
-To run the importer locally (PHP 8+, Composer, cURL):
-
-```powershell
-cd catalog-importer
-composer install
-cd ..
-php catalog-importer/import.php
-```
-
-Playback is intentionally restricted to authorised media. The website no longer embeds third-party streaming players or queries third-party playback availability. IMDb IDs, title metadata, search results and posters do not grant streaming rights. Only configure media that Streamivio owns or is licensed to distribute.
+The bundled catalogue is limited to Streamivio-authored editorial records and manually selected titles. External IMDb scraping, chart imports, poster lookups and metadata enrichment have been disabled pending commercial licensing. Add new records only from independently sourced information and artwork that Streamivio is permitted to use. This keeps discovery available while a licensed metadata provider is evaluated.
 
 ## Search
 
 The website's `GET /api/search` endpoint supports `scope=all|movies|tv|anime|documentaries|kids|reality|games`, optional country/year/age-rating/genre filters, and sorting by best match, rating, newest year, or title. Search is case-, accent-, and punctuation-insensitive and ranks title matches above plot matches; the Python catalog also tolerates small spelling mistakes and searches overview text, genres, alternate titles, keywords, cast, and directors when those fields are present.
 
-For the `all`, `movies`, and `tv` scopes, the website can supplement a short local result set with server-side IMDb title-search results when the Python service is configured through `PYMOVIEDB_SERVICE_URL` or `PYMOVIEDB_API_URL`. Results are merged to avoid duplicate titles, while games remain discovery entries with official-site links rather than video playback. If an external search source fails, the API reports it in `unavailable` and preserves results from sources that still respond.
+Search currently uses the bundled Streamivio editorial catalogue only. External IMDb lookup is disabled until a commercial metadata licence is obtained. Games remain discovery entries with official-site links rather than video playback.
 
 Example: `/api/search?q=matrx&scope=all&sort=relevance` can find "The Matrix" despite a small typo; `/api/search?q=space&scope=movies&sort=year` orders matching movies by newest year.
 
