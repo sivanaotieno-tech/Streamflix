@@ -4,7 +4,7 @@ import re
 import sys
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import quote, parse_qs, urlsplit
+from urllib.parse import parse_qs, urlsplit
 
 import requests
 from requests.exceptions import RequestException
