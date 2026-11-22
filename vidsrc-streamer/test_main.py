@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from fastapi.testclient import TestClient
+from fastapi import HTTPException
 import main
 
 
@@ -12,7 +12,6 @@ class AuthorisedResolverTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.catalog = Path(self.temp.name) / "catalog.json"
-        self.client = TestClient(main.app)
         self.patch = patch.object(main, "CATALOG_PATH", self.catalog)
         self.patch.start()
 
@@ -28,8 +27,9 @@ class AuthorisedResolverTests(unittest.TestCase):
             "imdb_id": "tt1234567",
             "video_url": "https://media.example.org/title/master.m3u8",
         })
-        response = self.client.get("/stream/tt1234567")
-        self.assertEqual(response.status_code, 403)
+        with self.assertRaises(HTTPException) as error:
+            main.stream("tt1234567")
+        self.assertEqual(error.exception.status_code, 403)
 
     def test_returns_only_rights_cleared_hls(self):
         self.write_catalog({
@@ -39,10 +39,9 @@ class AuthorisedResolverTests(unittest.TestCase):
             "rights_status": "licensed",
             "rights_reference": "https://licences.example.org/record/123",
         })
-        response = self.client.get("/stream/tt1234567")
-        self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.json()["distribution_authorized"])
-        self.assertEqual(response.json()["format"], "hls")
+        response = main.stream("tt1234567")
+        self.assertTrue(response["distribution_authorized"])
+        self.assertEqual(response["format"], "hls")
 
     def test_rejects_unsupported_format(self):
         self.write_catalog({
@@ -52,8 +51,9 @@ class AuthorisedResolverTests(unittest.TestCase):
             "rights_status": "owned",
             "rights_reference": "https://rights.example.org/record/123",
         })
-        response = self.client.get("/stream/tt1234567")
-        self.assertEqual(response.status_code, 415)
+        with self.assertRaises(HTTPException) as error:
+            main.stream("tt1234567")
+        self.assertEqual(error.exception.status_code, 415)
 
 
 if __name__ == "__main__":
