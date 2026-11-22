@@ -21,55 +21,6 @@ IMDB_GENRES = {
 }
 
 
-def fetch_imdb_suggestions(query, media_type=None):
-    """Fetch lightweight, structured title metadata without scraping IMDb HTML."""
-    encoded_query = quote(str(query).strip(), safe="")
-    url = f"https://v3.sg.media-imdb.com/suggestion/x/{encoded_query}.json?includeVideos=0"
-    response = requests.get(
-        url,
-        headers={"Accept": "application/json", "User-Agent": "Streamivio/1.0 (+https://streamivio.com)"},
-        timeout=12,
-    )
-    response.raise_for_status()
-    payload = response.json()
-    rows = payload.get("d", []) if isinstance(payload, dict) else []
-    results = []
-    tv_kinds = {"tvSeries", "tvMiniSeries", "tvMovie"}
-    movie_kinds = {"movie", "feature", "short", "tvShort"}
-    for row in rows:
-        if not isinstance(row, dict):
-            continue
-        imdb_id = str(row.get("id") or "").strip()
-        title = str(row.get("l") or "").strip()
-        kind = str(row.get("q") or "").strip()
-        if not re.fullmatch(r"tt\d+", imdb_id) or not title:
-            continue
-        is_tv = kind in tv_kinds
-        if media_type == "tv" and not is_tv:
-            continue
-        if media_type == "movie" and (is_tv or kind not in movie_kinds):
-            continue
-        image = row.get("i")
-        poster = image.get("imageUrl") if isinstance(image, dict) else None
-        if not isinstance(poster, str) or not poster.startswith("https://"):
-            poster = None
-        results.append({
-            "id": imdb_id,
-            "imdbID": imdb_id,
-            "imdb_id": imdb_id,
-            "name": title,
-            "title": title,
-            "url": f"https://www.imdb.com/title/{imdb_id}/",
-            "poster": poster,
-            "year": str(row.get("y") or ""),
-            "type": "tv" if is_tv else "movie",
-            "source": "IMDb",
-        })
-        if len(results) >= 20:
-            break
-    return {"result_count": len(results), "results": results}
-
-
 def describe_video_url(stream_url):
     """Classify a configured HTTPS playback URL; never fetch or proxy the media."""
     if not isinstance(stream_url, str) or not stream_url.strip():
@@ -162,16 +113,11 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 return
 
             if path == "/search":
-                title = query.get("q", [""])[0].strip()
-                title_type = query.get("type", ["movie"])[0].strip().lower()
-                if len(title) < 2 or len(title) > 100:
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Search query must be between 2 and 100 characters"})
-                    return
-                if title_type not in IMDB_TYPES:
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Type must be movie or tv"})
-                    return
-                data = fetch_imdb_suggestions(title, title_type)
-                self.send_json(HTTPStatus.OK, data)
+                self.send_json(HTTPStatus.GONE, {
+                    "result_count": 0,
+                    "results": [],
+                    "error": "External IMDb search is disabled until Streamivio has a commercial metadata licence.",
+                })
                 return
 
             if path == "/popular":
@@ -204,19 +150,7 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 if local:
                     self.send_json(HTTPStatus.OK, normalize(local))
                     return
-                if not IMDB_ID_PATTERN.fullmatch(title_id):
-                    self.send_json(HTTPStatus.BAD_REQUEST, {"error": "Use a catalog title id or a valid IMDb id (tt followed by digits)"})
-                    return
-                data = fetch_imdb_suggestions(title_id)
-                match = next((row for row in data["results"] if row["id"] == title_id), None)
-                if match is None:
-                    self.send_json(HTTPStatus.NOT_FOUND, {"id": title_id, "error": "IMDb title was not found"})
-                    return
-                self.send_json(HTTPStatus.OK, {
-                    **match,
-                    "overview": "",
-                    "description": "IMDb title metadata. Full synopsis is not available from the lightweight search endpoint.",
-                })
+                self.send_json(HTTPStatus.NOT_FOUND, {"id": title_id, "error": "Title is not in the local Streamivio catalogue"})
                 return
             self.send_json(HTTPStatus.NOT_FOUND, {"error": "Route not found"})
         except ValueError as error:
@@ -237,9 +171,9 @@ class MetadataHandler(BaseHTTPRequestHandler):
                 self.send_json(HTTPStatus.BAD_GATEWAY, {"result_count": 0, "results": [], "error": "IMDb search is currently unavailable"})
                 return
             if path == "/title":
-                self.send_json(HTTPStatus.BAD_GATEWAY, {"name": None, "description": "The IMDb metadata service is currently unavailable", "error": "IMDb metadata is unavailable"})
+                self.send_json(HTTPStatus.BAD_GATEWAY, {"name": None, "description": "Local title metadata is currently unavailable", "error": "Local title metadata is unavailable"})
                 return
-            self.send_json(HTTPStatus.BAD_GATEWAY, {"error": "IMDb metadata lookup failed"})
+            self.send_json(HTTPStatus.BAD_GATEWAY, {"error": "Local catalogue lookup failed"})
 
     def log_message(self, format, *args):
         print(f"Streamivio catalog service: {format % args}", file=sys.stderr, flush=True)
