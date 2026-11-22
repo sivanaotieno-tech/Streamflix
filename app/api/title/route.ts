@@ -90,23 +90,6 @@ function projectDetails(base: AnyRecord, metadata?: AnyRecord | null) {
   };
 }
 
-async function serviceGet(base: string, path: string): Promise<AnyRecord | null> {
-  try {
-    const url = new URL(path, base);
-    const response = await fetch(url.toString(), {
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-      signal: AbortSignal.timeout(4500),
-    });
-    if (!response.ok) return null;
-    const payload: unknown = await response.json();
-    return isRecord(payload) ? payload : null;
-  } catch (error) {
-    console.error("Streamivio title metadata service is unavailable", error);
-    return null;
-  }
-}
-
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
   const id = (params.get("id") || "").trim().slice(0, 128);
@@ -170,8 +153,6 @@ export async function GET(request: NextRequest) {
   };
 
   const metadata: AnyRecord | null = null;
-  const resolvedProviderId = "";
-
   if (!local && !game) {
     return NextResponse.json({
       available: false,
