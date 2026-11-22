@@ -155,7 +155,7 @@ export async function GET(request:NextRequest){
 
   const metadataApiBase=(process.env.STREAMIVIO_API_URL||process.env.NEXT_PUBLIC_STREAMIVIO_API_URL||"").replace(/\\/+$/,"");
   if(rawQuery&&!popular&&scope!=="games"&&metadataApiBase&&process.env.STREAMIVIO_METADATA_SEARCH_ENABLED==="true"){
-    const kinds=scope==="movies"?["movie"]:scope==="tv"?["series"]:scope==="anime"?["anime"]:scope==="documentaries"?["documentary"]:scope==="kids"?["movie","series"]:scope==="reality"?["series"]:["movie","series","anime"];
+    const kinds=scope==="movies"?["movie"]:scope==="tv"?["series"]:scope==="anime"?["anime"]:scope==="all"?["movie","series","anime"]:[];
     const remoteRows:SearchRecord[]=[];
     const requests=await Promise.all(kinds.map(async kind=>{
       try{
