@@ -166,6 +166,7 @@ export async function GET(request:NextRequest){
         const response=await fetch(endpoint,{cache:"no-store",signal:AbortSignal.timeout(8000)});
         if(!response.ok)throw new Error("Metadata request failed");
         const payload=await response.json();
+        if(payload?.streamivio_metadata_provider!=="streamx")return [];
         const values=Array.isArray(payload)?payload:Array.isArray(payload.results)?payload.results:Array.isArray(payload.metas)?payload.metas:Array.isArray(payload.data)?payload.data:[];
         return values.map((entry:SearchRecord)=>{
           const title=String(entry.title||entry.name||entry.titleText||"").trim();
