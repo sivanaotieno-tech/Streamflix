@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Props = {
   id: string;
@@ -15,12 +15,62 @@ export function TitleDetailPlayer({ id, title, kind, imdbId }: Props) {
   const [format, setFormat] = useState<"mp4" | "hls" | "">("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useEffect(() => {
+    if (!playerUrl || format !== "hls") return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    let cancelled = false;
+    let hls: any = null;
+    let script: HTMLScriptElement | null = null;
+
+    const attach = () => {
+      if (cancelled) return;
+      const Hls = (window as any).Hls;
+      if (Hls && Hls.isSupported()) {
+        hls = new Hls({ enableWorker: true });
+        hls.loadSource(playerUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.ERROR, (_event: unknown, data: any) => {
+          if (data?.fatal && !cancelled) {
+            setError("This HLS stream could not be played. Check the media URL, host CORS settings and stream availability.");
+          }
+        });
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = playerUrl;
+      } else {
+        setError("This browser cannot play HLS video. Try an MP4 source or a browser with HLS support.");
+      }
+    };
+
+    if ((window as any).Hls) {
+      attach();
+    } else {
+      script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/hls.js@1.5.20/dist/hls.min.js";
+      script.async = true;
+      script.onload = attach;
+      script.onerror = () => {
+        if (!cancelled) setError("The HLS playback engine could not load. Check your connection and try again.");
+      };
+      document.head.appendChild(script);
+    }
+
+    return () => {
+      cancelled = true;
+      hls?.destroy();
+      if (script?.parentNode) script.parentNode.removeChild(script);
+    };
+  }, [playerUrl, format]);
 
   async function play() {
     setLoading(true);
     setError("");
     setNotice("");
     setPlayerUrl("");
+    setFormat("");
     try {
       const params = new URLSearchParams({ id, title, type: kind });
       if (imdbId) params.set("imdb_id", imdbId);
@@ -55,12 +105,13 @@ export function TitleDetailPlayer({ id, title, kind, imdbId }: Props) {
       {playerUrl && (
         <div className="mt-5 overflow-hidden rounded-xl bg-black">
           <video
+            ref={videoRef}
             key={playerUrl}
             controls
             playsInline
             preload="metadata"
             className="aspect-video w-full"
-            src={playerUrl}
+            src={format === "mp4" ? playerUrl : undefined}
             onError={() => setError("The media host did not deliver a playable stream. Check the URL, CORS policy, codec and access permissions.")}
           >
             Your browser cannot play this video format.
