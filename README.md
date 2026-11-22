@@ -125,3 +125,17 @@ The Arcade page includes original Streamivio-built mini-games and discovery entr
 Streamivio includes passwordless email sign-in and sign-up with a six-digit code. Codes are generated cryptographically, expire after 10 minutes, and are stored as HMAC hashes in Upstash Redis. Resend delivers the transactional message.
 
 Production credentials must be configured and tested before these flows can operate. Payment processing remains sandbox-only when Hyperswitch is selected; do not accept real customer payments until a production integration, merchant onboarding, webhook verification, refunds, customer support and applicable legal/compliance requirements have been completed.
+
+
+## Streamivio Media Engine
+
+The private-library playback dashboard is available at `/media`. It connects to a separately deployed Streamivio FastAPI backend and a dedicated Jellyfin server.
+
+Frontend environment variable:
+- `NEXT_PUBLIC_STREAMIVIO_API_URL`: the public HTTPS origin of the deployed `streamivio-api` service (for example, your actual Vercel API deployment URL).
+
+Configure the backend's `JELLYFIN_URL` and `STREAMIVIO_ALLOWED_ORIGINS` variables in its Vercel project. Start a separate Jellyfin host using [MEDIA_ENGINE_SETUP.md](https://github.com/sivanaotieno-tech/streamivio-api/blob/main/MEDIA_ENGINE_SETUP.md) in the API repository. The media server must be reachable from both the backend and the user's browser over HTTPS.
+
+The Media Engine dashboard supports Jellyfin sign-in, library search, playback-info negotiation, HLS playback, audio/subtitle stream selection and watch-progress reporting. Jellyfin performs direct play/remux/transcoding and delivers the actual media bytes; Vercel does not host video files or run FFmpeg.
+
+External streaming providers are an adapter framework only until each provider's official API, credentials and distribution/playback permissions are supplied. Do not configure unlicensed streams or bypass DRM. A connected Jellyfin server and authorised media files are required for real playback; a successful website deployment alone does not provide a video catalogue.
