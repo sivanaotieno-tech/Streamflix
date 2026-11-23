@@ -38,13 +38,13 @@ function mediaFormat(value: string, explicit?: unknown): MediaFormat | null {
   return null;
 }
 
-async function resolveHovod(titleId: string) {
+async function resolveHovod(titleId: string, season?: string | null, episode?: string | null) {
   const base = (process.env.STREAMIVIO_API_URL || process.env.NEXT_PUBLIC_STREAMIVIO_API_URL || "").replace(/\/+$/, "");
   if (!base) return null;
   let endpoint: URL;
   try {
     endpoint = new URL("/media/playback/" + encodeURIComponent(titleId), base);
-    if (endpoint.protocol !== "https:" && endpoint.hostname !== "localhost" && endpoint.hostname !== "127.0.0.1") return null;
+    if (endpoint.protocol !== "https:" && endpoint.hostname !== "localhost" && endpoint.hostname !== "127.0.0.1") return null;\n    if (season && episode) { endpoint.searchParams.set("season", season); endpoint.searchParams.set("episode", episode); }
   } catch { return null; }
 
   const response = await fetch(endpoint, {
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
   const titleId = String((local as any)?.id || id || "");
   if (titleId) {
     try {
-      const hovod = await resolveHovod(titleId);
+      const hovod = await resolveHovod(titleId, season, episode);
       if (hovod && "error" in hovod) return NextResponse.json({ available: false, error: hovod.error }, { status: hovod.status });
       if (hovod) return NextResponse.json(hovod, { headers: { "Cache-Control": "no-store" } });
     } catch (error) {
