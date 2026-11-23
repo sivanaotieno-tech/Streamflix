@@ -38,7 +38,9 @@ const descriptions: Record<string, string> = {
   "Captain America: Brave New World": "Sam Wilson steps into a global conflict after meeting the newly elected U.S. president.",
   "Thunderbolts*": "A group of unconventional operatives is drawn into a mission with dangerous stakes.",
   "The Fantastic Four: First Steps": "The Fantastic Four face a cosmic threat while protecting their world."
-};\n\nconst entry = (
+};
+
+const entry = (
   id: string,
   title: string,
   year: string,
