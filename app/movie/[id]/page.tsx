@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { catalog } from "@/app/data/catalog";
 import { TitleDetailPlayer } from "@/components/title-detail-player";
+import { ImdbPoster } from "@/components/imdb-poster";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -20,7 +21,7 @@ export default async function MoviePage({ params }: Props) {
         <Link href="/" className="text-sm text-zinc-400 hover:text-white">← Back to Streamivio</Link>
         <section className="mt-8 grid gap-8 md:grid-cols-[280px_1fr]">
           <div className="relative aspect-[2/3] overflow-hidden rounded-xl bg-zinc-900">
-            {item.poster ? <Image src={item.poster} alt={item.title} fill sizes="(max-width: 768px) 80vw, 280px" className="object-cover" unoptimized /> : <div className="flex h-full items-center justify-center p-6 text-center text-zinc-500">{item.title}</div>}
+            {item.poster ? <Image src={item.poster} alt={item.title} fill sizes="(max-width: 768px) 80vw, 280px" className="object-cover" unoptimized /> : <ImdbPoster title={item.title} year={item.year} />}
           </div>
           <div className="flex flex-col justify-center">
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-blue-400">Streamivio · Movie</p>
