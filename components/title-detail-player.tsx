@@ -72,7 +72,8 @@ export function TitleDetailPlayer({ id, title, kind, imdbId }: Props) {
   }
 
   return (
-    <div className="mt-8">\n      {birthdayMessage && <div role="status" className="mb-5 rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-5 text-center text-lg font-bold text-yellow-200">🎉 Happy birthday to the Streamivio creator! 🎉</div>}
+    <div className="mt-8">
+      {birthdayMessage && <div role="status" className="mb-5 rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-5 text-center text-lg font-bold text-yellow-200">🎉 Happy birthday to the Streamivio creator! 🎉</div>}
       <button type="button" onClick={play} disabled={loading} className="rounded-lg bg-[#e50914] px-6 py-3 text-sm font-bold text-white disabled:opacity-60">
         {loading ? "Checking playback…" : playerUrl || embedUrl ? "Reload player" : "Play"}
       </button>
