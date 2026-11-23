@@ -10,7 +10,9 @@ export function TitleDetailPlayer({ id, title, kind, imdbId }: Props) {
   const [embedUrl, setEmbedUrl] = useState("");
   const [format, setFormat] = useState<"mp4" | "hls" | "">("");
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");\n  const [season, setSeason] = useState("1");\n  const [episode, setEpisode] = useState("1");
+  const [notice, setNotice] = useState("");
+  const [season, setSeason] = useState("1");
+  const [episode, setEpisode] = useState("1");
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   useEffect(() => {
@@ -49,7 +51,8 @@ export function TitleDetailPlayer({ id, title, kind, imdbId }: Props) {
     setLoading(true); setError(""); setNotice(""); setPlayerUrl(""); setEmbedUrl(""); setFormat("");
     try {
       const params = new URLSearchParams({ id, title, type: kind });
-      if (imdbId) params.set("imdb_id", imdbId);\n      if (kind === "tv") { params.set("season", season); params.set("episode", episode); }
+      if (imdbId) params.set("imdb_id", imdbId);
+      if (kind === "tv") { params.set("season", season); params.set("episode", episode); }
       const response = await fetch("/api/playback?" + params.toString(), { cache: "no-store" });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || payload?.available !== true) throw new Error(typeof payload?.error === "string" ? payload.error : "No authorised playback source is configured.");
