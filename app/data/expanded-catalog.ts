@@ -325,4 +325,5 @@ export const expandedCatalog: CatalogTitle[] = [
   entry("mcu-brave-new-world","Captain America: Brave New World","2025","movie",["Action","Adventure","Marvel","MCU"],["United States"]),
   entry("mcu-thunderbolts","Thunderbolts*","2025","movie",["Action","Adventure","Marvel","MCU"],["United States"]),
   entry("mcu-fantastic-four-first-steps","The Fantastic Four: First Steps","2025","movie",["Action","Adventure","Marvel","MCU"],["United States"]),
+  entry("mcu-avengers-doomsday","Avengers: Doomsday","2026","movie",["Action","Adventure","Marvel","MCU"],["United States"]),
 ];
