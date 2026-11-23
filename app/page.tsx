@@ -6,6 +6,7 @@ import {StreamivioLogo} from "@/components/streamivio-logo";
 import {onAuthStateChanged,signOut as firebaseSignOut} from "firebase/auth";
 import {firebaseAuth} from "@/lib/firebase-client";
 import {OpeningScreen} from "@/components/opening-screen";
+import {ImdbPoster} from "@/components/imdb-poster";
 
 type Item={
   id:string|number;
@@ -74,7 +75,7 @@ function CatalogPoster({item,className,imageClassName}:{item:Item;className:stri
         <p className="mt-2 text-[9px] font-medium tracking-widest text-zinc-500">{item.year||"STREAMIVIO LIBRARY"}</p>
       </div>
     </div>
-    {item.poster&&<img src={item.poster} alt={String(item.title||item.name||"")} className={imageClassName+" absolute inset-0"} loading="lazy" onError={event=>{event.currentTarget.style.display="none";}}/>}
+    {item.poster ? <img src={item.poster} alt={String(item.title||item.name||"")} className={imageClassName+" absolute inset-0"} loading="lazy" onError={event=>{event.currentTarget.style.display="none";}}/> : <ImdbPoster title={String(item.title||item.name||"")} year={String(item.year||"")} className={imageClassName+" absolute inset-0"} />}
   </div>;
 }
 
