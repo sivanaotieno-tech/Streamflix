@@ -44,7 +44,8 @@ async function resolveHovod(titleId: string, season?: string | null, episode?: s
   let endpoint: URL;
   try {
     endpoint = new URL("/media/playback/" + encodeURIComponent(titleId), base);
-    if (endpoint.protocol !== "https:" && endpoint.hostname !== "localhost" && endpoint.hostname !== "127.0.0.1") return null;\n    if (season && episode) { endpoint.searchParams.set("season", season); endpoint.searchParams.set("episode", episode); }
+    if (endpoint.protocol !== "https:" && endpoint.hostname !== "localhost" && endpoint.hostname !== "127.0.0.1") return null;
+    if (season && episode) { endpoint.searchParams.set("season", season); endpoint.searchParams.set("episode", episode); }
   } catch { return null; }
 
   const response = await fetch(endpoint, {
