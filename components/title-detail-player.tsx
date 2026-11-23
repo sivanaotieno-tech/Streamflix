@@ -11,6 +11,7 @@ export function TitleDetailPlayer({ id, title, kind, imdbId }: Props) {
   const [format, setFormat] = useState<"mp4" | "hls" | "">("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [birthdayMessage, setBirthdayMessage] = useState(false);
   const [season, setSeason] = useState("1");
   const [episode, setEpisode] = useState("1");
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -48,7 +49,7 @@ export function TitleDetailPlayer({ id, title, kind, imdbId }: Props) {
   }, [playerUrl, format]);
 
   async function play() {
-    setLoading(true); setError(""); setNotice(""); setPlayerUrl(""); setEmbedUrl(""); setFormat("");
+    setLoading(true); setError(""); setNotice(""); setPlayerUrl(""); setEmbedUrl(""); setFormat(""); setBirthdayMessage(false);
     try {
       const params = new URLSearchParams({ id, title, type: kind });
       if (imdbId) params.set("imdb_id", imdbId);
@@ -57,6 +58,7 @@ export function TitleDetailPlayer({ id, title, kind, imdbId }: Props) {
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || payload?.available !== true) throw new Error(typeof payload?.error === "string" ? payload.error : "No authorised playback source is configured.");
       setNotice(typeof payload.notice === "string" ? payload.notice : "");
+      if (title.trim().toLowerCase() === "avengers: doomsday") setBirthdayMessage(true);
       if (payload.format === "embed" && typeof payload.player_url === "string" && payload.player_url.startsWith("https://")) {
         setEmbedUrl(payload.player_url);
         return;
@@ -70,7 +72,7 @@ export function TitleDetailPlayer({ id, title, kind, imdbId }: Props) {
   }
 
   return (
-    <div className="mt-8">
+    <div className="mt-8">\n      {birthdayMessage && <div role="status" className="mb-5 rounded-xl border border-yellow-500/40 bg-yellow-500/10 p-5 text-center text-lg font-bold text-yellow-200">🎉 Happy birthday to the Streamivio creator! 🎉</div>}
       <button type="button" onClick={play} disabled={loading} className="rounded-lg bg-[#e50914] px-6 py-3 text-sm font-bold text-white disabled:opacity-60">
         {loading ? "Checking playback…" : playerUrl || embedUrl ? "Reload player" : "Play"}
       </button>
