@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { catalog } from "../data/catalog";\nimport { ImdbPoster } from "../../components/imdb-poster";
+import { catalog } from "../data/catalog";
+import { ImdbPoster } from "../../components/imdb-poster";
 
 const mcuMovies = catalog
   .filter((item) => item.genres.includes("MCU"))
