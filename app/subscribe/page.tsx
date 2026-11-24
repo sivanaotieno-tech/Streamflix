@@ -131,7 +131,7 @@ export default function SubscribePage() {
             <button key={item.id} type="button" onClick={() => setPlan(item.id)} className={`rounded-lg border p-6 text-left transition sm:p-8 ${plan === item.id ? "border-red-500 bg-[#202020] ring-1 ring-red-500/40" : "border-white/10 bg-[#1b1b1b] hover:border-white/30"}`}>
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-2xl font-extrabold">{item.name}</h2>
+                  <span className={`mb-3 inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-black uppercase tracking-[.15em] ${item.id === "plus" ? "border-sky-300/30 bg-sky-300/10 text-sky-200" : "border-amber-300/30 bg-amber-300/10 text-amber-200"}`}>{item.id === "plus" ? "✦ Streamivio Plus" : "★ Streamivio Premium"}</span><h2 className="text-2xl font-extrabold">{item.name}</h2>
                   <p className="mt-2 text-sm text-zinc-400">{item.description}</p>
                 </div>
                 <span className={`rounded-full px-3 py-1 text-xs font-bold ${plan === item.id ? "bg-red-500 text-white" : "bg-white/10 text-zinc-300"}`}>{plan === item.id ? "Selected" : "Choose"}</span>
