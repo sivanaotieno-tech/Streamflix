@@ -638,7 +638,7 @@ export default function Home(){
       </div>
     </header>}
 
-    {loading&&!hero&&<div className="flex min-h-screen items-center justify-center text-zinc-400"><div className="text-center"><div className="mb-4 flex justify-center"><StreamivioLogo className="text-3xl"/></div><div>Loading your entertainment...</div></div></div>}
+    {loading&&!hero&&<div className="mx-4 mt-6 rounded-xl border border-white/10 bg-white/[.03] px-4 py-3 text-xs text-zinc-400 md:mx-12">Catalog shelves are loading in the background. You can still browse Streamivio.</div>}
 
     {!q.trim()&&<div className="relative z-10 mx-auto max-w-[1700px] pt-5">
       {browse==="Games"&&gamesLoading&&<div className="mb-4 flex items-center gap-2 px-4 text-sm text-zinc-400 md:px-12"><LoaderCircle className="h-4 w-4 animate-spin"/>Loading games from the local catalog…</div>}
