@@ -100,7 +100,7 @@ function Row({title,items,onOpen}:{title:string;items:Item[];onOpen:(m:Item)=>vo
   </section>
 }
 
-export default function Home(){
+function DoomsdayCountdown(){const target=new Date("2026-12-18T00:00:00Z").getTime();const [now,setNow]=useState(Date.now());useEffect(()=>{const timer=window.setInterval(()=>setNow(Date.now()),1000);return()=>window.clearInterval(timer);},[]);const diff=Math.max(0,target-now);const days=Math.floor(diff/86400000),hours=Math.floor(diff/3600000)%24,mins=Math.floor(diff/60000)%60,secs=Math.floor(diff/1000)%60;return <section className="mx-4 mb-7 rounded-2xl border border-red-500/30 bg-gradient-to-r from-red-950/60 via-zinc-900 to-black p-5 md:mx-12 md:p-7"><div className="text-xs font-bold uppercase tracking-[.3em] text-red-300">Marvel Studios · Countdown</div><h2 className="mt-2 text-2xl font-black sm:text-3xl">Avengers: Doomsday</h2><p className="mt-1 text-sm text-zinc-400">Only in theaters December 18, 2026</p><div className="mt-5 grid grid-cols-4 gap-2 sm:max-w-xl">{[["Days",days],["Hours",hours],["Minutes",mins],["Seconds",secs]].map(([label,val])=><div key={String(label)} className="rounded-xl border border-white/10 bg-black/40 p-3 text-center"><div className="text-2xl font-black tabular-nums sm:text-4xl">{String(val).padStart(2,"0")}</div><div className="mt-1 text-[10px] uppercase tracking-wider text-zinc-500">{label}</div></div>)}</div><a href="https://www.youtube.com/watch?v=iFl4YeX6jmc" target="_blank" rel="noreferrer" className="mt-5 inline-block rounded-full bg-red-600 px-5 py-2.5 text-sm font-bold hover:bg-red-500">Watch official trailer ↗</a></section>};\nexport default function Home(){
   const[rows,setRows]=useState<Record<string,Item[]>>({});
   const[hero,setHero]=useState<Item|null>(null);
   const[q,setQ]=useState("");
@@ -648,7 +648,7 @@ export default function Home(){
         >{label}</button>)}
         {movieShelfLoading&&<LoaderCircle aria-label="Loading movies" className="h-4 w-4 animate-spin text-zinc-400"/>}
       </div>}
-      {browse==="My List"
+      <DoomsdayCountdown/><section className="mb-8 px-4 md:px-12"><h2 className="mb-3 text-lg font-black">Watch to prepare for Avengers: Doomsday</h2><p className="mb-4 text-xs text-zinc-500">Suggested catch-up titles for the multiverse saga.</p><div className="scrollbar-hide flex gap-3 overflow-x-auto pb-4">{[["Captain America: The First Avenger","2011"],["The Avengers","2012"],["Captain America: The Winter Soldier","2014"],["Avengers: Age of Ultron","2015"],["Captain America: Civil War","2016"],["Doctor Strange","2016"],["Thor: Ragnarok","2017"],["Avengers: Infinity War","2018"],["Avengers: Endgame","2019"],["Loki","2021"],["Doctor Strange in the Multiverse of Madness","2022"],["Black Panther: Wakanda Forever","2022"],["Ant-Man and the Wasp: Quantumania","2023"],["The Marvels","2023"],["Deadpool & Wolverine","2024"],["Captain America: Brave New World","2025"],["Thunderbolts*","2025"],["The Fantastic Four: First Steps","2025"]].map(([title,year])=><button key={title} onClick={()=>{const match=Object.values(rows).flat().find(it=>String(it.title||it.name).toLowerCase()===title.toLowerCase());if(match)setSelected(match);else window.location.href="/discover";}} className="min-w-[135px] rounded-lg border border-white/10 bg-white/[.04] p-3 text-left hover:bg-white/10"><span className="text-[10px] text-red-300">{year}</span><span className="mt-1 block text-xs font-bold">{title}</span></button>)}</div></section>{browse==="My List"
         ? <Row title="My List" items={list} onOpen={play}/>
         : Object.entries(rows)
           .filter(([title])=>browse==="Home"
@@ -689,7 +689,7 @@ export default function Home(){
       {titleDetailsLoading&&<p role="status" className="mt-3 text-xs text-zinc-400"><LoaderCircle className="mr-1 inline h-3.5 w-3.5 animate-spin"/>Loading title details and credits…</p>}
       {titleDetailsMessage&&!titleDetailsLoading&&!titleDetailsMetadataAvailable&&<p className="mt-3 text-xs text-zinc-500">{titleDetailsMessage}</p>}
       {titleDetailsError&&<p role="status" className="mt-3 text-xs text-amber-300">{titleDetailsError}</p>}
-      <p className="mt-3 leading-6 text-zinc-300">{detailTitle?.overview||detailTitle?.description||"A synopsis has not been added for this title yet. Check back later for more information."}</p>
+      <a className="mt-4 inline-flex rounded-full border border-white/15 px-4 py-2 text-xs font-bold text-red-300 hover:bg-white/10" target="_blank" rel="noreferrer" href={"https://www.youtube.com/results?search_query="+encodeURIComponent(String(detailTitle?.title||detailTitle?.name||selected.title||selected.name)+" official trailer")}>Watch trailer ↗</a><p className="mt-3 leading-6 text-zinc-300">{detailTitle?.overview||detailTitle?.description||"A synopsis has not been added for this title yet. Check back later for more information."}</p>
       {detailTitle?.directors&&detailTitle.directors.length>0&&<p className="mt-3 text-sm text-zinc-400"><span className="text-zinc-200">Director:</span> {detailTitle.directors.join(", ")}</p>}
       {detailTitle?.cast&&detailTitle.cast.length>0&&<p className="mt-2 text-sm text-zinc-400"><span className="text-zinc-200">Cast:</span> {detailTitle.cast.join(", ")}</p>}
       {detailError&&<p role="status" className="mt-4 text-sm text-amber-300">{detailError}</p>}
