@@ -64,18 +64,12 @@ const formatSeconds=(value:number)=>{
 
 const MOVIE_GENRES=[["All",""],["Action","action"],["Comedy","comedy"],["Drama","drama"],["Horror","horror"],["Romance","romance"],["Sci-Fi","sci_fi"],["Thriller","thriller"]] as const;
 function CatalogPoster({item,className,imageClassName}:{item:Item;className:string;imageClassName:string}){
+  const [posterFailed,setPosterFailed]=useState(false);
+  useEffect(()=>{setPosterFailed(false);},[item.poster,item.title,item.name]);
   return <div className={className+" relative overflow-hidden"}>
     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,_var(--tw-gradient-stops))] from-red-950 via-zinc-900 to-black"/>
-    <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/[.06] to-transparent"/>
-    <div className="relative flex h-full flex-col justify-between p-3 sm:p-4">
-      <span className="text-[8px] font-black uppercase tracking-[.24em] text-red-300/80">STREAMIVIO · DISCOVER</span>
-      <div>
-        <p className="mb-2 text-[8px] font-semibold uppercase tracking-[.18em] text-zinc-400">{Array.isArray(item.genres)&&item.genres[0]?item.genres[0]:"FEATURED TITLE"}</p>
-        <h3 className="line-clamp-4 break-words text-base font-black leading-tight text-white drop-shadow sm:text-lg">{item.title||item.name}</h3>
-        <p className="mt-2 text-[9px] font-medium tracking-widest text-zinc-500">{item.year||"STREAMIVIO LIBRARY"}</p>
-      </div>
-    </div>
-    {item.poster ? <img src={item.poster} alt={String(item.title||item.name||"")} className={imageClassName+" absolute inset-0"} loading="lazy" onError={event=>{event.currentTarget.style.display="none";}}/> : <ImdbPoster title={String(item.title||item.name||"")} year={String(item.year||"")} className={imageClassName+" absolute inset-0"} />}
+    {!item.poster||posterFailed?<ImdbPoster title={String(item.title||item.name||"")} year={String(item.year||"")} className={imageClassName+" absolute inset-0"}/>:<img src={item.poster} alt={String(item.title||item.name||"")} className={imageClassName+" absolute inset-0"} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={()=>setPosterFailed(true)}/>}
+    {!item.poster||posterFailed?<div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/10"/>:null}
   </div>;
 }
 
@@ -253,6 +247,7 @@ export default function Home(){
   if(isJujutsuKaisen){seasonNumbers.add(1);seasonNumbers.add(2);seasonNumbers.add(3);}
   const isJoJoTitle=/jojo.?s bizarre adventure/i.test(String(selected?.title||selected?.name||""));
   if(isJoJoTitle){for(let part=1;part<=6;part++)seasonNumbers.add(part);}
+  if(isTvItem(selected)&&seasonNumbers.size===0){for(let s=1;s<=10;s++)seasonNumbers.add(s);}
   const seasonOptions=Array.from(seasonNumbers).sort((a,b)=>a-b).map(season=>({season}));
 
   const get=async(s:string,p:string)=>{
@@ -699,7 +694,7 @@ export default function Home(){
         <span>Saved playback position: {formatSeconds(resumeSeconds)}</span>
         <button type="button" onClick={()=>void startPlayback(resumeSeconds)} disabled={playbackLoading} className="rounded bg-zinc-700 px-3 py-1.5 font-semibold disabled:opacity-50">Resume</button>
       </div>}
-      {isTvItem(selected)&&seasonOptions.length>0&&<div className="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:grid-cols-2"><label className="grid gap-1 text-xs text-zinc-300">Season<select value={season} onChange={e=>{setSeason(e.target.value);setEpisode("");}} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"><option value="">Choose a season</option>{seasonOptions.map((entry:any)=><option key={entry.season} value={String(entry.season)}>Season {entry.season}</option>)}</select></label><label className="grid gap-1 text-xs text-zinc-300">Episode<input type="number" min="1" inputMode="numeric" disabled={!season} value={episode} onChange={e=>setEpisode(e.target.value)} placeholder="Episode number" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm disabled:opacity-50"/></label><p className="text-[11px] text-zinc-500 sm:col-span-2">Choose a season and episode, then select Play to load that episode in the player.</p></div>}
+      {isTvItem(selected)&&<div className="mt-4 grid gap-3 rounded-lg border border-white/10 bg-black/20 p-3 sm:grid-cols-2"><label className="grid gap-1 text-xs text-zinc-300">Season<select value={season} onChange={e=>{setSeason(e.target.value);setEpisode("");}} className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm"><option value="">Choose a season</option>{seasonOptions.map((entry:any)=><option key={entry.season} value={String(entry.season)}>Season {entry.season}</option>)}</select></label><label className="grid gap-1 text-xs text-zinc-300">Episode<input type="number" min="1" inputMode="numeric" disabled={!season} value={episode} onChange={e=>setEpisode(e.target.value)} placeholder="Episode number" className="rounded border border-white/15 bg-zinc-900 px-3 py-2 text-sm disabled:opacity-50"/></label><p className="text-[11px] text-zinc-500 sm:col-span-2">Choose a season and episode, then select Play to load that episode in the player.</p></div>}
       {playbackUrl&&<div className="mt-5 overflow-hidden rounded-lg bg-black">
         {(playbackFormat==="mp4"||playbackFormat==="hls")?<video key={playbackUrl} controls autoPlay playsInline className="aspect-video w-full" src={playbackUrl} onLoadedMetadata={e=>{const video=e.currentTarget;if(pendingDirectResume>0&&Number.isFinite(video.duration)&&video.duration>0){video.currentTime=Math.min(pendingDirectResume,Math.max(0,video.duration-1));}}} onTimeUpdate={e=>{if(!playerContentId)return;const video=e.currentTarget;const seconds=Number.isFinite(video.currentTime)?Math.floor(video.currentTime):0;setResumeSeconds(seconds);try{localStorage.setItem(progressKeyFor(playerContentId),String(seconds));}catch{}}} onEnded={()=>{if(playerContentId){try{localStorage.removeItem(progressKeyFor(playerContentId));}catch{}setResumeSeconds(0);setPendingDirectResume(0);}}}>Your browser cannot play this video format.</video> :<p className="p-4 text-sm text-amber-200">Unsupported playback format.</p>}
         <p className="px-3 py-2 text-xs text-zinc-400">Playback controls and available subtitle options are provided by the video player. Availability can vary by title and region.</p>
