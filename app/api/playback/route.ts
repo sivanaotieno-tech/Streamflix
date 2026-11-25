@@ -96,7 +96,7 @@ async function resolveConfiguredSource(imdbId: string) {
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
-  const cleanParam = (value: string | null) => (value || "").replace(/[\\r\
+  const cleanParam = (value: string | null) => (value || "").replace(/[\r\n\t]+/g, " ").trim();
 \\t]+/g, " ").trim();
   const id = cleanParam(params.get("id"));
   const title = cleanParam(params.get("title"));
