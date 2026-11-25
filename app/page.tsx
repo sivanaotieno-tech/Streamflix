@@ -38,6 +38,8 @@ type Item={
   directors?:string[];
   runtime?:string|null;
   contentRating?:string|null;
+  seasons?:any[];
+  season_count?:number;
 };
 
 const SEARCH_CATEGORIES=[["All","all"],["Movies","movies"],["TV Shows","tv"],["Anime","anime"],["Documentaries","documentaries"],["Kids & Family","kids"],["Reality","reality"],["Games","games"]] as const;
