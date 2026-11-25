@@ -340,7 +340,7 @@ export default function Home(){
       if(startAt.trim())playbackParams.set("startAt",startAt.trim());
       const response=await fetch("/api/playback?"+playbackParams.toString(),{cache:"no-store"});
       const data=await response.json().catch(()=>({}));
-      if(response.ok&&data.available&&typeof data.stream_url==="string"){
+      if(response.ok&&data.available&&(typeof data.stream_url==="string"||typeof data.player_url==="string")){
         const directProgressId=String(resolvedImdbId||selected.id);
         let initialStart=resumeOverride!==undefined?resumeOverride:(startAt.trim()?Number(startAt):0);
         if(!initialStart){
