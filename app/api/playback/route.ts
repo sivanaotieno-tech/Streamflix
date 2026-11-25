@@ -15,7 +15,16 @@ const isSafeHttps = (value: unknown): value is string => {
   } catch { return false; }
 };
 
-const isAllowedEmbed = (value: unknown): value is string => {\n  if (!isSafeHttps(value)) return false;\n  try {\n    const host = new URL(value).hostname.toLowerCase();\n    const allowed = (process.env.STREAMIVIO_EMBED_HOSTS || "").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);\n    return allowed.some((domain) => host === domain || host.endsWith("." + domain));\n  } catch { return false; }\n};\n\nconst isImdbId = (value: unknown): value is string =>
+const isAllowedEmbed = (value: unknown): value is string => {
+  if (!isSafeHttps(value)) return false;
+  try {
+    const host = new URL(value).hostname.toLowerCase();
+    const allowed = (process.env.STREAMIVIO_EMBED_HOSTS || "").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);
+    return allowed.some((domain) => host === domain || host.endsWith("." + domain));
+  } catch { return false; }
+};
+
+const isImdbId = (value: unknown): value is string =>
   typeof value === "string" && /^tt\d{5,12}$/i.test(value);
 
 const hasRightsRecord = (item: any) =>
@@ -87,7 +96,8 @@ async function resolveConfiguredSource(imdbId: string) {
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
-  const cleanParam = (value: string | null) => (value || "").replace(/[\\r\\n\\t]+/g, " ").trim();
+  const cleanParam = (value: string | null) => (value || "").replace(/[\\r\
+\\t]+/g, " ").trim();
   const id = cleanParam(params.get("id"));
   const title = cleanParam(params.get("title"));
   const requestedType = cleanParam(params.get("type") || "movie").toLowerCase();
