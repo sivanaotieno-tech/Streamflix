@@ -255,10 +255,22 @@ export default function Home(){
   const isJujutsuKaisen=/jujutsu kaisen/i.test(String(selected?.title||selected?.name||""));
   const isOnePieceTitle=/one piece/i.test(String(selected?.title||selected?.name||""));
   const seasonNumbers=new Set<number>();
-  if(isJujutsuKaisen){seasonNumbers.add(1);seasonNumbers.add(2);seasonNumbers.add(3);}
   const isJoJoTitle=/jojo.?s bizarre adventure/i.test(String(selected?.title||selected?.name||""));
-  if(isJoJoTitle){for(let part=1;part<=6;part++)seasonNumbers.add(part);}
-  if(isTvItem(selected)&&seasonNumbers.size===0){for(let s=1;s<=10;s++)seasonNumbers.add(s);}
+  // Use season metadata when available; never fabricate a universal 1–10 list.
+  const rawSeasonMetadata=titleDetails?.seasons ?? titleDetails?.season_numbers ?? selected?.seasons;
+  if(Array.isArray(rawSeasonMetadata)){
+    rawSeasonMetadata.forEach((entry:any)=>{
+      const number=typeof entry==="number"?entry:Number(entry?.season_number??entry?.season??entry?.number);
+      if(Number.isInteger(number)&&number>0)seasonNumbers.add(number);
+    });
+  }
+  const seasonCount=Number(titleDetails?.numberOfSeasons??titleDetails?.season_count??titleDetails?.total_seasons??selected?.season_count);
+  if(!seasonNumbers.size&&Number.isInteger(seasonCount)&&seasonCount>0&&seasonCount<=100){
+    for(let s=1;s<=seasonCount;s++)seasonNumbers.add(s);
+  }
+  // Known editorial exceptions where season/part data is not yet supplied by metadata.
+  if(!seasonNumbers.size&&isJujutsuKaisen){seasonNumbers.add(1);seasonNumbers.add(2);}
+  if(!seasonNumbers.size&&isJoJoTitle){for(let part=1;part<=6;part++)seasonNumbers.add(part);}
   const seasonOptions=Array.from(seasonNumbers).sort((a,b)=>a-b).map(season=>({season}));
 
   const get=async(s:string,p:string)=>{
