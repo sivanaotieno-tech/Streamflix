@@ -15,7 +15,7 @@ const isSafeHttps = (value: unknown): value is string => {
   } catch { return false; }
 };
 
-const isImdbId = (value: unknown): value is string =>
+const isAllowedEmbed = (value: unknown): value is string => {\n  if (!isSafeHttps(value)) return false;\n  try {\n    const host = new URL(value).hostname.toLowerCase();\n    const allowed = (process.env.STREAMIVIO_EMBED_HOSTS || "").split(",").map((h) => h.trim().toLowerCase()).filter(Boolean);\n    return allowed.some((domain) => host === domain || host.endsWith("." + domain));\n  } catch { return false; }\n};\n\nconst isImdbId = (value: unknown): value is string =>
   typeof value === "string" && /^tt\d{5,12}$/i.test(value);
 
 const hasRightsRecord = (item: any) =>
@@ -59,7 +59,7 @@ async function resolveHovod(titleId: string, season?: string | null, episode?: s
     return { error: typeof payload.detail === "string" ? payload.detail : "Playback is not authorised for this title.", status: response.status };
   }
   if (payload.available !== true) return null;
-  const playerUrl = isSafeHttps(payload.player_url) ? payload.player_url : "";
+  const playerUrl = isAllowedEmbed(payload.player_url) ? payload.player_url : "";
   const streamUrl = isSafeHttps(payload.stream_url) ? payload.stream_url : "";
   const format = playerUrl ? "embed" : (payload.format === "hls" && streamUrl ? "hls" : null);
   if (!format) return null;
