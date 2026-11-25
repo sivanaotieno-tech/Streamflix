@@ -87,12 +87,13 @@ async function resolveConfiguredSource(imdbId: string) {
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
-  const id = (params.get("id") || "").trim();
-  const title = (params.get("title") || "").trim();
-  const requestedType = (params.get("type") || "movie").trim().toLowerCase();
-  const imdbId = (params.get("imdb_id") || params.get("imdbId") || "").trim();
-  const season = params.get("season");
-  const episode = params.get("episode");
+  const cleanParam = (value: string | null) => (value || "").replace(/[\\r\\n\\t]+/g, " ").trim();
+  const id = cleanParam(params.get("id"));
+  const title = cleanParam(params.get("title"));
+  const requestedType = cleanParam(params.get("type") || "movie").toLowerCase();
+  const imdbId = cleanParam(params.get("imdb_id") || params.get("imdbId"));
+  const season = cleanParam(params.get("season"));
+  const episode = cleanParam(params.get("episode"));
 
   if (!id && !title && !imdbId) return NextResponse.json({ available: false, error: "Choose a title first." }, { status: 400 });
   if ((season && !episode) || (!season && episode) || (season && (!/^\d+$/.test(season) || Number(season) < 1)) || (episode && (!/^\d+$/.test(episode) || Number(episode) < 1))) {
