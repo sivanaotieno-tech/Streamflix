@@ -38,7 +38,7 @@ export function MediaEngineDashboard() {
           {providers.map((provider) => (
             <article key={provider.id} className="rounded-2xl border border-white/10 bg-zinc-900 p-5">
               <div className="flex items-center justify-between gap-3">
-                <h2 className="text-lg font-bold">{provider.id === "streamx" ? "StreamX metadata" : provider.id === "anilist" ? "AniList metadata" : "Hovod video engine"}</h2>
+                <h2 className="text-lg font-bold">{provider.id === "streamx" ? "StreamX metadata" : provider.id === "anilist" ? "AniList metadata" : provider.role || "Playback provider"}</h2>
                 <span className={"rounded-full px-3 py-1 text-xs " + (provider.enabled || (provider.configured && !String(provider.status || "").includes("disabled")) ? "bg-emerald-950 text-emerald-300" : "bg-zinc-800 text-zinc-400")}>{provider.enabled ? "Enabled" : String(provider.status || "").includes("disabled") ? "Disabled pending review" : provider.configured ? "Configured" : "Not configured"}</span>
               </div>
               <p className="mt-2 text-sm text-zinc-400">{provider.role}</p>
@@ -52,11 +52,11 @@ export function MediaEngineDashboard() {
         <h2 className="font-bold">Deployment model</h2>
         <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-zinc-400">
           <li>Website and Streamivio API: Vercel.</li>
-          <li>Hovod API and FFmpeg workers: persistent cloud VM.</li>
+          <li>Authorised playback provider: configured separately from the website.</li>
           <li>Original media and HLS renditions: private S3-compatible object storage.</li>
           <li>Only titles with a verified rights record can be enabled for playback.</li>
         </ul>
-        <p className="mt-4 text-xs text-zinc-500">Hovod public playback IDs are unlisted, not access-controlled. Do not use this configuration for subscriber-only titles.</p>
+        
       </section>
     </main>
   );
