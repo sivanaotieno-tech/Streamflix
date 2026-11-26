@@ -73,3 +73,20 @@ section h2{letter-spacing:-.025em}
 .catalog-card .relative{border-color:rgba(192,132,252,.14);background:linear-gradient(135deg,#20132e,#08070c)}
 input:focus,select:focus{outline-color:#c084fc}
 main{background:radial-gradient(ellipse at 50% 0%,rgba(126,34,206,.12),transparent 45%),var(--sv-bg)}
+
+
+/* Mockup-aligned finishing pass: unify the accent palette and player/catalog surfaces. */
+:root{--sv-accent:#a855f7;--sv-accent-bright:#c084fc;--sv-bg:#050507;--sv-panel:#111019}
+main{background:radial-gradient(ellipse at 50% -8%,rgba(168,85,247,.16),transparent 42%),#050507!important}
+.hero-art::before{background:linear-gradient(90deg,rgba(5,5,8,.96) 0%,rgba(5,5,8,.75) 35%,rgba(5,5,8,.2) 78%),linear-gradient(0deg,#050507 0%,transparent 55%)!important}
+.catalog-card .relative{border-color:rgba(192,132,252,.22)!important;box-shadow:0 12px 30px rgba(0,0,0,.4)}
+.catalog-card:hover .relative{box-shadow:0 0 0 1px rgba(192,132,252,.45),0 18px 40px rgba(80,20,130,.2)}
+.site-sidebar,.site-topbar,.mobile-bottom-nav{border-color:rgba(192,132,252,.16)!important}
+button[class*="bg-sky-500"],a[class*="bg-sky-500"]{background:#a855f7!important;color:#fff!important}
+button[class*="bg-sky-500"]:hover,a[class*="bg-sky-500"]:hover{background:#9333ea!important}
+button[class*="bg-red-600"],button[class*="bg-red-700"],button[class*="bg-[#e50914]"]{background:#7e22ce!important}
+button[class*="bg-red-600"]:hover,button[class*="bg-red-700"]:hover{background:#9333ea!important}
+[class*="text-sky-300"],[class*="text-sky-400"],[class*="text-red-300"],[class*="text-red-400"]{color:#d8b4fe!important}
+[class*="border-red-500"],[class*="border-red-300"]{border-color:rgba(192,132,252,.35)!important}
+input:focus,select:focus{outline-color:#c084fc!important}
+@media(prefers-reduced-motion:reduce){.catalog-card,.catalog-card img,.hero-art img{transition:none!important;animation:none!important}}
