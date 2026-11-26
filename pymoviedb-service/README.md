@@ -50,7 +50,7 @@ Catalog examples: `/catalog?type=movie`, `/catalog?type=anime&genre=adventure`, 
 
 The website uses the bundled Streamivio editorial catalogue for search and discovery. IMDb suggestion lookup has been disabled until an appropriate commercial metadata licence is secured.
 
-The legacy local catalogue playback endpoint returns unavailable until `video_url` is set to a working, authorised media URL. Hovod playback is resolved separately by the main Streamivio API when a title has a verified rights record and a mapped Hovod playback ID. Neither API scrapes, unlocks, proxies, or supplies unauthorised movie streams.
+The legacy local catalogue playback endpoint returns unavailable until `video_url` is set to a working, authorised media URL. The main Streamivio API does not use Hovod. Neither API scrapes, unlocks, proxies, or supplies unauthorised movie streams.
 
 
 
@@ -63,7 +63,7 @@ The Streamivio title dialog includes a Play button. It first calls the Next.js `
 
 A separate FastAPI resolver lives in `../authorized-media-resolver/`. It exposes `GET /stream/{imdb_id}` and only returns an authorized HTTPS MP4/HLS URL explicitly mapped to that IMDb ID in the configured JSON catalog. Every entry must include `distribution_authorized=true`, a valid `rights_status`, and a `rights_reference`. It does not extract third-party streams. Install and run it using the instructions in `../authorized-media-resolver/README.md`.
 
-For the Next.js app to call it, set the server-only Vercel environment variable `STREAMIVIO_RESOLVER_URL` to the resolver's HTTPS base URL. Set `PYMOVIEDB_SERVICE_URL` to the Python catalogue API's HTTPS base URL only if you need the local catalogue API. Redeploy after changing environment variables. The resolver has no cache-clear endpoint. Hovod playback is integrated through the main Streamivio API; its public/unlisted playback IDs are only for content cleared for public playback, not subscriber-only titles.
+For the Next.js app to call it, set the server-only Vercel environment variable `STREAMIVIO_RESOLVER_URL` to the resolver's HTTPS base URL. Set `PYMOVIEDB_SERVICE_URL` to the Python catalogue API's HTTPS base URL only if you need the local catalogue API. Redeploy after changing environment variables. The resolver has no cache-clear endpoint. Hovod is not part of Streamivio playback.
 
 
 ## Playback metadata API
