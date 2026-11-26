@@ -1,33 +1,49 @@
-# Streamivio live-server deployment (Docker)
+# Streamivio live-server deployment (no Docker)
 
-This runs the Next.js site and its bundled Python catalogue API on a VPS or Linux server. It is an alternative to Vercel and preserves dynamic Next.js routes.
+Deploy Streamivio directly on a Linux VPS with Node.js and npm.
 
 ## Requirements
-- Linux VPS with Docker Engine and the Docker Compose plugin
-- A DNS A record for your domain pointing to the server IP
-- Reverse proxy and HTTPS (recommended: Caddy or Nginx)
+- Linux server with SSH access
+- Node.js 24 and npm
+- Git
+- DNS pointed at the server; HTTPS reverse proxy (Caddy or Nginx) recommended
 
-## Deploy
-1. Clone the repository and enter it: `git clone https://github.com/sivanaotieno-tech/Streamflix.git && cd Streamflix`
-2. Review environment requirements in the README and configure any needed secrets in a local `.env` file. Never commit secrets.
-3. Build and start: `docker compose up -d --build`
-4. Check: `docker compose ps` and `curl -fsS http://127.0.0.1:3000`.
-5. For updates: `git pull && docker compose up -d --build`.
+## Website setup
+1. Clone the repo: `git clone https://github.com/sivanaotieno-tech/Streamflix.git && cd Streamflix`
+2. Install dependencies: `npm ci`
+3. Create `.env.local` and configure any required secrets/settings. Do not commit secrets.
+4. Build: `npm run build`
+5. Run: `npm start` (Next.js listens on port 3000 by default).
 
-The web app is on port 3000. Do not expose the catalogue API port directly to the internet; it is available to the web container on the Compose network. Configure your reverse proxy to send the public domain to 127.0.0.1:3000. Enable HTTPS and firewall the host so only SSH and HTTP/HTTPS are public.
+## Keep the website running
+Install PM2 globally (`npm install -g pm2`) and run:
+```bash
+pm2 start npm --name streamivio -- start
+pm2 save
+pm2 startup
+``
+Follow the command PM2 prints for your OS to enable startup on reboot.
 
-## Caddy example
-If Caddy is installed on the host, add a site block (replace the domain):
+## Optional catalogue API
+The Python catalogue service is in `pymoviedb-service`. If needed, run it separately:
+```bash
+cd pymoviedb-service
+python3 -m venv .venv
+. .venv/bin/activate
+pip install -r requirements.txt
+HOST=127.0.0.1 PORT=8001 python server.py
+```
+Use a process manager/systemd service to keep it running. Configure `PYMOVIEDB_SERVICE_URL` to the API's reachable HTTPS URL only if this service is used by the Next.js app. Do not expose the API publicly unless protected.
 
-```caddy
-streamivio.com, www.streamivio.com {
-    reverse_proxy 127.0.0.1:3000
-}
+## Reverse proxy
+Point your domain's reverse proxy to `127.0.0.1:3000`, enable HTTPS, and restrict public firewall access to SSH and ports 80/443.
+
+## Updating
+```bash
+git pull
+npm ci
+npm run build
+pm2 restart streamivio
 ```
 
-Caddy will manage TLS certificates after DNS is pointed correctly and ports 80/443 are reachable.
-
-## Important
-- This is a server-side deployment, not a static export. API routes and dynamic pages require Node.
-- The app may still require Firebase, email, payment and authorized media resolver credentials for those specific features. Features without configuration should not be presented as live/verified.
-- Playback providers must be authorized to distribute the media. This deployment does not scrape or unlock third-party streams.
+This is a Node server deployment, not a static export. API routes and dynamic pages need the server runtime. Specific services (Firebase, email, payment, authorized playback) require their own valid credentials and configuration; don't present unconfigured services as working.
