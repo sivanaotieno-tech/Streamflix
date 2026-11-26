@@ -59,3 +59,17 @@ section h2{letter-spacing:-.025em}
   button,a{min-height:44px}
 }
 @media(hover:none){.catalog-card:hover,.card:hover{transform:none;filter:none;box-shadow:none}}
+
+/* Streamivio cinematic purple rebrand inspired by the approved mockup. */
+:root{color-scheme:dark;--sv-bg:#050507;--sv-panel:#111019;--sv-blue:#a855f7;--sv-muted:#aaa3b7}
+.site-sidebar{background:linear-gradient(180deg,#08070c 0%,#100b19 100%);border-color:rgba(192,132,252,.12)}
+.site-topbar{background:linear-gradient(180deg,rgba(5,5,8,.97),rgba(5,5,8,.78));border-bottom-color:rgba(192,132,252,.1)}
+.sidebar-link:hover{background:rgba(168,85,247,.14);color:#f5eaff}
+.sidebar-link.active{background:linear-gradient(145deg,#7027b8,#3c185f);color:#ead4ff;box-shadow:inset 0 0 0 1px rgba(192,132,252,.25),0 5px 18px rgba(0,0,0,.2)}
+.mobile-bottom-nav{background:rgba(5,5,8,.97);border-color:rgba(192,132,252,.14)}
+.hero-shell{background:#09060e;border-bottom-color:rgba(192,132,252,.12)}
+.hero-art{background-color:#130a20}
+.hero-art::before{background:linear-gradient(90deg,rgba(5,5,8,.97) 0%,rgba(5,5,8,.78) 30%,rgba(5,5,8,.18) 73%,rgba(5,5,8,.08) 100%),linear-gradient(0deg,#050507 0%,rgba(5,5,8,.12) 40%,rgba(5,5,8,.08) 100%)}
+.catalog-card .relative{border-color:rgba(192,132,252,.14);background:linear-gradient(135deg,#20132e,#08070c)}
+input:focus,select:focus{outline-color:#c084fc}
+main{background:radial-gradient(ellipse at 50% 0%,rgba(126,34,206,.12),transparent 45%),var(--sv-bg)}
