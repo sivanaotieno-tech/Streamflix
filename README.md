@@ -132,7 +132,7 @@ Production credentials must be configured and tested before these flows can oper
 The `/media` page reports the standalone provider status. Streamivio does not require Jellyfin.
 
 - **StreamX metadata:** optional self-hosted metadata adapter for discovery and title details. It is disabled until upstream data terms have been reviewed.
-- **Hovod video engine:** self-hosted on a persistent cloud VM; it accepts media Streamivio owns or is licensed to distribute, transcodes to HLS, and provides its embeddable player.
+- **Authorised playback provider:** connect a provider that Streamivio is licensed to use, or configure direct MP4/HLS assets that Streamivio owns or is authorised to distribute.
 - **Storage:** S3-compatible object storage (for example Cloudflare R2) holds originals and HLS renditions.
 - **Vercel:** hosts the Next.js site and can call the Streamivio API; it does not run FFmpeg or deliver large video files.
 
@@ -141,8 +141,6 @@ Server-side Vercel variables:
 - `STREAMIVIO_METADATA_SEARCH_ENABLED=false`: set true only after the API's StreamX upstream terms approval flag has also been set.
 - `STREAMIVIO_RESOLVER_URL`: optional authorised-media resolver HTTPS origin.
 
-The playback route checks the API for a rights-cleared Hovod mapping first, then falls back only to manually configured authorised sources. Every direct/resolver entry must carry `distribution_authorized=true`, a valid `rights_status` (`licensed`, `owned`, or `public_domain`) and a non-empty `rights_reference`.
-
-**Important Hovod limitation:** its current public playback IDs are unlisted, not access-controlled. Only use this integration for content cleared for public playback. Do not use it for subscriber-only or private titles until an authenticated playback gateway is implemented.
+The playback route does not use Hovod. It accepts only manually configured authorised sources. Every direct/resolver entry must carry `distribution_authorized=true`, a valid `rights_status` (`licensed`, `owned`, or `public_domain`) and a non-empty `rights_reference`.
 
 See the API repository's [standalone setup guide](https://github.com/sivanaotieno-tech/streamivio-api/blob/main/MEDIA_ENGINE_SETUP.md).
