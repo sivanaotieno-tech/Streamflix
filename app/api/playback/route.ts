@@ -47,35 +47,6 @@ function mediaFormat(value: string, explicit?: unknown): MediaFormat | null {
   return null;
 }
 
-async function resolveHovod(titleId: string, season?: string | null, episode?: string | null) {
-  const base = (process.env.STREAMIVIO_API_URL || process.env.NEXT_PUBLIC_STREAMIVIO_API_URL || "").replace(/\/+$/, "");
-  if (!base) return null;
-  let endpoint: URL;
-  try {
-    endpoint = new URL("/media/playback/" + encodeURIComponent(titleId), base);
-    if (endpoint.protocol !== "https:" && endpoint.hostname !== "localhost" && endpoint.hostname !== "127.0.0.1") return null;
-    if (season && episode) { endpoint.searchParams.set("season", season); endpoint.searchParams.set("episode", episode); }
-  } catch { return null; }
-
-  const response = await fetch(endpoint, {
-    cache: "no-store",
-    headers: { Accept: "application/json" },
-    signal: AbortSignal.timeout(8000),
-  });
-  const payload: any = await response.json().catch(() => ({}));
-  if (response.status === 404 || response.status === 503) return null;
-  if (!response.ok) {
-    return { error: typeof payload.detail === "string" ? payload.detail : "Playback is not authorised for this title.", status: response.status };
-  }
-  if (payload.available !== true) return null;
-  const playerUrl = isAllowedEmbed(payload.player_url) ? payload.player_url : "";
-  const streamUrl = isSafeHttps(payload.stream_url) ? payload.stream_url : "";
-  const streamFormat = streamUrl ? mediaFormat(streamUrl, payload.format) : null;
-  const format = playerUrl ? "embed" : streamFormat;
-  if (!format) return null;
-  return { available: true, format, stream_url: streamUrl || undefined, player_url: playerUrl || undefined, title: payload.title, source: "hovod", notice: payload.notice };
-}
-
 async function resolveConfiguredSource(imdbId: string) {
   const base = (process.env.STREAMIVIO_RESOLVER_URL || "").replace(/\/+$/, "");
   if (!base) return null;
@@ -114,15 +85,6 @@ export async function GET(request: NextRequest) {
   const local = catalog.find((item: any) => String(item.id) === id) ||
     (title ? catalog.find((item: any) => normalizeTitle(String(item.title || "")) === normalizeTitle(title) && isTvType(String(item.type || "")) === isTvType(requestedType)) : undefined);
   const titleId = String((local as any)?.id || id || "");
-  if (titleId) {
-    try {
-      const hovod = await resolveHovod(titleId, season, episode);
-      if (hovod && "error" in hovod) return NextResponse.json({ available: false, error: hovod.error }, { status: hovod.status });
-      if (hovod) return NextResponse.json(hovod, { headers: { "Cache-Control": "no-store" } });
-    } catch (error) {
-      console.error("Streamivio API playback lookup failed:", error);
-    }
-  }
 
   const resolvedId = imdbId || (local as any)?.imdb_id || (local as any)?.imdbId;
   if (hasRightsRecord(local)) {
@@ -141,7 +103,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     available: false,
     playback_verified: false,
-    error: "No authorised playback source is configured for this title. Add a verified rights record and Hovod asset, or configure an authorised MP4/HLS source.",
+    error: "No authorised playback source is configured for this title. Add a verified rights record and an authorised MP4/HLS source.",
     metadata_id: isImdbId(resolvedId) ? resolvedId : undefined,
   }, { status: 404, headers: { "Cache-Control": "no-store" } });
 }
