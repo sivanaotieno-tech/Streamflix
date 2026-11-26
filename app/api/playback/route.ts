@@ -70,7 +70,8 @@ async function resolveHovod(titleId: string, season?: string | null, episode?: s
   if (payload.available !== true) return null;
   const playerUrl = isAllowedEmbed(payload.player_url) ? payload.player_url : "";
   const streamUrl = isSafeHttps(payload.stream_url) ? payload.stream_url : "";
-  const streamFormat = streamUrl ? mediaFormat(streamUrl, payload.format) : null;\n  const format = playerUrl ? "embed" : streamFormat;
+  const streamFormat = streamUrl ? mediaFormat(streamUrl, payload.format) : null;
+  const format = playerUrl ? "embed" : streamFormat;
   if (!format) return null;
   return { available: true, format, stream_url: streamUrl || undefined, player_url: playerUrl || undefined, title: payload.title, source: "hovod", notice: payload.notice };
 }
