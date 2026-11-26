@@ -1,9 +1,0 @@
-services:
-  - type: web
-    name: streamivio
-    runtime: node
-    plan: free
-    buildCommand: npm ci && npm run build
-    startCommand: npm run start
-    healthCheckPath: /
-    autoDeploy: true
