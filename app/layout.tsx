@@ -4,7 +4,7 @@ import { LiveClock } from "@/components/live-clock";
 
 export const metadata = {
   title: "Streamivio",
-  description: "A legitimate movie, TV and live entertainment discovery platform.",
+  description: "Streamivio — discover movies, series, anime, games and manga in one cinematic entertainment experience.",
   applicationName: "Streamivio",
   manifest: "/manifest.json",
   icons: {
