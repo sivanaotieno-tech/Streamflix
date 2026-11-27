@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { embyFetch, getEmbyUserId, embyIsConfigured } from "@/lib/emby-server";
+import { AUTH_COOKIE_NAME, authStorageReady, getAuthenticatedUser } from "@/lib/auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,6 +20,14 @@ const fields = [
 ].join(",");
 
 export async function GET(request: NextRequest) {
+  if (!authStorageReady()) {
+    return NextResponse.json({ available: false, configured: false, items: [], totalRecordCount: 0, message: "Streamivio sign-in is not configured." }, { status: 503, headers: { "Cache-Control": "no-store" } });
+  }
+  const user = await getAuthenticatedUser(request.cookies.get(AUTH_COOKIE_NAME)?.value);
+  if (!user) {
+    return NextResponse.json({ available: false, authenticated: false, items: [], totalRecordCount: 0, message: "Sign in to Streamivio to access your Emby library." }, { status: 401, headers: { "Cache-Control": "no-store" } });
+  }
+
   if (!embyIsConfigured()) {
     return NextResponse.json({
       available: false,
