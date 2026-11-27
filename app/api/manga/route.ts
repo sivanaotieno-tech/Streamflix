@@ -9,7 +9,7 @@ export async function GET(request: Request) {
   const limit = Math.min(100, Math.max(1, Number(searchParams.get("limit") || 50)));
   const offset = Math.max(0, Number(searchParams.get("offset") || 0));
   try {
-    const params = new URLSearchParams({ limit: String(limit), offset: String(offset), "includes[]": "cover_art", "order[relevance]": "desc" });
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset), "includes[]": "cover_art", "order[rating]": "desc" });
     if (q) params.set("title", q);
     const response = await fetch(`${API}/manga?${params.toString()}`, { headers: { "User-Agent": "Streamivio/1.0 (catalogue)" }, next: { revalidate: 3600 } });
     if (!response.ok) return NextResponse.json({ detail: "Manga metadata provider returned an error." }, { status: response.status });
