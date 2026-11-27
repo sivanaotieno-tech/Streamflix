@@ -530,57 +530,17 @@ export default function Home(){
   const add=(m:Item)=>{if(!list.some(x=>x.id===m.id))setList(list.concat(m))};
   const detailTitle=titleDetails||selected;
 
-  return <main className={"min-h-screen pb-24 lg:ml-20 lg:pb-12 transition-colors "+(nightMode?"bg-[#020304] text-zinc-100":"bg-[#090b10] text-white")}>
+  return <main className={"min-h-screen pb-24 lg:pb-12 transition-colors "+(nightMode?"bg-[#020304] text-zinc-100":"bg-black text-white")}>
     {!welcomeDismissed&&<OpeningScreen onEnter={()=>{setBrowse("Home");setQ("");setSelected(null);setWelcomeDismissed(true);}} />}
-    <aside className="site-sidebar fixed left-0 top-0 z-50 hidden h-screen w-20 flex-col items-center border-r border-white/10 py-5 lg:flex">
-      <button onClick={()=>{setBrowse("Home");setQ("");}} aria-label="Streamivio home" className="mb-10 flex h-10 w-10 items-center justify-center rounded-xl bg-sky-500 text-lg font-black text-[#06111d] shadow-lg shadow-sky-500/20">S</button>
-      <div className="flex flex-1 flex-col items-center gap-3">
-        {[
-          {label:"Home",icon:HomeIcon},
-          {label:"Movies",icon:Clapperboard},
-          {label:"TV Shows",icon:Tv},
-          {label:"Anime",icon:Compass},
-          {label:"Manga",icon:BookOpen},
-          {label:"Documentaries",icon:FileVideo},
-          {label:"Kids & Family",icon:Users},
-          {label:"Reality",icon:Trophy},
-          {label:"Games",icon:Gamepad2},
-          {label:"My List",icon:Bookmark}
-        ].map(({label,icon:Icon})=><button key={label} onClick={()=>{setBrowse(label);setQ("");}} title={label} aria-label={label} className={`sidebar-link flex h-11 w-11 items-center justify-center rounded-xl transition ${browse===label||(browse==="Home"&&label==="Home")?"active":"text-zinc-500 hover:bg-white/10 hover:text-white"}`}><Icon className="h-5 w-5"/></button>)}
-      </div>
-      <a href="/subscribe" title="Subscription" aria-label="Subscription" className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-zinc-500 transition hover:bg-white/10 hover:text-white"><CreditCard className="h-5 w-5"/></a>
-      <a href="/sign-in" title="Account" aria-label="Account" className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-white/10 bg-white/5 text-zinc-500 transition hover:bg-white/10 hover:text-white">{authUser?.photoURL?<img src={authUser.photoURL} alt={authUser.displayName||"Google profile"} referrerPolicy="no-referrer" className="h-full w-full object-cover"/>:<UserRound className="h-5 w-5"/>}</a>
-    </aside>
-
-    <header className="site-topbar fixed left-0 right-0 top-0 z-40 flex h-16 items-center gap-4 px-4 lg:left-20 lg:px-8">
-      <button onClick={()=>{setBrowse("Home");setQ("");}} aria-label="Streamivio home" className="shrink-0 lg:hidden"><StreamivioLogo className="text-[19px]"/></button>
-      <div className="hidden lg:block"><StreamivioLogo className="text-[20px]"/></div>
-      <div className="hidden items-center gap-4 text-xs text-zinc-400 xl:flex">
-        <span className="text-zinc-600">/</span><span className="font-medium text-zinc-300">{browse}</span>
-      </div>
-      <div className="ml-auto flex items-center gap-3">\n        <button type="button" onClick={()=>setFocusMode(v=>!v)} title="Toggle focus mode" aria-pressed={focusMode} className="rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-white/10">{focusMode?"Focus: On":"Focus"}</button>\n        <button type="button" onClick={()=>setNightMode(v=>!v)} title="Toggle night mode" aria-pressed={nightMode} className="rounded-full border border-white/15 px-3 py-2 text-xs font-semibold text-zinc-200 hover:bg-white/10">{nightMode?"Night: On":"Night mode"}</button>
-        <form onSubmit={submitSearch} role="search" className="relative flex items-center">
-          <Search className="pointer-events-none absolute left-3 h-4 w-4 text-zinc-400"/>
-          <input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")setQ("");}} placeholder="Search movies, shows, anime..." aria-label="Search movies, TV, documentaries, kids shows, reality, anime and games" autoComplete="off" maxLength={100} className="w-36 rounded-full border border-white/10 bg-white/[0.06] py-2 pl-9 pr-8 text-xs outline-none transition placeholder:text-zinc-500 focus:w-52 focus:border-white/30 sm:w-48"/>
-          {q&&<button type="button" onClick={()=>setQ("")} aria-label="Clear search" className="absolute right-3 text-zinc-400 hover:text-white"><X className="h-3.5 w-3.5"/></button>}
-        </form>
-        <a href="https://vidsrc.sh/" target="_blank" rel="noreferrer" title="Open external Vidsrc provider" className="hidden text-xs font-semibold text-zinc-300 hover:text-white sm:block">Vidsrc ↗</a><a href="/games" className="hidden text-xs font-semibold text-zinc-300 hover:text-white sm:block">Games</a><a href="/media" className="hidden text-xs font-semibold text-zinc-300 hover:text-white sm:block">Media</a><button onClick={()=>{setBrowse("My List");setQ("");}} className="hidden text-xs font-semibold text-zinc-300 hover:text-white sm:block">My List</button>
-        {authUser?<><div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-white/15 bg-white/5">{authUser.photoURL?<img src={authUser.photoURL} alt={authUser.displayName||"Profile"} referrerPolicy="no-referrer" className="h-full w-full object-cover"/>:<UserRound className="h-4 w-4 text-zinc-300"/>}</div><span title={authUser.email} className="hidden max-w-28 truncate text-xs text-zinc-300 lg:block">{authUser.displayName||authUser.email}</span><button onClick={()=>void signOut()} className="text-xs font-semibold text-zinc-300 hover:text-white">Sign out</button></>:<a href="/sign-in" className="whitespace-nowrap text-xs font-semibold text-zinc-200 hover:text-white">{authStatusLoading?"Checking…":"Sign in"}</a>}
-        <a href="/subscribe" aria-label="Open Streamivio subscription plans" className="rounded-full bg-sky-500 px-4 py-2 text-xs font-bold text-[#06111d] transition hover:bg-sky-400 sm:text-sm">Subscribe</a>
-      </div>
+    <header className="site-topbar fixed left-0 right-0 top-0 z-40 flex h-[68px] items-center gap-4 border-b border-white/10 bg-black/90 px-4 backdrop-blur-xl md:px-6">
+      <button onClick={()=>{setBrowse("Home");setQ("");}} aria-label="Streamivio home" className="flex shrink-0 items-center"><StreamivioLogo className="text-[19px]"/></button>
+      <nav className="hidden items-center gap-1 xl:flex">{[{label:"Home",icon:HomeIcon},{label:"Movies",icon:Clapperboard},{label:"TV Shows",icon:Tv},{label:"Anime",icon:Compass},{label:"Games",icon:Gamepad2},{label:"Manga",icon:BookOpen}].map(({label,icon:Icon})=><button key={label} onClick={()=>{setBrowse(label);setQ("");}} className={`flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold transition ${browse===label?"bg-purple-800 text-white":"text-zinc-300 hover:bg-white/10"}`}><Icon className="h-4 w-4"/>{label}</button>)}
+      <a href="/download" className="flex items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/10">↓ Download</a><button onClick={()=>setBrowse("My List")} className="rounded-full px-3 py-2 text-xs font-semibold text-zinc-300 hover:bg-white/10">My List</button></nav>
+      <div className="ml-auto flex min-w-0 items-center gap-2"><form onSubmit={submitSearch} role="search" className="relative flex items-center"><Search className="pointer-events-none absolute left-3 h-4 w-4 text-zinc-400"/><input value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")setQ("");}} placeholder="Search movies, shows..." aria-label="Search titles" autoComplete="off" maxLength={100} className="w-36 rounded-full border border-white/10 bg-white/[0.06] py-2 pl-9 pr-8 text-xs outline-none focus:border-purple-400 sm:w-48 lg:w-64"/>{q&&<button type="button" onClick={()=>setQ("")} aria-label="Clear search" className="absolute right-3 text-zinc-400"><X className="h-3.5 w-3.5"/></button>}</form>
+      <button type="button" onClick={()=>setFocusMode(v=>!v)} title="Focus mode" className="hidden rounded-full px-3 py-2 text-xs text-zinc-300 hover:bg-white/10 lg:block">{focusMode?"Focus on":"Focus"}</button><a href="/subscribe" className="hidden rounded-full bg-purple-700 px-4 py-2 text-xs font-bold text-white hover:bg-purple-600 sm:block">Subscribe</a>{authUser?<button onClick={()=>void signOut()} title="Sign out" className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-700 text-sm">{authUser.photoURL?<img src={authUser.photoURL} alt="Profile" className="h-full w-full rounded-full object-cover"/>:"S"}</button>:<a href="/sign-in" className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-700 text-sm font-bold">S</a>}</div>
     </header>
-
-    <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-50 grid grid-cols-6 border-t border-white/10 px-2 pb-[max(env(safe-area-inset-bottom),8px)] pt-2 lg:hidden">
-      {[
-        {label:"Home",icon:HomeIcon},
-        {label:"Movies",icon:Clapperboard},
-        {label:"TV Shows",icon:Tv},
-        {label:"Manga",icon:BookOpen},
-        {label:"My List",icon:Bookmark},
-        {label:"Plans",icon:CreditCard}
-      ].map(({label,icon:Icon})=><button key={label} onClick={()=>{if(label==="Plans"){window.location.href="/subscribe";return;}setBrowse(label);setQ("");}} className={`flex flex-col items-center gap-1 py-1 text-[10px] ${browse===label?"text-white":"text-zinc-500"}`}><Icon className="h-5 w-5"/><span>{label}</span></button>)}
-    </nav>
-
+    <div className="h-[68px]"/>
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-white/10 bg-black/90 px-2 pb-[env(safe-area-inset-bottom)] pt-2 xl:hidden">{[{label:"Home",icon:HomeIcon},{label:"Movies",icon:Clapperboard},{label:"TV Shows",icon:Tv},{label:"Anime",icon:Compass},{label:"Games",icon:Gamepad2},{label:"Manga",icon:BookOpen}].map(({label,icon:Icon})=><button key={label} onClick={()=>{setBrowse(label);setQ("");}} className={`flex flex-col items-center gap-1 py-1 text-[10px] ${browse===label?"text-purple-300":"text-zinc-500"}`}><Icon className="h-5 w-5"/><span>{label}</span></button>)}</nav>
     {q.trim()&&<section className="relative mx-4 mt-16 min-h-[55vh] rounded-xl bg-[#181818] p-5 sm:mx-6 md:mx-9 md:p-8">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <div>
