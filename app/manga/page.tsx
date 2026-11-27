@@ -45,7 +45,18 @@ export default function MangaPage() {
   const [remote, setRemote] = useState<RemoteManga[]>([]);
   const [mode, setMode] = useState<"trending" | "featured" | "search">("trending");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");\n  const [readerPages, setReaderPages] = useState<string[]>([]);\n  const [readerPage, setReaderPage] = useState(0);\n  const [readerOpen, setReaderOpen] = useState(false);\n  useEffect(() => () => readerPages.forEach(url => URL.revokeObjectURL(url)), [readerPages]);\n  function loadLocalPages(files: FileList | null) {\n    if (!files) return;\n    readerPages.forEach(url => URL.revokeObjectURL(url));\n    const images = Array.from(files).filter(file => file.type.startsWith("image/")).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));\n    const urls = images.map(file => URL.createObjectURL(file));\n    setReaderPages(urls); setReaderPage(0); setReaderOpen(urls.length>0);\n  }
+  const [error, setError] = useState("");
+  const [readerPages, setReaderPages] = useState<string[]>([]);
+  const [readerPage, setReaderPage] = useState(0);
+  const [readerOpen, setReaderOpen] = useState(false);
+  useEffect(() => () => readerPages.forEach(url => URL.revokeObjectURL(url)), [readerPages]);
+  function loadLocalPages(files: FileList | null) {
+    if (!files) return;
+    readerPages.forEach(url => URL.revokeObjectURL(url));
+    const images = Array.from(files).filter(file => file.type.startsWith("image/")).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));
+    const urls = images.map(file => URL.createObjectURL(file));
+    setReaderPages(urls); setReaderPage(0); setReaderOpen(urls.length>0);
+  }
 
   async function load(type: "trending" | "featured" | "search", search = "") {
     setLoading(true);
