@@ -19,6 +19,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - name: Install dependencies
+        run: npm install
       - name: Validate production build
         run: npm run build
