@@ -612,6 +612,7 @@ export default function Home(){
         <p className="mt-2 max-w-md line-clamp-3 text-xs leading-5 text-zinc-100 drop-shadow sm:text-sm">{hero.overview||"Discover movies, series and anime."}</p>
         <div className="mt-5 flex gap-3"><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full bg-white px-5 py-2.5 text-xs font-bold text-black hover:bg-zinc-200"><Film className="h-3.5 w-3.5"/>Explore</button><button onClick={()=>setSelected(hero)} className="flex items-center gap-1.5 rounded-full border border-white/30 bg-black/25 px-5 py-2.5 text-xs font-bold text-white backdrop-blur hover:bg-white/15"><Plus className="h-3.5 w-3.5"/>More Info</button></div>
       </div>
+      <aside className="absolute right-5 top-5 z-20 w-[min(90vw,340px)] rounded-2xl border border-purple-400/25 bg-black/80 p-4 shadow-[0_0_35px_rgba(140,40,220,.22)] backdrop-blur-xl sm:right-8 sm:top-8"><div className="flex items-center gap-2 text-sm font-bold"><img src="https://commons.wikimedia.org/wiki/Special:FilePath/Avengers%20Doomsday%20logo.png" alt="" className="h-8 w-auto max-w-12 object-contain"/>Avengers: Doomsday</div><DoomsdayCountdown/></aside>
     </header>}
 
     {loading&&!hero&&<div className="mx-4 mt-6 rounded-xl border border-white/10 bg-white/[.03] px-4 py-3 text-xs text-zinc-400 md:mx-12">Catalog shelves are loading in the background. You can still browse Streamivio.</div>}
