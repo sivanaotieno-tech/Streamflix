@@ -1,0 +1,1 @@
+import CatalogPage from "@/components/catalog-page";export default function Movies(){return <CatalogPage heading="Movies" scope="movies"/>}
