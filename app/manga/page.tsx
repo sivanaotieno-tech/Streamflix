@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, BookOpen, ExternalLink, GitBranch, Search, Sparkles } from "lucide-react";
+import { ArrowLeft, BookOpen, ExternalLink, GitBranch, Search, Sparkles, ChevronLeft, ChevronRight, Upload, X } from "lucide-react";
 
 type RemoteManga = {
   title?: string;
@@ -45,7 +45,7 @@ export default function MangaPage() {
   const [remote, setRemote] = useState<RemoteManga[]>([]);
   const [mode, setMode] = useState<"trending" | "featured" | "search">("trending");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState("");\n  const [readerPages, setReaderPages] = useState<string[]>([]);\n  const [readerPage, setReaderPage] = useState(0);\n  const [readerOpen, setReaderOpen] = useState(false);\n  useEffect(() => () => readerPages.forEach(url => URL.revokeObjectURL(url)), [readerPages]);\n  function loadLocalPages(files: FileList | null) {\n    if (!files) return;\n    readerPages.forEach(url => URL.revokeObjectURL(url));\n    const images = Array.from(files).filter(file => file.type.startsWith("image/")).sort((a,b)=>a.name.localeCompare(b.name,undefined,{numeric:true}));\n    const urls = images.map(file => URL.createObjectURL(file));\n    setReaderPages(urls); setReaderPage(0); setReaderOpen(urls.length>0);\n  }
 
   async function load(type: "trending" | "featured" | "search", search = "") {
     setLoading(true);
@@ -73,13 +73,13 @@ export default function MangaPage() {
   return <main className="min-h-screen bg-[#090b10] px-5 pb-20 pt-8 text-white md:px-12">
     <div className="mx-auto max-w-7xl">
       <a href="/" className="mb-8 inline-flex items-center gap-2 text-sm text-zinc-400 hover:text-white"><ArrowLeft size={16}/> Back to Streamivio</a>
-      <a href="/manga/jojo" className="mb-6 block rounded-2xl border border-purple-300/20 bg-purple-950/20 p-5 hover:border-purple-300/50"><p className="text-xs font-bold uppercase tracking-widest text-purple-300">Manga · Season collection</p><h2 className="mt-2 text-2xl font-black">JoJo’s Bizarre Adventure</h2><p className="mt-2 text-sm text-zinc-400">Browse all nine manga parts as Seasons 1–9, with chapter catalogue links.</p><span className="mt-3 inline-flex rounded-full bg-purple-300 px-4 py-2 text-sm font-bold text-black">Browse seasons →</span></a>
+      <a href="/manga/jojo" className="mb-6 block rounded-2xl border border-purple-300/20 bg-purple-950/20 p-5 hover:border-purple-300/50"><p className="text-xs font-bold uppercase tracking-widest text-purple-300">Manga · Season collection</p><h2 className="mt-2 text-2xl font-black">JoJo’s Bizarre Adventure</h2><p className="mt-2 text-sm text-zinc-400">Browse the existing manga parts as seasons, with chapter catalogue links.</p><span className="mt-3 inline-flex rounded-full bg-purple-300 px-4 py-2 text-sm font-bold text-black">Browse seasons →</span></a>
       <a href="/manga/ban-kaisen" className="mb-10 block overflow-hidden rounded-3xl border border-rose-300/25 bg-gradient-to-r from-rose-950/80 via-zinc-950 to-black p-6 md:p-10 hover:border-rose-300/50">
         <p className="text-xs font-bold uppercase tracking-[.3em] text-rose-300">Streamivio Original · Manga</p>
         <div className="mt-3 flex flex-wrap items-end justify-between gap-4"><div><h2 className="text-4xl font-black tracking-tight md:text-6xl">BAN KAISEN</h2><p className="mt-2 text-zinc-300">Volume 1 · Whispers from The Heart · Chapter 1: The White Van</p><p className="mt-2 text-xs text-zinc-500">Original manga manuscript and reader page · Illustrations in production</p></div><span className="rounded-full bg-rose-300 px-5 py-3 text-sm font-bold text-black">Open reader →</span></div>
       </a>
       <div className="mb-9 flex flex-wrap items-end justify-between gap-5">
-        <div><div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[.28em] text-purple-300"><BookOpen size={15}/> Streamivio Manga</div><h1 className="text-4xl font-black tracking-tight md:text-6xl">Read beyond the screen.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">Search a large live manga catalogue with covers, descriptions and genres. Open catalogue entries on MangaDex; reading availability and rights remain with publishers and creators.</p></div>
+        <div><div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-[.28em] text-purple-300"><BookOpen size={15}/> Streamivio Manga</div><h1 className="text-4xl font-black tracking-tight md:text-6xl">Read beyond the screen.</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-400">Search a live manga catalogue with covers, descriptions and genres. Use publisher links to read legally, or open the local reader with page images you already have.</p></div>
         <label className="flex w-full max-w-sm items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-3"><Search size={16} className="text-zinc-500"/><input value={query} onChange={e=>setQuery(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&query.trim()) void load("search",query.trim());}} placeholder="Search the library..." className="w-full bg-transparent text-sm outline-none placeholder:text-zinc-600"/><button onClick={()=>query.trim()?void load("search",query.trim()):void load("trending")} className="text-xs font-semibold text-purple-300">Search</button></label>
       </div>
 
