@@ -1,0 +1,1 @@
+import CatalogPage from "@/components/catalog-page";export default function Anime(){return <CatalogPage heading="Anime" scope="anime"/>}
