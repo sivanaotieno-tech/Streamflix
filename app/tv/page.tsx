@@ -1,0 +1,1 @@
+import CatalogPage from "@/components/catalog-page";export default function TV(){return <CatalogPage heading="TV Shows" scope="tv"/>}
